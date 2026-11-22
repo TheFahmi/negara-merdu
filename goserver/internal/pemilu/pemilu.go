@@ -24,7 +24,7 @@ const (
 )
 
 // LabelJabatanSah: jabatan yang dikenal.
-var LabelJabatanSah = map[string]bool{"kades": true, "rw": true, "rt": true}
+var LabelJabatanSah = map[string]bool{"kades": true, "walikota": true, "camat": true, "lurah": true, "rw": true, "rt": true}
 
 // Periode: satu baris tabel pemilu.
 type Periode struct {
@@ -260,7 +260,8 @@ func DaftarPejabat(ctx context.Context, q db.Querier) ([]Pejabat, error) {
 	rows, err := q.Query(ctx,
 		`SELECT w.username, j.jabatan, j.wilayah FROM jabatan j
 		 JOIN warga w ON w.id=j.warga_id
-		 ORDER BY CASE j.jabatan WHEN 'kades' THEN 0 WHEN 'rw' THEN 1 ELSE 2 END,
+		 ORDER BY CASE j.jabatan WHEN 'kades' THEN 0 WHEN 'walikota' THEN 1 WHEN 'camat' THEN 2
+		          WHEN 'lurah' THEN 3 WHEN 'rw' THEN 4 ELSE 5 END,
 		          j.wilayah ASC`)
 	if err != nil {
 		return nil, err
@@ -309,11 +310,10 @@ func (h *Handler) Ambil(w http.ResponseWriter, r *http.Request) {
 		galat(w, 500, "Kesalahan server")
 		return
 	}
-	var wilayahSaya map[string]any
-	var rtSaya, rwSaya int
+	var wilayahSaya *db.Wilayah
 	if row != nil {
-		rtSaya, rwSaya = db.WilayahDariBlok(row.Blok)
-		wilayahSaya = map[string]any{"rt": rtSaya, "rw": rwSaya}
+		wl := db.WilayahLengkap(row.Blok)
+		wilayahSaya = &wl
 	}
 	balapan := []Balapan{}
 	suaraSaya := map[string]int64{}
@@ -330,7 +330,9 @@ func (h *Handler) Ambil(w http.ResponseWriter, r *http.Request) {
 			}
 			daftar = [][2]any{{j, wil}}
 		} else if row != nil {
-			daftar = append(daftar, [2]any{"rt", rtSaya}, [2]any{"rw", rwSaya})
+			for _, jb := range db.UrutanJabatan[1:] { // walikota .. rt di wilayah rumah sendiri
+				daftar = append(daftar, [2]any{jb, db.WilayahJabatan(jb, row.Blok)})
+			}
 		}
 		for _, d := range daftar {
 			b, err := BalapanData(ctx, h.DB.Pool, p, d[0].(string), d[1].(int))
@@ -401,7 +403,7 @@ func (h *Handler) Calon(w http.ResponseWriter, r *http.Request) {
 	visi := strings.TrimSpace(strAmbil(data, "visi"))
 	misi := strings.TrimSpace(strAmbil(data, "misi"))
 	if !LabelJabatanSah[jabatan] {
-		galat(w, 400, "Jabatan tidak dikenal (rt/rw/kades)")
+		galat(w, 400, "Jabatan tidak dikenal (rt/rw/lurah/camat/walikota/kades)")
 		return
 	}
 	if visi == "" || utf8.RuneCountInString(visi) > VisiMaks {
@@ -413,8 +415,7 @@ func (h *Handler) Calon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Wilayah SELALU dihitung server dari blok rumah kandidat sendiri.
-	rt, rw := db.WilayahDariBlok(row.Blok)
-	wilayah := map[string]int{"kades": 0, "rw": rw, "rt": rt}[jabatan]
+	wilayah := db.WilayahJabatan(jabatan, row.Blok)
 	p, _ := Terbaru(ctx, h.DB.Pool)
 	if p == nil || p.Status != "pencalonan" {
 		galat(w, 409, "Pencalonan sedang tidak dibuka")
@@ -469,8 +470,10 @@ func (h *Handler) Pilih(w http.ResponseWriter, r *http.Request) {
 		mentah = float64(v)
 	}
 	kandidatID := int64(mentah)
-	rt, rw := db.WilayahDariBlok(row.Blok)
-	hak := map[string]int{"kades": 0, "rw": rw, "rt": rt}
+	hak := map[string]int{}
+	for _, jb := range db.UrutanJabatan {
+		hak[jb] = db.WilayahJabatan(jb, row.Blok)
+	}
 	p, _ := Terbaru(ctx, h.DB.Pool)
 	if p == nil || p.Status != "pemungutan" {
 		galat(w, 409, "Pemungutan suara sedang tidak berlangsung")
@@ -487,7 +490,7 @@ func (h *Handler) Pilih(w http.ResponseWriter, r *http.Request) {
 	}
 	// Hak pilih divalidasi dari alamat rumah PEMILIH (bukan klaim klien).
 	if kWilayah != hak[kJabatan] {
-		galat(w, 403, "Kandidat itu bukan untuk wilayahmu — kamu hanya bisa memilih di RT/RW rumahmu sendiri")
+		galat(w, 403, "Kandidat itu bukan untuk wilayahmu — kamu hanya bisa memilih di wilayah rumahmu sendiri")
 		return
 	}
 	var sudah int64

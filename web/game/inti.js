@@ -50,6 +50,25 @@
     toko_pancing: { kol: 41, bar: 23 },
   };
 
+  /* ===== Hierarki wilayah (WAJIB sama dengan goserver/internal/db/db.go) =====
+     RT = 5x5 blok (160 RT) · RW = 4x2 RT (20 RW) · Kelurahan = 2 RW
+     barat-timur (10) · Kecamatan = kolom kelurahan (2: Barat/Timur) ·
+     Kota = seluruh negara (Kota Merdu). Ketua: Ketua RT, Ketua RW, Lurah,
+     Camat, Wali Kota — dipilih lewat Pemilu; Presiden di atas semuanya. */
+  export const NAMA_KELURAHAN = ["Sukamerdu", "Mekarsari", "Sidomulyo", "Tanjungsari", "Harapanjaya",
+    "Sukamaju", "Karangrejo", "Bumiayu", "Margasari", "Sumberjaya"];
+  export const NAMA_KECAMATAN = ["Merdu Barat", "Merdu Timur"];
+  export const NAMA_KOTA = "Kota Merdu";
+  export function wilayahLengkap(blok) {
+    const idx = blok - 1, baris = Math.floor(idx / BLOK_KOLOM), kolom = idx % BLOK_KOLOM;
+    const rtKol = Math.floor(kolom / 5), rtBar = Math.floor(baris / 5);
+    const rt = rtBar * 16 + rtKol + 1, rw = Math.floor(rtBar / 2) * 4 + Math.floor(rtKol / 4) + 1;
+    const kelurahan = Math.floor((rw - 1) / 4) * 2 + Math.floor(((rw - 1) % 4) / 2) + 1;
+    const kecamatan = (kelurahan - 1) % 2 + 1;
+    return { rt, rw, kelurahan, nama_kelurahan: NAMA_KELURAHAN[kelurahan - 1], kecamatan,
+      nama_kecamatan: NAMA_KECAMATAN[kecamatan - 1], kota: 1, nama_kota: NAMA_KOTA };
+  }
+  export function teksRTRW(wl) { return String(wl.rt).padStart(3, "0") + "/" + String(wl.rw).padStart(2, "0"); }
   export function sudutBlok(kol, bar) { return { x: (kol - BLOK_KOLOM / 2) * PITCH, z: (bar - BLOK_BARIS / 2) * PITCH }; }
   export function posisiKavling(blokNomor, kavlingNomor) {
     const bi = blokNomor - 1, bar = Math.floor(bi / BLOK_KOLOM), kol = bi % BLOK_KOLOM;

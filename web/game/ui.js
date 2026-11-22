@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "ui" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    UI: wiring panel/menu, sesi + gerbang daftar/masuk, lengkapi profil, KTP, keluarga/KK, pemilu, dan panel pembangunan. */
-import { $, IK, posisiKavling } from "./inti.js";
+import { $, IK, posisiKavling, teksRTRW, wilayahLengkap } from "./inti.js";
 import { ambilData, perbaruiInfoWaktu, renderer, scene, setPilihanKualitas, setPilihanWaktu } from "./bersama.js";
 import { bangunKotaMassal } from "./kota.js";
 import { buatKarakter } from "./karakter.js";
@@ -46,6 +46,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     }
     $("#kartu .isi").innerHTML = "<h3>" + IK.ktp + " Kartu Warga Negara</h3><p><b>@" + w.username + "</b><br>Rumah No. " + w.nomor_rumah +
       " · Blok " + w.blok + " Kavling " + w.kavling + "<br>" +
+      teksWilayahPendek(w.wilayah || wilayahLengkap(w.blok)) + "<br>" +
       "Jenis Kelamin: " + labelGender(w.gender) + "<br>" +
       (w.jabatan ? "Jabatan: <b>" + w.jabatan + "</b><br>" : "") +
       "Kamera sedang menunjuk kavlingmu di kota.</p>" +
@@ -56,6 +57,11 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     $("#btn-masuk-rumah").addEventListener("click", () => { $("#kartu").hidden = true; masukInterior(w, null); });
     $("#btn-ktp-saya").addEventListener("click", () => { $("#kartu").hidden = true; tampilkanKTP(); });
     $("#btn-keluarga-saya").addEventListener("click", () => { $("#kartu").hidden = true; bukaKeluarga(); });
+  }
+  export function teksWilayahPendek(wl) { // "RT 072/RW 10 · Kel. Harapanjaya · Kec. Merdu Barat · Kota Merdu"
+    if (!wl) return "";
+    return "RT " + String(wl.rt).padStart(3, "0") + "/RW " + String(wl.rw).padStart(2, "0") +
+      " · Kel. " + wl.nama_kelurahan + " · Kec. " + wl.nama_kecamatan + " · " + (wl.nama_kota || "Kota Merdu");
   }
   export function perbaruiChipSaya() {
     const chip = $("#chip-saya");
@@ -367,8 +373,11 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     $("#ktp-nik").textContent = kelompokkanNomor(w.nik);
     $("#ktp-nama").textContent = "@" + w.username;
     $("#ktp-gender").textContent = labelGender(w.gender); // "—" bila belum dilengkapi
-    $("#ktp-alamat").textContent = "Blok " + w.blok + " · Kavling " + w.kavling;
-    $("#ktp-norumah").textContent = w.nomor_rumah;
+    const wl = w.wilayah || wilayahLengkap(w.blok); // server mengirim wilayah; cadangan dihitung klien
+    $("#ktp-alamat").textContent = "No. " + w.nomor_rumah + ", Blok " + w.blok + " Kav. " + w.kavling;
+    $("#ktp-rtrw").textContent = teksRTRW(wl);
+    $("#ktp-kelurahan").textContent = wl.nama_kelurahan;
+    $("#ktp-kecamatan").textContent = wl.nama_kecamatan;
     $("#ktp-terdaftar").textContent = formatTanggalID(w.terdaftar);
     $("#ktp-baris-jabatan").hidden = !w.jabatan; // baris Jabatan hanya untuk pejabat aktif
     $("#ktp-jabatan").textContent = w.jabatan || "—";
@@ -421,25 +430,29 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     c.fillText("KARTU TANDA PENDUDUK", 196, 118);
     c.font = "700 36px system-ui, sans-serif"; c.fillStyle = "#1d5a8f";
     try { c.letterSpacing = "8px"; } catch (e) {}
-    c.fillText("NEGARA MERDU", 198, 166);
+    c.fillText("NEGARA MERDU · KOTA MERDU", 198, 166);
     try { c.letterSpacing = "0px"; } catch (e) {}
     // panel data (kolom nilai mulai x=316, panel berakhir x=800)
     jalurBulat(c, 58, 200, 742, 404, 20); c.fillStyle = "rgba(255,255,255,0.45)"; c.fill();
+    const wlK = w.wilayah || wilayahLengkap(w.blok);
     const baris = [
       ["NIK", kelompokkanNomor(w.nik), "700 39px system-ui, sans-serif"],
       ["Nama", "@" + w.username, "700 32px system-ui, sans-serif"],
       ["Jenis Kelamin", labelGender(w.gender), "700 32px system-ui, sans-serif"],
-      ["Alamat", "Blok " + w.blok + " · Kavling " + w.kavling, "700 32px system-ui, sans-serif"],
-      ["No. Rumah", String(w.nomor_rumah), "700 32px system-ui, sans-serif"],
+      ["Alamat", "No. " + w.nomor_rumah + ", Blok " + w.blok + " Kav. " + w.kavling, "700 32px system-ui, sans-serif"],
+      ["RT/RW", teksRTRW(wlK), "700 32px system-ui, sans-serif"],
+      ["Kel/Desa", wlK.nama_kelurahan, "700 32px system-ui, sans-serif"],
+      ["Kecamatan", wlK.nama_kecamatan, "700 32px system-ui, sans-serif"],
       ["Terdaftar", formatTanggalID(w.terdaftar), "700 32px system-ui, sans-serif"],
       ["Berlaku", "Seumur Hidup", "700 32px system-ui, sans-serif"],
     ];
-    if (w.jabatan) baris.splice(6, 0, ["Jabatan", w.jabatan, "700 32px system-ui, sans-serif"]);
+    if (w.jabatan) baris.splice(8, 0, ["Jabatan", w.jabatan, "700 32px system-ui, sans-serif"]);
     // Jarak baris bertingkat supaya semua baris tetap di dalam panel
     // (panel y 200..604): <=6 baris longgar, 7 rapat, 8+ paling rapat.
     let yAwal = 268, langkahY = 62;
     if (baris.length === 7) { yAwal = 258; langkahY = 54; }
-    else if (baris.length >= 8) { yAwal = 248; langkahY = 48; }
+    else if (baris.length === 8) { yAwal = 248; langkahY = 48; }
+    else if (baris.length >= 9) { yAwal = 240; langkahY = Math.floor(370 / (baris.length - 1)); } // 9-10 baris (RT/RW, Kel, Kec)
     baris.forEach(([label, nilai, font], i) => {
       const yy = yAwal + i * langkahY;
       c.font = "600 30px system-ui, sans-serif"; c.fillStyle = "#1d4e79";
@@ -560,7 +573,12 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     const d = dataKeluarga; if (!d) return;
     $("#kk-nokk").textContent = kelompokkanNomor(d.no_kk);
     $("#kk-kepala").textContent = "@" + d.kepala;
-    $("#kk-alamat").textContent = "Blok " + d.alamat.blok + " · Kavling " + d.alamat.kavling + " · Negara Merdu";
+    $("#kk-alamat").textContent = "Blok " + d.alamat.blok + " · Kavling " + d.alamat.kavling;
+    const wlKK = wilayahLengkap(d.alamat.blok);
+    $("#kk-rtrw").textContent = teksRTRW(wlKK);
+    $("#kk-kelurahan").textContent = wlKK.nama_kelurahan;
+    $("#kk-kecamatan").textContent = wlKK.nama_kecamatan;
+    $("#kk-kota").textContent = wlKK.nama_kota + " · Negara Merdu";
     const tb = $("#kk-tbody"); tb.innerHTML = "";
     d.anggota.forEach((a, i) => {
       const tr = document.createElement("tr");
@@ -721,10 +739,11 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     isi.textContent = "";
     const p = d.pemilu;
     // --- Pejabat aktif: Presiden + Ketua RW/RT wilayah si peminta ---
+    // Pejabat yang relevan: Presiden + Wali Kota + Camat/Lurah/Ketua RW/RT wilayah si peminta
+    const ws = d.wilayah_saya;
+    const kunciWilayah = { kades: 0, walikota: 1, camat: ws && ws.kecamatan, lurah: ws && ws.kelurahan, rw: ws && ws.rw, rt: ws && ws.rt };
     const pejabatTampil = (d.pejabat || []).filter((j) =>
-      j.jabatan === "kades" || !d.wilayah_saya ||
-      (j.jabatan === "rt" && j.wilayah === d.wilayah_saya.rt) ||
-      (j.jabatan === "rw" && j.wilayah === d.wilayah_saya.rw));
+      j.jabatan === "kades" || j.jabatan === "walikota" || !ws || j.wilayah === kunciWilayah[j.jabatan]);
     if (pejabatTampil.length) {
       isi.appendChild(elemenPemilu("h4", "pemilu-bagian", "Pejabat Negara Saat Ini"));
       for (const j of pejabatTampil) {
@@ -762,9 +781,8 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     isi.appendChild(status);
     if (d.wilayah_saya) {
       isi.appendChild(elemenPemilu("p", "pemilu-catatan",
-        "Wilayah rumahmu: RT " + String(d.wilayah_saya.rt).padStart(3, "0") +
-        " · RW " + String(d.wilayah_saya.rw).padStart(2, "0") +
-        ". Kamu memilih Ketua RT & RW di wilayahmu, dan Presiden untuk seluruh negara."));
+        "Wilayah rumahmu: " + teksWilayahPendek(d.wilayah_saya) +
+        ". Kamu memilih Ketua RT, Ketua RW, Lurah, Camat & Wali Kota di wilayahmu, dan Presiden untuk seluruh negara."));
     }
     for (const b of d.balapan || []) gambarBalapanPemilu(isi, d, b);
     if (p.status === "pencalonan" && !d.terkunci) {
@@ -834,6 +852,9 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     const sel = document.createElement("select"); sel.id = "calon-jabatan";
     const opsi = [
       ["kades", "Presiden (seluruh negara)"],
+      ["walikota", "Wali Kota Merdu (seluruh kota)"],
+      ["camat", "Camat " + (d.wilayah_saya.nama_kecamatan || "") + " (kecamatanmu)"],
+      ["lurah", "Lurah " + (d.wilayah_saya.nama_kelurahan || "") + " (kelurahanmu)"],
       ["rw", "Ketua RW " + String(d.wilayah_saya.rw).padStart(2, "0") + " (wilayah rumahmu)"],
       ["rt", "Ketua RT " + String(d.wilayah_saya.rt).padStart(3, "0") + " (wilayah rumahmu)"],
     ];

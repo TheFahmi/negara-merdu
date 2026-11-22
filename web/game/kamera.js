@@ -1,10 +1,10 @@
 /* Negara Merdu — modul game "kamera" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kamera: mode orbit/1st person/3rd person/drone, gerak pemain, tabrakan, joystick & sentuh. */
-import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
+import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, wilayahLengkap, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
 import { OFSET_MATAHARI, aturJangkauBayangan, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { INT, dekatPintuKeluar, diInterior, keluarInterior, masukInterior, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
-import { sesi } from "./ui.js";
+import { sesi, teksWilayahPendek } from "./ui.js";
 import { buangGrup } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { ketukIklan } from "./iklan.js";
@@ -124,6 +124,7 @@ import { waktuLalu } from "./main.js";
     }
     $("#kartu .isi").innerHTML = "<h3>" + IK.rumah + " Rumah @" + w.username + "</h3><p>Rumah No. " + w.nomor_rumah +
       " · Blok " + w.blok + " Kavling " + w.kavling + "<br>" +
+      teksWilayahPendek(wilayahLengkap(w.blok)) + "<br>" +
       (w.jabatan ? "Jabatan: <b>" + w.jabatan + "</b><br>" : "") +
       "Warga resmi Negara Merdu. Rumah detailnya dipajang di Distrik Pusat.</p>" +
       '<button class="btn-masuk" id="btn-masuk-rumah" type="button">' + IK.pintu + ' Masuk Rumah</button>';

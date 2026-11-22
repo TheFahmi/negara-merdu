@@ -223,13 +223,95 @@ func WilayahDariBlok(blok int) (rt, rw int) {
 	return rt, rw
 }
 
-// LabelJabatan: label tampil jabatan aktif ("Presiden", "Ketua RW 07",
-// "Ketua RT 042"); nil untuk jabatan tak dikenal.
+// ===== Hierarki wilayah: RT < RW < Kelurahan < Kecamatan < Kota =====
+// RW tersusun 4 kolom x 5 baris di peta. Kelurahan = 2 RW bersebelahan
+// (barat-timur) -> 10 kelurahan (2 kolom x 5 baris). Kecamatan = satu
+// kolom kelurahan -> 2 kecamatan (Barat & Timur). Kota = seluruh negara
+// (1 kota). Murni dari nomor blok, sama persis dengan klien (inti.js).
+
+// NamaKelurahan: nama 10 kelurahan (indeks = nomor kelurahan - 1).
+var NamaKelurahan = [10]string{
+	"Sukamerdu", "Mekarsari", "Sidomulyo", "Tanjungsari", "Harapanjaya",
+	"Sukamaju", "Karangrejo", "Bumiayu", "Margasari", "Sumberjaya",
+}
+
+// NamaKecamatan: nama 2 kecamatan (indeks = nomor kecamatan - 1).
+var NamaKecamatan = [2]string{"Merdu Barat", "Merdu Timur"}
+
+// NamaKota: satu-satunya kota di Negara Merdu.
+const NamaKota = "Kota Merdu"
+
+// Wilayah: alamat administratif lengkap satu blok.
+type Wilayah struct {
+	RT            int    `json:"rt"`
+	RW            int    `json:"rw"`
+	Kelurahan     int    `json:"kelurahan"`
+	NamaKelurahan string `json:"nama_kelurahan"`
+	Kecamatan     int    `json:"kecamatan"`
+	NamaKecamatan string `json:"nama_kecamatan"`
+	Kota          int    `json:"kota"`
+	NamaKota      string `json:"nama_kota"`
+}
+
+// KelurahanDariRW: nomor RW (1..20) -> nomor kelurahan (1..10).
+func KelurahanDariRW(rw int) int {
+	i := rw - 1
+	return (i/4)*2 + (i%4)/2 + 1
+}
+
+// KecamatanDariKelurahan: nomor kelurahan (1..10) -> nomor kecamatan (1..2).
+func KecamatanDariKelurahan(kel int) int { return (kel-1)%2 + 1 }
+
+// WilayahLengkap: nomor blok -> alamat administratif lengkap.
+func WilayahLengkap(blok int) Wilayah {
+	rt, rw := WilayahDariBlok(blok)
+	kel := KelurahanDariRW(rw)
+	kec := KecamatanDariKelurahan(kel)
+	return Wilayah{RT: rt, RW: rw, Kelurahan: kel, NamaKelurahan: NamaKelurahan[kel-1],
+		Kecamatan: kec, NamaKecamatan: NamaKecamatan[kec-1], Kota: 1, NamaKota: NamaKota}
+}
+
+// WilayahJabatan: nomor wilayah yang dipimpin jabatan tsb untuk warga di blok ini.
+func WilayahJabatan(jabatan string, blok int) int {
+	w := WilayahLengkap(blok)
+	switch jabatan {
+	case "rt":
+		return w.RT
+	case "rw":
+		return w.RW
+	case "lurah":
+		return w.Kelurahan
+	case "camat":
+		return w.Kecamatan
+	case "walikota":
+		return w.Kota
+	}
+	return 0 // kades/presiden: seluruh negara
+}
+
+// UrutanJabatan: urutan tampil dari tertinggi (Presiden) ke terendah (RT).
+var UrutanJabatan = []string{"kades", "walikota", "camat", "lurah", "rw", "rt"}
+
+// LabelJabatan: label tampil jabatan aktif ("Presiden", "Wali Kota Merdu",
+// "Camat Merdu Barat", "Lurah Sukamerdu", "Ketua RW 07", "Ketua RT 042");
+// nil untuk jabatan tak dikenal.
 func LabelJabatan(jabatan string, wilayah int) *string {
 	var s string
 	switch jabatan {
 	case "kades":
 		s = "Presiden"
+	case "walikota":
+		s = "Wali Kota Merdu"
+	case "camat":
+		if wilayah < 1 || wilayah > len(NamaKecamatan) {
+			return nil
+		}
+		s = "Camat " + NamaKecamatan[wilayah-1]
+	case "lurah":
+		if wilayah < 1 || wilayah > len(NamaKelurahan) {
+			return nil
+		}
+		s = "Lurah " + NamaKelurahan[wilayah-1]
 	case "rw":
 		s = fmt.Sprintf("Ketua RW %02d", wilayah)
 	case "rt":

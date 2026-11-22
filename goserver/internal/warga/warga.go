@@ -70,6 +70,7 @@ type Privat struct {
 	Gender    *string             `json:"gender"`
 	Terdaftar string              `json:"terdaftar"`
 	Keluarga  *keluarga.Ringkasan `json:"keluarga"`
+	Wilayah   db.Wilayah          `json:"wilayah"` // RT/RW/Kelurahan/Kecamatan/Kota dari blok rumah (untuk KTP)
 }
 
 // KePrivat membentuk Privat (query keluarga sendiri, seperti warga_privat).
@@ -85,6 +86,7 @@ func KePrivat(ctx context.Context, q db.Querier, w *db.Warga) Privat {
 		Gender:    w.Gender,
 		Terdaftar: terdaftar,
 		Keluarga:  ring,
+		Wilayah:   db.WilayahLengkap(w.Blok),
 	}
 }
 
