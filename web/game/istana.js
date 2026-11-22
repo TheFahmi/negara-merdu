@@ -77,15 +77,25 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
        waktu); kepala lampu taman memakai LAMPU_TAMAN (digerakkan
        kepalaLampu). Tanpa PointLight baru. */
     const g = new THREE.Group();
-    const matEmas = M(0xd9a441, 0.45), matEmasT = M(0xf2b13d, 0.5);
-    const matKrem = M(0xfdf3d8), matKrem2 = M(0xf3e5c3), matPutih = M(0xf8f3e4);
-    const matAtapI = M(0x2e5d43, 0.9);
-    const matBatu = M(0xb8a888), matBatuT = M(0xcabfa5);
-    const matKayu = M(0x6b4423), matBesi = M(0x2f2a26, 0.6);
-    const matHedge = M(0x3d7a44), matTanah = M(0x5d4630), matKarpet = M(0xa31f34);
-    const matJendelaIstana = new THREE.MeshStandardMaterial({ color: 0x39566b, emissive: 0xffc98a, emissiveIntensity: 0.25, roughness: 0.35, flatShading: true });
+    const matEmas = new THREE.MeshStandardMaterial({ color: 0xe0aa3e, roughness: 0.28, metalness: 0.72, flatShading: false });
+    const matEmasT = new THREE.MeshStandardMaterial({ color: 0xf5c249, roughness: 0.22, metalness: 0.78, flatShading: false });
+    const matKrem = new THREE.MeshStandardMaterial({ color: 0xfdf3d8, roughness: 0.86, metalness: 0.02 });
+    const matKrem2 = new THREE.MeshStandardMaterial({ color: 0xf3e5c3, roughness: 0.84, metalness: 0.02 });
+    const matPutih = new THREE.MeshStandardMaterial({ color: 0xfbf8f0, roughness: 0.62, metalness: 0.04, flatShading: false }); // kolom portico halus
+    const matAtapI = new THREE.MeshStandardMaterial({ color: 0x26543c, roughness: 0.68, metalness: 0.12 });
+    const matKubah = new THREE.MeshStandardMaterial({ color: 0x26543c, roughness: 0.42, metalness: 0.22, flatShading: false }); // kubah mulus mengilap
+    const matBatu = M(0xb8a888, 0.92), matBatuT = M(0xcabfa5, 0.88);
+    const matKayu = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.65, metalness: 0.05 });
+    const matBesi = new THREE.MeshStandardMaterial({ color: 0x26292d, roughness: 0.45, metalness: 0.55 });
+    const matHedge = M(0x3d7a44), matTanah = M(0x5d4630), matKarpet = M(0xa31f34, 0.95);
+    const matJendelaIstana = new THREE.MeshStandardMaterial({
+      color: 0x2b475c, emissive: 0xffc98a, emissiveIntensity: 0.25,
+      roughness: 0.12, metalness: 0.45, flatShading: false,
+    });
     MAT_JENDELA.mat = matJendelaIstana;
-    const matKepalaTaman = new THREE.MeshStandardMaterial({ color: 0xffe2ae, emissive: 0xffc37a, emissiveIntensity: 0.85, roughness: 0.6, flatShading: true });
+    const matKepalaTaman = new THREE.MeshStandardMaterial({
+      color: 0xffe2ae, emissive: 0xffc37a, emissiveIntensity: 0.85, roughness: 0.35, flatShading: false,
+    });
     LAMPU_TAMAN.mat = matKepalaTaman;
     function kotakM(w, h, d, mat, x, y, z) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -103,9 +113,13 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
        Grup menghadap +z, titik asal di tengah jendela. */
     function jendelaEmas(x, y, z, rotY, skala) {
       const jg = new THREE.Group(); const s = skala || 1;
-      jg.add(kotakM(1.6 * s, 2.2 * s, 0.14, matEmas, 0, 0, 0));
-      const kaca = kotakM(1.3 * s, 1.9 * s, 0.1, matJendelaIstana, 0, 0, 0.05); kaca.castShadow = false; jg.add(kaca);
-      jg.add(kotakM(1.9 * s, 0.18 * s, 0.34, matKrem2, 0, -1.18 * s, 0.06));
+      jg.add(kotakM(1.64 * s, 2.24 * s, 0.14, matEmas, 0, 0, 0));
+      const kaca = kotakM(1.32 * s, 1.92 * s, 0.1, matJendelaIstana, 0, 0, 0.05);
+      kaca.castShadow = false; jg.add(kaca);
+      // Kusen silang emas
+      jg.add(kotakM(0.08 * s, 1.92 * s, 0.06, matEmas, 0, 0, 0.09));
+      jg.add(kotakM(1.32 * s, 0.08 * s, 0.06, matEmas, 0, 0.12 * s, 0.09));
+      jg.add(kotakM(1.94 * s, 0.20 * s, 0.36, matKrem2, 0, -1.18 * s, 0.08));
       jg.position.set(x, y, z); jg.rotation.y = rotY || 0; return jg;
     }
     // podium & pelataran
@@ -163,7 +177,7 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     g.add(silM(2.4, 2.4, 3.4, 14, matKrem, 0, 15.6, -0.5));               // drum menara y[13.9,17.3] (dasar tertanam di atap)
     g.add(silM(2.58, 2.58, 0.32, 14, matEmas, 0, 17.3, -0.5));            // lis emas drum
     g.add(silM(3.15, 3.15, 0.25, 14, matKrem2, 0, 17.42, -0.5));          // cincin alas kubah
-    const kubah = new THREE.Mesh(new THREE.SphereGeometry(3.1, 14, 9, 0, Math.PI * 2, 0, Math.PI / 2), matAtapI);
+    const kubah = new THREE.Mesh(new THREE.SphereGeometry(3.1, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), matKubah);
     kubah.position.set(0, 17.55, -0.5); kubah.scale.y = 1.22; kubah.castShadow = true; g.add(kubah);
     g.add(silM(0.1, 0.14, 1.65, 6, matEmasT, 0, 21.9, -0.5));             // tiang puncak
     g.add(bolaM(0.45, matEmasT, 0, 23.03, -0.5));                         // bola emas puncak (±23.5 = titik tertinggi istana)
@@ -225,7 +239,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     const am = new THREE.Group();
     am.add(silM(3.7, 3.95, 0.75, 16, matBatu, 0, 0.38, 0));
     am.add(silM(3.9, 3.9, 0.22, 16, matBatuT, 0, 0.82, 0));
-    const air = silM(3.45, 3.45, 0.08, 16, new THREE.MeshStandardMaterial({ color: 0x6fb7cf, roughness: 0.25, flatShading: true, transparent: true, opacity: 0.9 }), 0, 0.8, 0);
+    const air = silM(3.45, 3.45, 0.08, 24,
+      new THREE.MeshStandardMaterial({ color: 0x4fa9c9, roughness: 0.08, metalness: 0.18, transparent: true, opacity: 0.9 }), 0, 0.8, 0);
     air.castShadow = false; am.add(air);
     am.add(silM(0.45, 0.68, 1.05, 10, matBatuT, 0, 1.3, 0));
     am.add(silM(1.35, 0.85, 0.4, 12, matBatuT, 0, 1.98, 0));

@@ -9,7 +9,8 @@
    Semua mobil = 2 InstancedMesh (badan berwarna per instans + detail
    kaca/lampu/roda berwarna verteks) per kelompok -> murah di HP. */
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
-import { PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
+import { M, PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
+import { rintanganFasilitas } from "./rumah.js";
 
 export const WARNA_MOBIL = [0xd9462e, 0x3f6fb5, 0xf2f2ee, 0x2b2d30, 0x9aa0a6, 0xe8c268, 0x2e8b57, 0x7a1f2b, 0x5b7c99, 0xe8943a];
 
@@ -88,7 +89,7 @@ const LAJUR = 3.5;          // jarak as lajur dari as jalan
 const JARAK_HENTI = 7.8;    // pusat mobil berhenti 7,8 sebelum tepi kotak persimpangan (moncong di belakang garis henti 5,25)
 const JARAK_AMAN = 7.5;     // jarak minimum ke mobil di depan
 const KECEPATAN = 11;       // satuan/detik
-let node = null, mobil = [], inst = null;
+let node = null, mobilJalan = [], inst = null;
 
 function bangunJaringan() {
   const peta = new Map();
@@ -131,27 +132,27 @@ export function bangunLaluLintas() {
   node = bangunJaringan();
   if (!node.length) return;
   const N = Math.round(320 * Math.max(0.35, PARAM.kepadatan || 1)); // jalanan ramai
-  mobil = [];
+  mobilJalan = [];
   for (let i = 0; i < N; i++) {
     const n = node[Math.floor(hashInt(i * 17 + 3) * node.length)];
     const car = { warna: WARNA_MOBIL[i % WARNA_MOBIL.length], v: KECEPATAN * (0.85 + hashInt(i * 5) * 0.3) };
     mulaiRuas(car, n, n.tetangga[i % n.tetangga.length]);
     car.s = hashInt(i * 29 + 1) * car.panjang * 0.8;
-    mobil.push(car);
+    mobilJalan.push(car);
   }
   inst = buatInstans(N);
   const c = new THREE.Color();
-  mobil.forEach((m, i) => inst.badan.setColorAt(i, c.setHex(m.warna)));
+  mobilJalan.forEach((m, i) => inst.badan.setColorAt(i, c.setHex(m.warna)));
   if (inst.badan.instanceColor) inst.badan.instanceColor.needsUpdate = true;
   scene.add(inst.badan); scene.add(inst.detail);
 }
 const _d = new THREE.Object3D();
 export function perbaruiLaluLintasMobil(t, dt) {
-  if (!inst || !mobil.length) return;
+  if (!inst || !mobilJalan.length) return;
   const fase = faseLaluLintas(t);
   // indeks mobil per ruas berarah untuk menjaga jarak
   const perRuas = new Map();
-  for (const m of mobil) {
+  for (const m of mobilJalan) {
     if (m.fase !== "ruas") continue;
     const k = m.dari.kol + "," + m.dari.bar + ">" + m.ke.kol + "," + m.ke.bar;
     (perRuas.get(k) || perRuas.set(k, []).get(k)).push(m);
@@ -176,11 +177,11 @@ export function perbaruiLaluLintasMobil(t, dt) {
       }
     }
   }
-  for (const m of mobil) if (m.fase === "simpang") {
+  for (const m of mobilJalan) if (m.fase === "simpang") {
     m.ss += m.v * 0.8 * dt;
     if (m.ss >= m.sPanjang) mulaiRuas(m, m.ke, m.berikut);
   }
-  mobil.forEach((m, i) => {
+  mobilJalan.forEach((m, i) => {
     let x, z, hx, hz;
     if (m.fase === "ruas") {
       const f = m.panjang ? m.s / m.panjang : 0;
@@ -194,4 +195,106 @@ export function perbaruiLaluLintasMobil(t, dt) {
     inst.badan.setMatrixAt(i, _d.matrix); inst.detail.setMatrixAt(i, _d.matrix);
   });
   inst.badan.instanceMatrix.needsUpdate = true; inst.detail.instanceMatrix.needsUpdate = true;
+}
+
+export function mobil(g, x, z, ry, warna) {
+    const grup = new THREE.Group();
+    const matBody = M(warna, 0.45);
+    const matKaca = M(0x1e2c36, 0.25);
+    const matBan = M(0x1e2024, 0.9);
+    const matVelg = M(0xcfd4dc, 0.35);
+
+    // 1. Bodi bawah & kap mesin
+    const bodiBawah = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.62, 4.25), matBody);
+    bodiBawah.position.set(0, 0.68, 0);
+    bodiBawah.castShadow = true; bodiBawah.receiveShadow = true;
+    grup.add(bodiBawah);
+
+    // 2. Kabin penumpang
+    const kabin = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.6, 2.15), matBody);
+    kabin.position.set(0, 1.28, -0.2);
+    kabin.castShadow = true;
+    grup.add(kabin);
+
+    // 3. Kaca depan, belakang, & samping kabin
+    const kacaDepan = new THREE.Mesh(new THREE.BoxGeometry(1.56, 0.5, 0.06), matKaca);
+    kacaDepan.position.set(0, 1.26, 0.9);
+    kacaDepan.rotation.x = -0.22;
+    grup.add(kacaDepan);
+
+    const kacaBelakang = new THREE.Mesh(new THREE.BoxGeometry(1.56, 0.46, 0.06), matKaca);
+    kacaBelakang.position.set(0, 1.26, -1.3);
+    kacaBelakang.rotation.x = 0.22;
+    grup.add(kacaBelakang);
+
+    const kacaSamping = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.42, 1.8), matKaca);
+    kacaSamping.position.set(0, 1.28, -0.2);
+    grup.add(kacaSamping);
+
+    // 4. Bumper depan & belakang
+    const matBumper = M(0x2b2f33, 0.6);
+    const bumperD = new THREE.Mesh(new THREE.BoxGeometry(1.96, 0.22, 0.24), matBumper);
+    bumperD.position.set(0, 0.44, 2.1);
+    grup.add(bumperD);
+    const bumperB = bumperD.clone();
+    bumperB.position.z = -2.1;
+    grup.add(bumperB);
+
+    // 5. Lampu depan & rem
+    const matLampuD = M(0xfff3c4, 0.3);
+    const matLampuB = M(0xd62828, 0.3);
+    for (const s of [-1, 1]) {
+      const ld = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.16, 0.08), matLampuD);
+      ld.position.set(s * 0.66, 0.72, 2.13);
+      grup.add(ld);
+      const lb = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.15, 0.08), matLampuB);
+      lb.position.set(s * 0.66, 0.72, -2.13);
+      grup.add(lb);
+    }
+
+    // 6. Roda & Velg (silinder diputar 90 derajat)
+    const geoBan = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16);
+    const geoVelg = new THREE.CylinderGeometry(0.21, 0.21, 0.3, 12);
+    for (const [wx, wz] of [[-0.95, 1.3], [0.95, 1.3], [-0.95, -1.3], [0.95, -1.3]]) {
+      const ban = new THREE.Mesh(geoBan, matBan);
+      ban.rotation.z = Math.PI / 2;
+      ban.position.set(wx, 0.38, wz);
+      ban.castShadow = true;
+      grup.add(ban);
+      const velg = new THREE.Mesh(geoVelg, matVelg);
+      velg.rotation.z = Math.PI / 2;
+      velg.position.set(wx, 0.38, wz);
+      grup.add(velg);
+    }
+
+    grup.position.set(x, 0, z);
+    grup.rotation.y = ry || 0;
+    g.add(grup);
+    return grup;
+  }
+
+/* ============ MOBIL PAJANGAN: mobil() detail parkir di tepi jalan ============
+   8 mobil mesh penuh (bukan instanced) di tepi jalan dekat plaza &
+   fasilitas terbangun, di posisi trotoar tepi (di luar lajur lalu lintas
+   kendaraan.js maupun arteri kota.js). Tiap mobil didaftarkan sebagai
+   AABB di rintanganFasilitas agar kamera tidak menembusnya. */
+export function bangunMobilPajangan() {
+  const grup = new THREE.Group();
+  const tempat = [
+    // jalan selatan plaza (strip z 84..98), tepi utara z 85.3, menghadap timur
+    [-52, 85.3, Math.PI / 2, 0xd9462e], [-34, 85.3, Math.PI / 2, 0x3f6fb5],
+    [30, 85.3, Math.PI / 2, 0xe8c268], [48, 85.3, Math.PI / 2, 0xf2f0eb],
+    // jalan antara Taman (1879) & Blok 1880 (strip x -84..-70), tepi barat, menghadap utara
+    [-82.7, -140, Math.PI, 0x2e9e5b], [-82.7, -108, Math.PI, 0x5c6770],
+    // jalan barat Toko Pancing (1882) (strip x 84..98), tepi barat, menghadap selatan
+    [85.3, -140, 0, 0xe07a3f], [85.3, -104, 0, 0x4a7a8c],
+  ];
+  for (const [x, z, ry, warna] of tempat) {
+    mobil(grup, x, z, ry, warna);
+    const memanjangX = Math.abs(Math.sin(ry)) > 0.5;
+    const hx = memanjangX ? 2.15 : 0.97, hz = memanjangX ? 0.97 : 2.15;
+    rintanganFasilitas.push({ minX: x - hx, maxX: x + hx, minZ: z - hz, maxZ: z + hz });
+  }
+  scene.add(grup);
+  return grup;
 }

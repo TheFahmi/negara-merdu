@@ -29,14 +29,15 @@ type FasilitasDef struct {
 
 // Fasilitas: urutan tampil = biaya termurah dulu (sama seperti server.py).
 var Fasilitas = []FasilitasDef{
-	{Kunci: "taman", Nama: "Taman Desa", Biaya: 5_000_000, Kol: 38, Bar: 23},                // Blok 1879 (dipindah dari 1637 ke barat Blok 1880 — perintah Fahmi 2026-11-22, blok lama dinilai terlalu jauh dari keramaian)
-	{Kunci: "lapangan", Nama: "Lapangan Bola", Biaya: 8_000_000, Kol: 20, Bar: 36},          // Blok 2901
-	{Kunci: "perpustakaan", Nama: "Perpustakaan Desa", Biaya: 12_000_000, Kol: 12, Bar: 12}, // Blok 973
-	{Kunci: "balai_warga", Nama: "Balai Warga", Biaya: 15_000_000, Kol: 68, Bar: 12},        // Blok 1029
-	{Kunci: "sekolah", Nama: "Sekolah Dasar", Biaya: 20_000_000, Kol: 52, Bar: 20},          // Blok 1653
-	{Kunci: "puskesmas", Nama: "Puskesmas", Biaya: 25_000_000, Kol: 60, Bar: 36},            // Blok 2941
-	{Kunci: "pasar", Nama: "Pasar Desa", Biaya: 30_000_000, Kol: 28, Bar: 28},               // Blok 2269
-	{Kunci: "masjid", Nama: "Masjid", Biaya: 40_000_000, Kol: 44, Bar: 28},                  // Blok 2285
+	{Kunci: "taman", Nama: "Taman Desa", Biaya: 5_000_000, Kol: 38, Bar: 23},                     // Blok 1879 (dipindah dari 1637 ke barat Blok 1880 — perintah Fahmi 2026-11-22, blok lama dinilai terlalu jauh dari keramaian)
+	{Kunci: "lapangan", Nama: "Lapangan Bola", Biaya: 8_000_000, Kol: 20, Bar: 36},               // Blok 2901
+	{Kunci: "perpustakaan", Nama: "Perpustakaan Desa", Biaya: 12_000_000, Kol: 12, Bar: 12},      // Blok 973
+	{Kunci: "balai_warga", Nama: "Balai Warga", Biaya: 15_000_000, Kol: 68, Bar: 12},             // Blok 1029
+	{Kunci: "sekolah", Nama: "Sekolah Dasar", Biaya: 20_000_000, Kol: 52, Bar: 20},               // Blok 1653
+	{Kunci: "puskesmas", Nama: "Puskesmas", Biaya: 25_000_000, Kol: 60, Bar: 36},                 // Blok 2941
+	{Kunci: "pasar", Nama: "Pasar Desa", Biaya: 30_000_000, Kol: 28, Bar: 28},                    // Blok 2269
+	{Kunci: "masjid", Nama: "Masjid", Biaya: 40_000_000, Kol: 44, Bar: 28},                       // Blok 2285
+	{Kunci: "apartemen", Nama: "Apartemen Merdu Residence", Biaya: 50_000_000, Kol: 39, Bar: 26}, // Blok 2120 (perintah Fahmi 2026-11-22: apartemen dipasang sebagai rencana pembangunan di selatan plaza)
 }
 
 // FasilitasVoting: bangunan di luar 8 fasilitas baku, hasil voting

@@ -117,6 +117,11 @@ function tiangBendera(g, x, z) {
   b.position.set(x + 1.25, 7.9, z); g.add(b);
 }
 
+/* State animasi Apartemen Residensia 10 (lift kaca + pintu geser +
+   air kolam rooftop) — diisi apartemen() saat gedungnya dibangun;
+   selama belum terbangun kabin null dan perbaruiApartemen() kembali. */
+const LIFT_APT = { kabin: null, pintuKabinKiri: null, pintuKabinKanan: null, pintuLantai: [], airKolam: null, lantai: 0, tujuan: 4, fase: "diam", timer: 1.5, bukaan: 0, ySaatIni: 0.5 };
+
 export const MODEL_BARU = {
   /* ===== LAPANGAN BOLA: stadion mini ===== */
   lapangan(g) {
@@ -379,10 +384,231 @@ export const MODEL_BARU = {
     for (const [x, z] of [[-21, 10], [21, 10], [-21, 20], [21, 20], [-12, 22], [12, 22]]) g.add(pohonKecil(x, z, 0.9));
     parkir(g, 22, -12, 4, true);
   },
+  /* ===== APARTEMEN RESIDENSIA 10: 10 lantai, kaca transparan, 36 unit interior 3D instanced, lift kaca & rooftop pool ===== */
+  apartemen(g) {
+    lingkungan(g, { jalanSampai: 12, lebarJalan: 8, lebarGerbang: 5, pohon: false });
+    const BZ = -5; // pusat Z gedung (meninggalkan halaman depan luas)
+    const W = 24, D = 16, T_LOBI = 4.4, T_LT = 3.2, N_HUNIAN = 9;
+    const Y_MULAI = 0.5 + T_LOBI; // 4.9
+
+    const matKaca = new THREE.MeshStandardMaterial({
+      color: 0xb5e2f5, roughness: 0.08, metalness: 0.25,
+      transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const matTirai = new THREE.MeshStandardMaterial({
+      color: 0xfbf7f0, roughness: 0.9, transparent: true, opacity: 0.65,
+    });
+    const matLampu = new THREE.MeshStandardMaterial({
+      color: 0xfff3d4, emissive: 0xffd088, emissiveIntensity: 1.15, roughness: 0.4,
+    });
+    const matBaja = new THREE.MeshStandardMaterial({ color: 0x323b42, roughness: 0.4, metalness: 0.55 });
+    const matPintuLift = new THREE.MeshStandardMaterial({ color: 0x8f9aa3, roughness: 0.28, metalness: 0.65 });
+
+    // --- 1. LANTAI 1: LOBI KOMERSIAL TRANSPARAN ---
+    g.add(kotak(W + 3, 0.5, D + 3, BATU, 0, 0.25, BZ));
+    g.add(kotak(W, 0.12, D, 0xe8e2d5, 0, 0.56, BZ)); // lantai marmer lobi
+    // 6 pilar struktural lobi
+    for (const px of [-W / 2 + 0.5, 0, W / 2 - 0.5]) for (const pz of [BZ - D / 2 + 0.5, BZ + D / 2 - 0.5]) {
+      g.add(kotak(0.9, T_LOBI, 0.9, 0xded8cc, px, 0.5 + T_LOBI / 2, pz));
+    }
+    // Dinding belakang & samping lobi + kaca transparan depan
+    g.add(kotak(W, T_LOBI, 0.35, 0xeae4d7, 0, 0.5 + T_LOBI / 2, BZ - D / 2 + 0.2));
+    g.add(kotak(0.35, T_LOBI, D, 0xeae4d7, -W / 2 + 0.2, 0.5 + T_LOBI / 2, BZ));
+    const kacaLobiD = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.2, T_LOBI - 0.4), matKaca);
+    kacaLobiD.position.set(0, 0.5 + T_LOBI / 2, BZ + D / 2 - 0.1); g.add(kacaLobiD);
+    // Kanopi drop-off lobi
+    g.add(kotak(10, 0.32, 4.8, 0x2f3840, 0, 4.5, BZ + D / 2 + 2.4));
+    for (const sx of [-4.5, 4.5]) g.add(kotak(0.32, 4.3, 0.32, 0x2f3840, sx, 2.35, BZ + D / 2 + 4.4));
+    // Interior lobi: meja resepsionis, sofa tunggu, lampu plafon
+    g.add(kotak(5.2, 1.15, 1.1, 0x6b4423, 0, 1.15, BZ - 3.5));
+    g.add(kotak(5.4, 0.12, 1.25, 0xf6efe0, 0, 1.75, BZ - 3.5));
+    for (const sx of [-6.5, 6.5]) {
+      g.add(kotak(3.2, 0.55, 1.1, 0x8b7e74, sx, 0.85, BZ + 1.8));
+      g.add(kotak(1.6, 0.35, 0.9, 0x7a4a21, sx, 0.72, BZ + 3.6));
+    }
+    const lampuLobi = new THREE.Mesh(new THREE.BoxGeometry(14, 0.12, 1.2), matLampu);
+    lampuLobi.position.set(0, Y_MULAI - 0.22, BZ); g.add(lampuLobi);
+
+    // --- 2. LANTAI 2–10: STRUKTUR BERBUKAAN NYATA + 36 UNIT INTERIOR INSTANCED ---
+    const unitList = []; // 36 unit: 9 lantai x 4 unit (2 depan, 2 belakang)
+    for (let lt = 0; lt < N_HUNIAN; lt++) {
+      const y = Y_MULAI + lt * T_LT;
+      // Pelat lantai + koridor tengah + partisi antar unit
+      g.add(kotak(W + 0.8, 0.26, D + 0.8, 0xd9d3c6, 0, y, BZ));
+      g.add(kotak(W - 0.6, T_LT - 0.26, 0.22, 0xf2ece0, 0, y + T_LT / 2, BZ - 1.1)); // dinding koridor utara
+      g.add(kotak(W - 0.6, T_LT - 0.26, 0.22, 0xf2ece0, 0, y + T_LT / 2, BZ + 1.1)); // dinding koridor selatan
+      g.add(kotak(0.24, T_LT - 0.26, D - 0.6, 0xf2ece0, 0, y + T_LT / 2, BZ));       // partisi tengah (kiri/kanan)
+
+      // Fasad depan (+z) & belakang (-z) dengan BUKAAN FISIK NYATA
+      for (const s of [-1, 1]) {
+        const zMuka = BZ + s * (D / 2 - 0.15);
+        // 3 Pilar vertikal (kiri, tengah, kanan) + spandrel bawah + header atas
+        for (const px of [-W / 2 + 0.45, 0, W / 2 - 0.45]) {
+          g.add(kotak(0.9, T_LT, 0.42, PUTIH, px, y + T_LT / 2, zMuka));
+        }
+        g.add(kotak(W, 0.48, 0.34, 0xe8e2d5, 0, y + 0.36, zMuka));          // spandrel bawah
+        g.add(kotak(W, 0.42, 0.34, 0xe8e2d5, 0, y + T_LT - 0.21, zMuka));   // header atas
+
+        // Kaca transparan, tirai & balkon untuk 2 unit di sisi ini
+        for (const ux of [-6, 6]) {
+          const kacaU = new THREE.Mesh(new THREE.PlaneGeometry(10.8, T_LT - 0.9), matKaca);
+          kacaU.position.set(ux, y + T_LT / 2, zMuka); g.add(kacaU);
+          // Tirai tipis di sisi dalam
+          for (const ts of [-4.6, 4.6]) {
+            const tr = new THREE.Mesh(new THREE.BoxGeometry(1.3, T_LT - 0.95, 0.06), matTirai);
+            tr.position.set(ux + ts, y + T_LT / 2, zMuka - s * 0.22); g.add(tr);
+          }
+          // Balkon + railing kaca transparan
+          g.add(kotak(6.2, 0.18, 1.5, 0xd9d3c6, ux, y + 0.08, zMuka + s * 0.85));
+          const railK = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.88, 0.07), matKaca);
+          railK.position.set(ux, y + 0.56, zMuka + s * 1.55); g.add(railK);
+          g.add(kotak(6.2, 0.07, 0.10, 0x323b42, ux, y + 1.02, zMuka + s * 1.55));
+
+          unitList.push({ x: ux, y: y + 0.14, z: BZ + s * 4.4, s, idx: unitList.length });
+        }
+      }
+      // Dinding samping barat (-x) berjendela transparan
+      g.add(kotak(0.32, T_LT, 3.6, PUTIH, -W / 2 + 0.16, y + T_LT / 2, BZ));
+      g.add(kotak(0.32, 0.7, D, PUTIH, -W / 2 + 0.16, y + 0.48, BZ));
+      g.add(kotak(0.32, 0.5, D, PUTIH, -W / 2 + 0.16, y + T_LT - 0.25, BZ));
+      const kacaBarat = new THREE.Mesh(new THREE.PlaneGeometry(D - 1.2, T_LT - 1.1), matKaca);
+      kacaBarat.rotation.y = Math.PI / 2;
+      kacaBarat.position.set(-W / 2 + 0.16, y + T_LT / 2, BZ); g.add(kacaBarat);
+    }
+
+    // Instanced Interior untuk ke-36 Unit (100% 3D nyata, super hemat draw call)
+    const N = unitList.length;
+    const dummy = new THREE.Object3D(), col = new THREE.Color();
+    const PALET_SOFA = [0xd4c3a3, 0x7a9685, 0x627385, 0xb86d52];
+    const buatIM = (geo, mat, pakaiWarna) => {
+      const im = new THREE.InstancedMesh(geo, mat, N);
+      im.frustumCulled = false;
+      g.add(im);
+      return { im, pakaiWarna };
+    };
+    const imLantai = buatIM(new THREE.BoxGeometry(10.8, 0.05, 6.2), M(0xb88b58, 0.85));
+    const imSofa   = buatIM(new THREE.BoxGeometry(2.8, 0.58, 1.05), new THREE.MeshStandardMaterial({ roughness: 0.85 }), true);
+    const imMeja   = buatIM(new THREE.BoxGeometry(1.4, 0.36, 0.72), M(0x6b4423, 0.75));
+    const imTV     = buatIM(new THREE.BoxGeometry(1.9, 1.05, 0.10), M(0x1b2228, 0.35));
+    const imKasur  = buatIM(new THREE.BoxGeometry(2.4, 0.45, 2.2), M(0xf8f4ec, 0.9));
+    const imSelim  = buatIM(new THREE.BoxGeometry(2.44, 0.12, 1.35), new THREE.MeshStandardMaterial({ roughness: 0.88 }), true);
+    const imKisi   = buatIM(new THREE.BoxGeometry(3.2, 2.4, 0.10), M(0x8c5e35, 0.8)); // dinding aksen kayu
+    const imLampuU = buatIM(new THREE.BoxGeometry(2.6, 0.08, 0.7), matLampu);
+
+    unitList.forEach((u, i) => {
+      const rot = u.s > 0 ? 0 : Math.PI;
+      const set = (item, dx, dy, dz, warnaHex) => {
+        const px = u.x + dx * (u.s > 0 ? 1 : -1), pz = u.z + dz * u.s;
+        dummy.position.set(px, u.y + dy, pz);
+        dummy.rotation.set(0, rot, 0);
+        dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+        item.im.setMatrixAt(i, dummy.matrix);
+        if (item.pakaiWarna && warnaHex != null) item.im.setColorAt(i, col.setHex(warnaHex));
+      };
+      const wAksen = PALET_SOFA[i % PALET_SOFA.length];
+      set(imLantai, 0, 0.03, 0);
+      set(imSofa,  -2.6, 0.32, -0.6, wAksen);
+      set(imMeja,  -2.6, 0.21,  0.9);
+      set(imTV,    -2.6, 1.25,  2.2);
+      set(imKasur,  2.6, 0.26, -0.5);
+      set(imSelim,  2.6, 0.54,  0.0, wAksen);
+      set(imKisi,   2.6, 1.30, -2.5);
+      set(imLampuU, 0,   2.85,  0);
+    });
+    for (const it of [imLantai, imSofa, imMeja, imTV, imKasur, imSelim, imKisi, imLampuU]) {
+      it.im.instanceMatrix.needsUpdate = true;
+      if (it.im.instanceColor) it.im.instanceColor.needsUpdate = true;
+    }
+
+    // --- 3. ROOFTOP: INFINITY POOL, PERGOLA & TAMAN ATAP ---
+    const Y_ATAP = Y_MULAI + N_HUNIAN * T_LT; // 33.7
+    g.add(kotak(W + 1.0, 0.4, D + 1.0, 0xd8d2c5, 0, Y_ATAP + 0.2, BZ));
+    // Parapet kaca keliling rooftop
+    for (const s of [-1, 1]) {
+      const pk = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 1.1, 0.1), matKaca);
+      pk.position.set(0, Y_ATAP + 0.95, BZ + s * (D / 2 + 0.35)); g.add(pk);
+      g.add(kotak(W + 0.8, 0.08, 0.14, 0x323b42, 0, Y_ATAP + 1.52, BZ + s * (D / 2 + 0.35)));
+    }
+    // Infinity Pool (sisi timur-depan rooftop)
+    g.add(kotak(11.6, 0.55, 6.6, 0xc9c2b2, 4.8, Y_ATAP + 0.65, BZ + 2.2));
+    const airPool = new THREE.Mesh(new THREE.BoxGeometry(10.6, 0.18, 5.6),
+      new THREE.MeshStandardMaterial({ color: 0x2ea8cc, emissive: 0x0c4a60, emissiveIntensity: 0.35, roughness: 0.08, metalness: 0.2 }));
+    airPool.position.set(4.8, Y_ATAP + 0.92, BZ + 2.2); g.add(airPool);
+    LIFT_APT.airKolam = airPool;
+    // Dek kayu + 3 kursi jemur + pergola kayu
+    g.add(kotak(10, 0.14, 6.6, 0x9c6b3f, -6.2, Y_ATAP + 0.47, BZ + 2.2));
+    for (let i = 0; i < 3; i++) {
+      g.add(kotak(1.2, 0.26, 2.6, 0xf6efe0, -9.0 + i * 2.6, Y_ATAP + 0.68, BZ + 2.2));
+    }
+    for (const [px, pz] of [[-10.5, BZ - 6], [-2.5, BZ - 6], [-10.5, BZ - 2], [-2.5, BZ - 2]]) {
+      g.add(kotak(0.24, 3.0, 0.24, 0x6b4423, px, Y_ATAP + 1.9, pz));
+    }
+    for (let i = 0; i < 6; i++) g.add(kotak(8.6, 0.14, 0.22, 0x7a4a21, -6.5, Y_ATAP + 3.4, BZ - 6 + i * 0.8));
+    // Ruang mesin lift di atap
+    g.add(kotak(5.2, 3.2, 5.2, 0xeae4d7, 8.6, Y_ATAP + 2.0, BZ - 4.8));
+
+    // --- 4. LIFT KACA PANORAMIK & PINTU GESER SINKRON (SISI TIMUR) ---
+    const LX = W / 2 + 2.1; // x = 14.1
+    const tinggiShaft = Y_ATAP + 0.4;
+    // Rangka baja vertikal shaft + dinding kaca panoramik
+    for (const dx of [-1.4, 1.4]) for (const dz of [-1.4, 1.4]) {
+      const tiang = new THREE.Mesh(new THREE.BoxGeometry(0.18, tinggiShaft, 0.18), matBaja);
+      tiang.position.set(LX + dx, tinggiShaft / 2, BZ + dz); g.add(tiang);
+    }
+    const kacaShaftD = new THREE.Mesh(new THREE.BoxGeometry(2.7, tinggiShaft, 2.7), matKaca);
+    kacaShaftD.position.set(LX, tinggiShaft / 2, BZ); g.add(kacaShaftD);
+
+    // Vestibul & Pintu Geser Gedung di ke-10 Lantai (Lantai 1–10)
+    LIFT_APT.pintuLantai = [];
+    for (let lt = 0; lt < 10; lt++) {
+      const yLt = lt === 0 ? 0.5 : Y_MULAI + (lt - 1) * T_LT;
+      // Jembatan vestibul dari gedung ke shaft lift
+      g.add(kotak(1.6, 0.22, 2.8, 0xd9d3c6, W / 2 + 0.5, yLt, BZ));
+      // Kusen pintu lift gedung
+      g.add(kotak(0.16, 2.45, 2.2, 0x323b42, W / 2 + 0.72, yLt + 1.25, BZ));
+      const pKiri  = new THREE.Mesh(new THREE.BoxGeometry(0.10, 2.25, 0.92), matPintuLift);
+      const pKanan = new THREE.Mesh(new THREE.BoxGeometry(0.10, 2.25, 0.92), matPintuLift);
+      pKiri.position.set(W / 2 + 0.76, yLt + 1.18, BZ - 0.47);
+      pKanan.position.set(W / 2 + 0.76, yLt + 1.18, BZ + 0.47);
+      g.add(pKiri); g.add(pKanan);
+      LIFT_APT.pintuLantai.push({ kiri: pKiri, kanan: pKanan, y: yLt, bz: BZ });
+    }
+
+    // Kabin Lift Kaca + Pintu Geser Kabin
+    const kabin = new THREE.Group();
+    kabin.add(kotak(2.4, 0.18, 2.4, 0x323b42, 0, 0.09, 0));
+    kabin.add(kotak(2.4, 0.18, 2.4, 0x323b42, 0, 2.45, 0));
+    const lampuKabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 1.6), matLampu);
+    lampuKabin.position.set(0, 2.34, 0); kabin.add(lampuKabin);
+    const kacaKabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.2, 2.2), matKaca);
+    kacaKabin.position.set(0, 1.25, 0); kabin.add(kacaKabin);
+    const pkKiri  = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.2, 0.9), matPintuLift);
+    const pkKanan = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.2, 0.9), matPintuLift);
+    pkKiri.position.set(-1.12, 1.22, -0.46);
+    pkKanan.position.set(-1.12, 1.22, 0.46);
+    kabin.add(pkKiri); kabin.add(pkKanan);
+    kabin.position.set(LX, 0.5, BZ);
+    g.add(kabin);
+    LIFT_APT.kabin = kabin;
+    LIFT_APT.pintuKabinKiri = pkKiri;
+    LIFT_APT.pintuKabinKanan = pkKanan;
+
+    // --- 5. PARKIR, MOBIL & POHON ---
+    parkir(g, -18, 18, 4, false);
+    mobil(g, -21.2, 18, 0, 0x3f6fb5);
+    mobil(g, -14.8, 18, 0, 0xd9462e);
+    mobil(g, 0, 12.5, Math.PI / 2, 0xf2f0eb); // mobil drop-off di depan lobi
+    for (const [px, pz] of [[-29, -28], [29, -28], [-29, 28], [29, 28], [-29, 0], [29, 8]]) {
+      g.add(pohonKecil(px, pz, 1.05));
+    }
+    papanDepan(g, "RESIDENSIA 10", "Apartemen Modern 10 Lantai", 13, 28, 0.65);
+  },
+
 };
 
 /* Tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok — bangunan berdinding saja. */
 export const TAPAK_BARU = {
+  apartemen: [[-13.5, -14.5, 16.0, 4.5]],
   lapangan: [[-21, -31.5, 21, -24.5], [-21, 24.5, 21, 31.5], [-33, -3, -32, 3]],       // tribun + papan skor
   perpustakaan: [[-12.6, -16.6, 12.6, -1.4], [-6, -0.2, 6, 2.6]],
   balai_warga: [[-27.6, 9.4, -16.4, 18.6]],                                            // kantor (pendopo terbuka bisa dimasuki)
@@ -391,3 +617,51 @@ export const TAPAK_BARU = {
   pasar: [],                                                                           // los & lapak terbuka
   masjid: [[-12, -19, 12, -1.5], [-17.4, 2.2, -13.6, 5.8], [13.6, 2.2, 17.4, 5.8], [-14.8, 9.2, -7.2, 16.8], [7.2, 9.2, 14.8, 16.8], [-23, -14, -19, -2]],
 };
+
+export function perbaruiApartemen(dt, t) {
+  if (!LIFT_APT.kabin) return;
+  const st = LIFT_APT;
+  const targetY = st.pintuLantai[st.tujuan] ? st.pintuLantai[st.tujuan].y : 0.5;
+
+  if (st.fase === "diam") {
+    st.timer -= dt;
+    if (st.timer <= 0) {
+      st.tujuan = (st.lantai + 1 + Math.floor((t * 1.7) % 8)) % 10;
+      if (st.tujuan === st.lantai) st.tujuan = (st.lantai + 3) % 10;
+      st.fase = "gerak";
+    }
+  } else if (st.fase === "gerak") {
+    const dy = targetY - st.ySaatIni;
+    const langkah = Math.sign(dy) * Math.min(Math.abs(dy), 5.5 * dt);
+    st.ySaatIni += langkah;
+    st.kabin.position.y = st.ySaatIni;
+    if (Math.abs(targetY - st.ySaatIni) < 0.02) {
+      st.ySaatIni = targetY; st.kabin.position.y = targetY;
+      st.lantai = st.tujuan; st.fase = "buka";
+    }
+  } else if (st.fase === "buka") {
+    st.bukaan = Math.min(1, st.bukaan + dt * 1.8);
+    if (st.bukaan >= 1) { st.fase = "tunggu"; st.timer = 2.0; }
+  } else if (st.fase === "tunggu") {
+    st.timer -= dt;
+    if (st.timer <= 0) st.fase = "tutup";
+  } else if (st.fase === "tutup") {
+    st.bukaan = Math.max(0, st.bukaan - dt * 1.8);
+    if (st.bukaan <= 0) { st.fase = "diam"; st.timer = 1.0; }
+  }
+
+  // Sinkronkan pintu geser kabin & pintu lantai aktif
+  const geser = st.bukaan * 0.78;
+  st.pintuKabinKiri.position.z = -0.46 - geser;
+  st.pintuKabinKanan.position.z = 0.46 + geser;
+  const pl = st.pintuLantai[st.lantai];
+  if (pl) {
+    pl.kiri.position.z = pl.bz - 0.47 - geser;
+    pl.kanan.position.z = pl.bz + 0.47 + geser;
+  }
+
+  // Animasi halus riak air infinity pool rooftop
+  if (st.airKolam) {
+    st.airKolam.position.y = 33.7 + 0.92 + Math.sin(t * 2.2) * 0.025;
+  }
+}

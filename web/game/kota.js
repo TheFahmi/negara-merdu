@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
-import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
+import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
   export function bangunKotaMassal() {
@@ -198,7 +198,12 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
        Dekorasi jalan tidak ditabrak pemain, sama seperti dekorasi kavling. */
     const elJalan = elemenJalan();
     const geoBatangJ = new THREE.CylinderGeometry(0.3, 0.45, 2.8, 6); geoBatangJ.translate(0, 1.4, 0);
-    const geoDaunJ = new THREE.IcosahedronGeometry(2.35, 0); geoDaunJ.translate(0, 4.1, 0);
+    const geoDaunJ = gabungGeometri([
+  { geo: new THREE.IcosahedronGeometry(2.1, 1), x: 0, y: 3.9, z: 0 },
+  { geo: new THREE.IcosahedronGeometry(1.45, 1), x: 1.0, y: 3.3, z: 0.6 },
+  { geo: new THREE.IcosahedronGeometry(1.4, 1), x: -0.9, y: 3.4, z: -0.5 },
+  { geo: new THREE.IcosahedronGeometry(1.3, 1), x: 0.1, y: 5.1, z: -0.1 },
+]);
     const imBatangJ = new THREE.InstancedMesh(geoBatangJ,
       new THREE.MeshStandardMaterial({ color: 0x8a5a30, roughness: 1, flatShading: true }), Math.max(1, elJalan.pohon.length));
     const imDaunJ = new THREE.InstancedMesh(geoDaunJ,
@@ -209,15 +214,22 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
       dummy.updateMatrix(); imBatangJ.setMatrixAt(i, dummy.matrix); imDaunJ.setMatrixAt(i, dummy.matrix);
       imDaunJ.setColorAt(i, warna.setHex(WARNA_SEMAK[Math.floor(p.h * 4) % 4]));
     });
-    const geoTiangL = new THREE.BoxGeometry(0.2, 4.6, 0.2); geoTiangL.translate(0, 2.3, 0);
-    const geoKepalaL = new THREE.BoxGeometry(0.55, 0.28, 0.55); geoKepalaL.translate(0, 4.75, 0);
+    const geoTiangL = gabungGeometri([
+  { geo: new THREE.CylinderGeometry(0.24, 0.28, 0.35, 8), x: 0, y: 0.175, z: 0 }, // pondasi
+  { geo: new THREE.CylinderGeometry(0.09, 0.13, 4.8, 8), x: 0, y: 2.55, z: 0 },   // tiang utama
+  { geo: new THREE.BoxGeometry(1.15, 0.10, 0.10), x: 0.52, y: 4.88, z: 0 },       // lengan lampu
+]);
+const geoKepalaL = new THREE.BoxGeometry(0.58, 0.14, 0.32);
+geoKepalaL.translate(1.02, 4.80, 0);
     const imTiangL = new THREE.InstancedMesh(geoTiangL,
       new THREE.MeshStandardMaterial({ color: 0x46524a, roughness: 0.8, flatShading: true }), Math.max(1, elJalan.lampu.length));
     const imKepalaL = new THREE.InstancedMesh(geoKepalaL,
       new THREE.MeshStandardMaterial({ color: 0xffe2ae, emissive: 0xffc37a, emissiveIntensity: 0.85, roughness: 0.6, flatShading: true }), Math.max(1, elJalan.lampu.length));
     LAMPU_JALAN.matKepala = imKepalaL.material; // fase waktu (?v=15) mengatur nyala kepala lampu dari sini
+    const X_LAMPU_VERTIKAL = [0, 20, 40, 60].map(kol => sudutBlok(kol, 0).x + 15.2);
     elJalan.lampu.forEach((p, i) => {
-      dummy.position.set(p.x, 0, p.z); dummy.scale.set(1, 1, 1); dummy.rotation.set(0, 0, 0);
+      dummy.position.set(p.x, 0, p.z); dummy.scale.set(1, 1, 1);
+      dummy.rotation.set(0, X_LAMPU_VERTIKAL.some(x => Math.abs(p.x - x) < 0.01) ? Math.PI : Math.PI / 2, 0);
       dummy.updateMatrix(); imTiangL.setMatrixAt(i, dummy.matrix); imKepalaL.setMatrixAt(i, dummy.matrix);
     });
     for (const [mesh, penuh] of [[imBatangJ, elJalan.pohon.length], [imDaunJ, elJalan.pohon.length], [imTiangL, elJalan.lampu.length], [imKepalaL, elJalan.lampu.length]]) {
@@ -375,3 +387,126 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
      lahannya dilipat. Danau di blok (36,28) dipertahankan apa adanya: itu
      air alam di tengah lahan kosong, bukan bangunan (blok itu bukan lahan
      fasilitas). Pohon taman instanced lama dihapus dari blok-blok ini. */
+
+  /* ================= LALU LINTAS MOBIL (INSTANCED, LAJUR KIRI) ================= */
+  const MOBIL_AKTIF = { imBodi: null, imDetail: null, daftar: [] };
+  const _dummyM = new THREE.Object3D();
+
+  export function bangunLaluLintasMobil() {
+    // 1. Geometri bodi (diwarnai per instans via instanceColor)
+    const geoBodi = gabungGeometri([
+      { geo: new THREE.BoxGeometry(1.92, 0.62, 4.25), x: 0, y: 0.68, z: 0 },
+      { geo: new THREE.BoxGeometry(1.66, 0.60, 2.15), x: 0, y: 1.28, z: -0.2 },
+    ]);
+
+    // 2. Geometri detail statis (kaca, bumper, lampu, 4 roda + velg) via vertexColors
+    const bagianDet = [
+      { geo: new THREE.BoxGeometry(1.96, 0.22, 0.24), x: 0, y: 0.44, z: 2.10, warna: 0x2b2f33 },  // bumper depan
+      { geo: new THREE.BoxGeometry(1.96, 0.22, 0.24), x: 0, y: 0.44, z: -2.10, warna: 0x2b2f33 }, // bumper belakang
+      { geo: new THREE.BoxGeometry(1.56, 0.50, 0.08), x: 0, y: 1.26, z: 0.90, rx: -0.22, warna: 0x1e2c36 }, // kaca depan
+      { geo: new THREE.BoxGeometry(1.56, 0.46, 0.08), x: 0, y: 1.26, z: -1.30, rx: 0.22, warna: 0x1e2c36 }, // kaca belakang
+      { geo: new THREE.BoxGeometry(1.70, 0.42, 1.80), x: 0, y: 1.28, z: -0.20, warna: 0x1e2c36 }, // kaca samping
+    ];
+    for (const s of [-1, 1]) {
+      bagianDet.push({ geo: new THREE.BoxGeometry(0.36, 0.16, 0.08), x: s * 0.66, y: 0.72, z: 2.13, warna: 0xfff3c4 });  // lampu depan
+      bagianDet.push({ geo: new THREE.BoxGeometry(0.36, 0.15, 0.08), x: s * 0.66, y: 0.72, z: -2.13, warna: 0xd62828 }); // lampu rem
+    }
+    for (const [wx, wz] of [[-0.95, 1.3], [0.95, 1.3], [-0.95, -1.3], [0.95, -1.3]]) {
+      bagianDet.push({ geo: new THREE.CylinderGeometry(0.38, 0.38, 0.28, 12), x: wx, y: 0.38, z: wz, rz: Math.PI / 2, warna: 0x1e2024 });
+      bagianDet.push({ geo: new THREE.CylinderGeometry(0.21, 0.21, 0.30, 10), x: wx, y: 0.38, z: wz, rz: Math.PI / 2, warna: 0xcfd4dc });
+    }
+    const geoDetail = gabungBerwarna(bagianDet);
+
+    // Jalur arteri utama (di luar plaza): 4 jalur vertikal + 4 jalur horizontal (masing-masing 2 arah)
+    const daftar = [];
+    const PALET_MOBIL = [0xd9462e, 0x3f6fb5, 0xe8c268, 0x2e9e5b, 0xf2f0eb, 0x5c6770, 0xe07a3f, 0x4a7a8c];
+    const jalurUS = [20, 36, 44, 60]; // kolom jalan vertikal (lewati area plaza 38..41)
+    const jalurTB = [10, 20, 30, 40]; // baris jalan horizontal (lewati area plaza 24..25)
+
+    // 32 mobil sumbu Utara-Selatan (lajur kiri: +z di timur x0+10.5, -z di barat x0+3.5)
+    jalurUS.forEach((kol, ki) => {
+      const x0 = sudutBlok(kol, 0).x;
+      for (const arah of [1, -1]) {
+        const laneX = arah === 1 ? x0 + JALAN * 0.75 : x0 + JALAN * 0.25;
+        for (let m = 0; m < 4; m++) {
+          const idx = daftar.length;
+          daftar.push({
+            sumbu: "us", arah, tetap: laneX,
+            pos: -KOTA_D / 2 + ((m * 0.25 + hashInt(idx * 17 + 3) * 0.18) % 1) * KOTA_D,
+            kec: 16 + hashInt(idx * 31 + 7) * 10,
+            warna: PALET_MOBIL[idx % PALET_MOBIL.length],
+          });
+        }
+      }
+    });
+
+    // 32 mobil sumbu Timur-Barat (lajur kiri: +x di utara z0+3.5, -x di selatan z0+10.5)
+    jalurTB.forEach((bar, bi) => {
+      const z0 = sudutBlok(0, bar).z;
+      for (const arah of [1, -1]) {
+        const laneZ = arah === 1 ? z0 + JALAN * 0.25 : z0 + JALAN * 0.75;
+        for (let m = 0; m < 4; m++) {
+          const idx = daftar.length;
+          daftar.push({
+            sumbu: "tb", arah, tetap: laneZ,
+            pos: -KOTA_W / 2 + ((m * 0.25 + hashInt(idx * 23 + 5) * 0.18) % 1) * KOTA_W,
+            kec: 16 + hashInt(idx * 29 + 11) * 10,
+            warna: PALET_MOBIL[idx % PALET_MOBIL.length],
+          });
+        }
+      }
+    });
+
+    const imBodi = new THREE.InstancedMesh(geoBodi,
+      new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.18 }), daftar.length);
+    const imDetail = new THREE.InstancedMesh(geoDetail,
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.2 }), daftar.length);
+    imBodi.castShadow = true; imBodi.receiveShadow = true;
+    imBodi.frustumCulled = false; imDetail.frustumCulled = false;
+
+    const c = new THREE.Color();
+    daftar.forEach((m, i) => imBodi.setColorAt(i, c.setHex(m.warna)));
+    if (imBodi.instanceColor) imBodi.instanceColor.needsUpdate = true;
+
+    scene.add(imBodi); scene.add(imDetail);
+    MOBIL_AKTIF.imBodi = imBodi; MOBIL_AKTIF.imDetail = imDetail; MOBIL_AKTIF.daftar = daftar;
+    perbaruiMobil(0, 0);
+  }
+
+  export function perbaruiMobil(dt, t) {
+    const { imBodi, imDetail, daftar } = MOBIL_AKTIF;
+    if (!imBodi || !daftar.length) return;
+    const fase = faseLaluLintas(t);
+    const halfW = KOTA_W / 2, halfD = KOTA_D / 2;
+
+    for (let i = 0; i < daftar.length; i++) {
+      const m = daftar[i];
+      const batas = m.sumbu === "us" ? halfD : halfW;
+      // Cek apakah mendekati garis henti persimpangan saat lampu bukan hijau
+      const relatif = ((m.pos + batas) % PITCH + PITCH) % PITCH;
+      const mendekatiHenti = m.arah === 1
+        ? (relatif > PITCH - 9 && relatif < PITCH - 4.5)
+        : (relatif > JALAN + 4.5 && relatif < JALAN + 9);
+      const berhenti = mendekatiHenti && fase[m.sumbu] !== "hijau";
+
+      if (!berhenti && dt > 0) {
+        m.pos += m.arah * m.kec * dt;
+        if (m.pos > batas) m.pos = -batas;
+        else if (m.pos < -batas) m.pos = batas;
+      }
+
+      if (m.sumbu === "us") {
+        _dummyM.position.set(m.tetap, 0, m.pos);
+        _dummyM.rotation.set(0, m.arah === 1 ? 0 : Math.PI, 0);
+      } else {
+        _dummyM.position.set(m.pos, 0, m.tetap);
+        _dummyM.rotation.set(0, m.arah === 1 ? Math.PI / 2 : -Math.PI / 2, 0);
+      }
+      _dummyM.scale.set(1, 1, 1);
+      _dummyM.updateMatrix();
+      imBodi.setMatrixAt(i, _dummyM.matrix);
+      imDetail.setMatrixAt(i, _dummyM.matrix);
+    }
+    imBodi.instanceMatrix.needsUpdate = true;
+    imDetail.instanceMatrix.needsUpdate = true;
+  }

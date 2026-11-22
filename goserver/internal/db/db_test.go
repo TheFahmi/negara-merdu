@@ -42,9 +42,10 @@ func TestAlokasi(t *testing.T) {
 		// Kavling terakhir Blok 1880, lalu blok peringkat 2 mulai terisi.
 		{25, 1880, 25}, {26, 1881, 1}, {27, 1881, 2}, {50, 1881, 25},
 		// Slot perumahan terakhir = blok perumahan terakhir (4000),
-		// kavling terakhir. (Zona perumahan kini 3.930 blok = 98.250
-		// slot, sesudah 2 blok tepi cluster jadi lahan fasilitas.)
-		{98250, 4000, 25},
+		// kavling terakhir. (Zona perumahan kini 3.929 blok = 98.225
+		// slot, sesudah 2 blok tepi cluster + Blok 2120 apartemen jadi
+		// lahan fasilitas.)
+		{98225, 4000, 25},
 	}
 	for _, k := range kasus {
 		b, kv := Alokasi(k.nomor)
@@ -85,12 +86,12 @@ func TestAlokasi(t *testing.T) {
 	}
 	// Luapan sesudah zona perumahan: blok terlarang pertama di akhir
 	// UrutanBlok mulai terisi blok demi blok juga, dari kavling 1.
-	if b, kv := Alokasi(98251); b != u[3930] || kv != 1 {
-		t.Fatalf("nomor 98251: blok %d kav %d, mau blok luapan pertama %d kav 1",
-			b, kv, u[3930])
+	if b, kv := Alokasi(98226); b != u[3929] || kv != 1 {
+		t.Fatalf("nomor 98226: blok %d kav %d, mau blok luapan pertama %d kav 1",
+			b, kv, u[3929])
 	}
 	// Tidak ada kavling ganda & tidak ada blok terlarang di seluruh zona
-	// perumahan (98.250 alokasi pertama); total kapasitas tetap 100.000.
+	// perumahan (98.225 alokasi pertama); total kapasitas tetap 100.000.
 	pasangan := map[[2]int]bool{}
 	for n := 1; n <= Kapasitas; n++ {
 		b, kv := Alokasi(n)
@@ -98,7 +99,7 @@ func TestAlokasi(t *testing.T) {
 			t.Fatalf("alokasi ganda di nomor %d: blok %d kav %d", n, b, kv)
 		}
 		pasangan[[2]int{b, kv}] = true
-		if n <= 3930*PerBlok && BlokTerlarang(b) {
+		if n <= 3929*PerBlok && BlokTerlarang(b) {
 			t.Fatalf("nomor %d mendarat di blok terlarang %d", n, b)
 		}
 	}
@@ -118,28 +119,30 @@ func TestBlokTerlarang(t *testing.T) {
 		}
 	}
 	// Blok fasilitas tepi cluster warga (Fahmi 2026-11-22): 1879 Taman
-	// (barat Blok 1880) & 1882 Toko Pancing (timur Blok 1881).
-	for _, b := range []int{1879, 1882} {
+	// (barat Blok 1880) & 1882 Toko Pancing (timur Blok 1881). Blok 2120
+	// (Apartemen Merdu Residence, selatan plaza) juga terlarang.
+	for _, b := range []int{1879, 1882, 2120} {
 		if !BlokTerlarang(b) {
 			t.Errorf("blok fasilitas tepi cluster %d harus terlarang", b)
 		}
 	}
 	// Perumahan biasa tidak terlarang.
-	for _, b := range []int{1, 1880, 1881, 2120, 4000} {
+	for _, b := range []int{1, 1880, 1881, 4000} {
 		if BlokTerlarang(b) {
 			t.Errorf("blok perumahan %d tidak boleh terlarang", b)
 		}
 	}
-	// Total terlarang tepat 70 (8 reservasi + 60 lahan + 2 blok fasilitas
-	// tepi cluster) -> 3.930 blok perumahan, sama dengan hitungan klien.
+	// Total terlarang tepat 71 (8 reservasi + 60 lahan + 2 blok fasilitas
+	// tepi cluster + 1 apartemen) -> 3.929 blok perumahan, sama dengan
+	// hitungan klien.
 	n := 0
 	for b := 1; b <= BlokKolom*BlokBaris; b++ {
 		if BlokTerlarang(b) {
 			n++
 		}
 	}
-	if n != 70 {
-		t.Errorf("total blok terlarang %d, mau 70", n)
+	if n != 71 {
+		t.Errorf("total blok terlarang %d, mau 71", n)
 	}
 }
 
@@ -149,7 +152,7 @@ func TestUrutanBlok(t *testing.T) {
 		t.Fatalf("panjang urutan %d, mau 4000", len(u))
 	}
 	// Kepala urutan terverifikasi tangan dari rumus jarak pusat blok.
-	kepala := []int{1880, 1881, 2120, 2121, 2119, 2122, 1800, 1801, 1958, 1963}
+	kepala := []int{1880, 1881, 2121, 2119, 2122, 1800, 1801, 1958, 1963, 2038}
 	for i, mau := range kepala {
 		if u[i] != mau {
 			t.Errorf("urutan[%d] = %d, mau %d", i, u[i], mau)
@@ -162,7 +165,7 @@ func TestUrutanBlok(t *testing.T) {
 		dx, dz := 2*kol-(BlokKolom-1), 2*bar-(BlokBaris-1)
 		return dx*dx + dz*dz
 	}
-	for i := 1; i < 3930; i++ {
+	for i := 1; i < 3929; i++ {
 		if jarak(u[i]) < jarak(u[i-1]) {
 			t.Fatalf("jarak menurun di urutan[%d]: blok %d sesudah %d", i, u[i], u[i-1])
 		}

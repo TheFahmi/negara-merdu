@@ -12,75 +12,174 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
 import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, resetApartemen, setKaitApartemen } from "./apartemen.js";
 
   export function buatRumahDetail(dinding, atap, varian, cerobong) {
-    // Ronde skill-3d (lowpoly-style + prop-artist): siluet besar tetap
-    // sederhana, kekayaan datang dari detail arsitektur prosedural —
-    // plinth pondasi (rumah terasa menapak), lis di bawah atap, papan
-    // sudut, bingkai + kusen silang + ambang jendela, bingkai pintu +
-    // kenop, dan hiasan halaman kecil per varian. Semua tetap di
-    // dalam tapak tabrakan ±4,6 x ±4,2 (rintanganDetail).
     const g = new THREE.Group();
-    const TRIM = 0xfdf3d8, KAYU = 0x7a4a21;
-    g.add(kotak(5.9, 0.35, 5.3, 0x9a938a, 0, 0.17, 0)); // plinth pondasi batu
-    g.add(kotak(5.4, 3, 4.8, dinding, 0, 1.68, 0));    // dinding (naik di atas plinth)
-    g.add(kotak(5.6, 0.22, 5.0, TRIM, 0, 3.10, 0));    // lis keliling di bawah atap
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) // papan sudut krem
-      g.add(kotak(0.18, 3.0, 0.18, TRIM, sx * 2.66, 1.83, sz * 2.36));
-    const matAtap = new THREE.MeshStandardMaterial({ color: atap, map: TEX_ATAP, roughness: 0.95, flatShading: true });
-    if (varian === 0) { // atap pelana
-      const roof = new THREE.Mesh(geometriAtapPelana(6.8, 2.3, 6.2), matAtap);
-      roof.position.y = 3.18; roof.castShadow = true; g.add(roof);
-    } else if (varian === 1) { // atap limas (bentuk lama)
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(4.1, 2.3, 4), matAtap);
-      roof.position.y = 4.33; roof.rotation.y = Math.PI / 4; roof.castShadow = true; g.add(roof);
-    } else { // atap datar + parapet + kotak atap
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.4, 5.6), matAtap);
-      slab.position.y = 3.38; slab.castShadow = true; g.add(slab);
-      g.add(kotak(2.2, 0.7, 2.0, dinding, -1.2, 3.93, -0.8));
+    const TRIM = 0xfdf3d8, KAYU = 0x7a4a21, KAYU_T = 0x5c3618;
+
+    const matDind = new THREE.MeshStandardMaterial({ color: dinding, roughness: 0.88, flatShading: true });
+    const matKaca = new THREE.MeshStandardMaterial({
+      color: 0xbfe6f8, roughness: 0.08, metalness: 0.25,
+      transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const matTirai = new THREE.MeshStandardMaterial({
+      color: 0xfaf5eb, roughness: 0.9, transparent: true, opacity: 0.72,
+    });
+    const matLampu = new THREE.MeshStandardMaterial({
+      color: 0xfff4d4, emissive: 0xffcf82, emissiveIntensity: 1.35, roughness: 0.35,
+    });
+
+    const boxD = (w, h, d, x, y, z) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matDind);
+      m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m;
+    };
+
+    // Helper kaca transparan + kusen + tirai dalam
+    function pasangJendela(w, h, x, y, z, rotY, pakaiBunga) {
+      const jg = new THREE.Group();
+      // Bingkai 4 sisi (bukan kotak padat, jadi benar-benar berlubang)
+      jg.add(kotak(w + 0.14, 0.09, 0.18, KAYU, 0, h / 2 + 0.03, 0));
+      jg.add(kotak(w + 0.14, 0.09, 0.18, KAYU, 0, -h / 2 - 0.03, 0));
+      jg.add(kotak(0.09, h, 0.18, KAYU, -w / 2 - 0.03, 0, 0));
+      jg.add(kotak(0.09, h, 0.18, KAYU, w / 2 + 0.03, 0, 0));
+      // Kusen silang tipis
+      jg.add(kotak(0.05, h, 0.06, KAYU, 0, 0, 0));
+      jg.add(kotak(w, 0.05, 0.06, KAYU, 0, 0, 0));
+      // Panel kaca transparan nyata
+      const kaca = new THREE.Mesh(new THREE.PlaneGeometry(w, h), matKaca);
+      jg.add(kaca);
+      // Tirai tipis di sisi dalam
+      for (const sx of [-1, 1]) {
+        const t = new THREE.Mesh(new THREE.BoxGeometry(w * 0.22, h - 0.04, 0.03), matTirai);
+        t.position.set(sx * (w * 0.37), 0, -0.08); jg.add(t);
+      }
+      // Ambang luar + kotak bunga opsional
+      jg.add(kotak(w + 0.24, 0.09, 0.26, TRIM, 0, -h / 2 - 0.07, 0.06));
+      if (pakaiBunga) {
+        jg.add(kotak(w * 0.85, 0.20, 0.22, 0x9c5a3c, 0, -h / 2 - 0.20, 0.14));
+        for (let i = -1; i <= 1; i++) {
+          const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 1), M(i === 0 ? 0xf2b13d : 0xe86a92));
+          b.position.set(i * (w * 0.26), -h / 2 - 0.05, 0.15); jg.add(b);
+        }
+      }
+      jg.position.set(x, y, z); jg.rotation.y = rotY || 0;
+      g.add(jg);
     }
-    if (cerobong && varian !== 2) g.add(kotak(0.5, 1.2, 0.5, 0xa2604c, 1.35, 4.53, -0.8));
-    // teras: pelat + 2 tiang + kanopi miring di atas pintu. Kanopi WAJIB
-    // duduk di atas puncak bingkai pintu (y 2,41) dan jauh lebih lebar
-    // dari pintu berbingkai (1,34) supaya benar-benar menaungi pintu —
-    // versi ?v=19 terpasang di y 1,70 sehingga memotong daun pintu
-    // (keluhan Fahmi: "kanopi lebih pendek dari pintu").
-    g.add(kotak(2.9, 0.22, 1.5, 0xa9743f, 0, 0.11, 3.05));
-    g.add(kotak(0.13, 2.4, 0.13, 0x8a5a30, -1.45, 1.42, 3.65));
-    g.add(kotak(0.13, 2.4, 0.13, 0x8a5a30, 1.45, 1.42, 3.65));
-    const atapTeras = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.13, 1.8),
-      new THREE.MeshStandardMaterial({ color: atap, roughness: 0.95, flatShading: true }));
-    atapTeras.position.set(0, 2.68, 3.1); atapTeras.rotation.x = -0.10; atapTeras.castShadow = true; g.add(atapTeras);
-    // (Siku penopang diagonal sempat dicoba di ?v=20 — dari render
-    // terbaca seperti ranting miring di depan jendela, tidak cocok
-    // dengan gaya rumahnya, jadi ditiadakan.)
-    g.add(kotak(1.3, 0.14, 0.5, 0x9a938a, 0, 0.28, 2.72)); // undakan batu ke pintu
-    // pintu: bingkai krem + daun kayu + kenop kuningan
-    g.add(kotak(1.34, 2.06, 0.10, TRIM, 0, 1.38, 2.42));
-    g.add(kotak(1.1, 1.9, 0.12, KAYU, 0, 1.30, 2.44));
-    const kenop = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), M(0xd9a441));
-    kenop.position.set(0.42, 1.30, 2.52); g.add(kenop);
-    // jendela depan: bingkai kayu + kaca + kusen silang + ambang
+
+    // 1. Pondasi & Lantai Interior Parket + Plafon
+    g.add(kotak(5.9, 0.35, 5.3, 0x8f887f, 0, 0.175, 0));
+    g.add(kotak(5.1, 0.06, 4.5, 0xb88b58, 0, 0.38, 0));   // lantai kayu dalam
+    g.add(kotak(5.2, 0.10, 4.6, 0xf6efe0, 0, 3.28, 0));   // plafon dalam
+
+    // 2. Dinding Berbukaan Nyata (tebal 0.22; luar x:±2.7, z:±2.4, y:0.35..3.35)
+    // Dinding Depan (z = +2.29) — lubang pintu & 2 jendela
+    boxD(0.45, 3.0, 0.22, -2.475, 1.85, 2.29);
+    boxD(0.45, 3.0, 0.22,  2.475, 1.85, 2.29);
+    boxD(0.47, 3.0, 0.22, -0.815, 1.85, 2.29);
+    boxD(0.47, 3.0, 0.22,  0.815, 1.85, 2.29);
+    boxD(1.20, 1.0, 0.22, -1.65,  0.85, 2.29); // spandrel bawah jendela kiri
+    boxD(1.20, 1.0, 0.22,  1.65,  0.85, 2.29); // spandrel bawah jendela kanan
+    boxD(1.20, 0.8, 0.22, -1.65,  2.95, 2.29); // header atas jendela kiri
+    boxD(1.20, 0.8, 0.22,  1.65,  2.95, 2.29); // header atas jendela kanan
+    boxD(1.16, 1.05, 0.22, 0,     2.825, 2.29); // header atas pintu
+
+    // Dinding Kiri & Kanan (x = ±2.59) — lubang jendela lebar 1.4
     for (const sx of [-1, 1]) {
-      g.add(kotak(1.2, 1.2, 0.09, KAYU, sx * 1.7, 1.98, 2.42));
-      g.add(kotak(1, 1, 0.1, 0xbfe8f5, sx * 1.7, 1.98, 2.44));
-      g.add(kotak(0.07, 1.0, 0.06, KAYU, sx * 1.7, 1.98, 2.47));
-      g.add(kotak(1.0, 0.07, 0.06, KAYU, sx * 1.7, 1.98, 2.47));
-      g.add(kotak(1.32, 0.09, 0.2, TRIM, sx * 1.7, 1.44, 2.46));
+      const wx = sx * 2.59;
+      boxD(0.22, 3.0, 1.08, wx, 1.85, -1.64);
+      boxD(0.22, 3.0, 1.88, wx, 1.85,  1.24);
+      boxD(0.22, 1.0, 1.40, wx, 0.85, -0.40);
+      boxD(0.22, 0.8, 1.40, wx, 2.95, -0.40);
     }
-    // jendela samping (+x): rumah terasa utuh dari jalan samping
-    g.add(kotak(0.09, 1.2, 1.2, KAYU, 2.72, 1.98, -0.6));
-    g.add(kotak(0.1, 1, 1, 0xbfe8f5, 2.72, 1.98, -0.6));
-    // hiasan halaman mungil per varian (deterministik, di dalam tapak)
+
+    // Dinding Belakang (z = -2.29) — lubang jendela panoramik lebar 2.4
+    boxD(1.50, 3.0, 0.22, -1.95, 1.85, -2.29);
+    boxD(1.50, 3.0, 0.22,  1.95, 1.85, -2.29);
+    boxD(2.40, 1.0, 0.22,  0,    0.85, -2.29);
+    boxD(2.40, 0.8, 0.22,  0,    2.95, -2.29);
+
+    // Pasang jendela transparan pada ke-5 bukaan dinding
+    pasangJendela(1.20, 1.20, -1.65, 1.95,  2.29, 0, varian === 0);
+    pasangJendela(1.20, 1.20,  1.65, 1.95,  2.29, 0, varian === 0);
+    pasangJendela(1.40, 1.20,  2.59, 1.95, -0.40, Math.PI / 2, false);
+    pasangJendela(1.40, 1.20, -2.59, 1.95, -0.40, -Math.PI / 2, false);
+    pasangJendela(2.40, 1.20,  0,    1.95, -2.29, Math.PI, false);
+
+    // 3. Interior 3D Nyata di Dalam Rumah (terlihat menembus jendela)
+    const aksenRuang = new THREE.Color(atap).lerp(new THREE.Color(0xf4ead8), 0.35).getHex();
+    // Karpet + Ruang Tamu (kiri)
+    g.add(kotak(2.1, 0.03, 1.8, aksenRuang, -1.15, 0.425, 0.35));
+    g.add(kotak(1.6, 0.36, 0.65, 0x8b7e74, -1.35, 0.59, -0.35));   // sofa utama
+    g.add(kotak(1.6, 0.42, 0.16, 0x776b62, -1.35, 0.88, -0.60));   // sandaran sofa
+    g.add(kotak(0.85, 0.24, 0.48, 0x8a5a30, -1.25, 0.53, 0.45));   // meja kopi
+    g.add(kotak(0.28, 0.42, 1.15, 0x6b4423, -2.30, 0.62, 0.55));   // kabinet TV
+    g.add(kotak(0.06, 0.58, 0.95, 0x1b2228, -2.32, 1.15, 0.55));   // TV layar datar
+    // Area Tidur & Lemari (kanan)
+    g.add(kotak(1.55, 0.30, 1.95, 0x8a5a30, 1.45, 0.56, -0.85));   // rangka kasur
+    g.add(kotak(1.45, 0.20, 1.85, 0xfaf6ee, 1.45, 0.78, -0.85));   // matras
+    g.add(kotak(1.48, 0.10, 1.15, aksenRuang, 1.45, 0.90, -0.50)); // selimut
+    g.add(kotak(0.55, 0.14, 0.35, 0xffffff, 1.15, 0.92, -1.52));   // bantal 1
+    g.add(kotak(0.55, 0.14, 0.35, 0xffffff, 1.75, 0.92, -1.52));   // bantal 2
+    g.add(kotak(0.55, 1.85, 1.15, 0x7a4a21, 2.15, 1.33, 1.25));    // lemari kayu
+    // Lampu plafon menyala hangat (membuat interior hidup dilihat dari luar)
+    const lampuDalam = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.12, 12), matLampu);
+    lampuDalam.position.set(0, 3.16, 0); g.add(lampuDalam);
+
+    // 4. Lis Atap, Papan Sudut & Variasi Atap
+    g.add(kotak(5.65, 0.22, 5.05, TRIM, 0, 3.35, 0));
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      g.add(kotak(0.20, 3.0, 0.20, TRIM, sx * 2.66, 1.85, sz * 2.36));
+    }
+    const matAtap = new THREE.MeshStandardMaterial({ color: atap, map: TEX_ATAP, roughness: 0.9, flatShading: true });
+    if (varian === 0) {
+      const roof = new THREE.Mesh(geometriAtapPelana(6.8, 2.3, 6.2), matAtap);
+      roof.position.y = 3.42; roof.castShadow = true; g.add(roof);
+    } else if (varian === 1) {
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(4.15, 2.35, 4), matAtap);
+      roof.position.y = 4.58; roof.rotation.y = Math.PI / 4; roof.castShadow = true; g.add(roof);
+    } else {
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.36, 5.6), matAtap);
+      slab.position.y = 3.58; slab.castShadow = true; g.add(slab);
+      g.add(kotak(5.8, 0.28, 0.14, TRIM, 0, 3.88, 2.55));
+      g.add(kotak(2.2, 0.72, 2.0, dinding, -1.2, 4.10, -0.8));
+      g.add(kotak(2.35, 0.12, 2.15, TRIM, -1.2, 4.50, -0.8));
+    }
+    if (cerobong && varian !== 2) {
+      g.add(kotak(0.52, 1.25, 0.52, 0xa2604c, 1.35, 4.75, -0.8));
+      g.add(kotak(0.66, 0.12, 0.66, 0x7a4a3a, 1.35, 5.40, -0.8));
+    }
+
+    // 5. Teras, Pintu Kaca, Railing & Lampu Teras
+    g.add(kotak(3.1, 0.24, 1.55, 0xa9743f, 0, 0.12, 3.08));
+    g.add(kotak(1.4, 0.14, 0.55, 0x8f887f, 0, 0.26, 2.72));
+    for (const sx of [-1, 1]) {
+      g.add(kotak(0.15, 2.45, 0.15, 0x8a5a30, sx * 1.45, 1.45, 3.72));
+      g.add(kotak(0.08, 0.08, 1.3, 0x8a5a30, sx * 1.45, 0.85, 3.05));
+      g.add(kotak(0.06, 0.62, 0.06, 0x8a5a30, sx * 1.45, 0.55, 3.05));
+    }
+    const atapTeras = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.14, 1.88),
+      new THREE.MeshStandardMaterial({ color: atap, roughness: 0.9, flatShading: true }));
+    atapTeras.position.set(0, 2.74, 3.12); atapTeras.rotation.x = -0.10; atapTeras.castShadow = true; g.add(atapTeras);
+    const lampuT = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.18), matLampu);
+    lampuT.position.set(0.84, 2.15, 2.46); g.add(lampuT);
+
+    // Pintu berbingkai + kaca intip transparan + kenop kuningan
+    g.add(kotak(1.26, 2.02, 0.16, TRIM, 0, 1.36, 2.30));
+    g.add(kotak(1.06, 1.90, 0.12, KAYU, 0, 1.30, 2.31));
+    g.add(kotak(0.70, 0.56, 0.05, KAYU_T, 0, 0.82, 2.37));
+    const kacaPintu = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.54), matKaca);
+    kacaPintu.position.set(0, 1.72, 2.38); g.add(kacaPintu);
+    const kenop = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), M(0xd9a441, 0.35));
+    kenop.position.set(0.40, 1.28, 2.40); g.add(kenop);
+
+    // Hiasan halaman
     if (varian !== 1) for (const sx of [-1, 1]) {
-      const semak = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 0), M(0x4e9a44));
-      semak.position.set(sx * 2.25, 0.30, 3.3); semak.scale.y = 0.85; semak.castShadow = true; g.add(semak);
+      const semak = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 1), M(0x4e9a44));
+      semak.position.set(sx * 2.25, 0.30, 3.3); semak.scale.y = 0.82; semak.castShadow = true; g.add(semak);
     }
     if (varian !== 0) {
-      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.26, 7), M(0xb56545));
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.26, 8), M(0xb56545));
       pot.position.set(2.3, 0.13, 3.15); g.add(pot);
-      const bunga = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), M(0xe86a92));
+      const bunga = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 1), M(0xe86a92));
       bunga.position.set(2.3, 0.38, 3.15); g.add(bunga);
-      const daun = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), M(0x4e9a44));
-      daun.position.set(2.18, 0.32, 3.05); g.add(daun);
     }
     return g;
   }

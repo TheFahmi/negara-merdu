@@ -3,14 +3,15 @@ package pembangunan
 import "testing"
 
 func TestDaftarFasilitasPersis(t *testing.T) {
-	if len(Fasilitas) != 8 {
-		t.Fatalf("jumlah fasilitas = %d, mau 8", len(Fasilitas))
+	if len(Fasilitas) != 9 {
+		t.Fatalf("jumlah fasilitas = %d, mau 9", len(Fasilitas))
 	}
 	mau := map[string][2]int{
 		"taman": {1879, 5_000_000}, "lapangan": {2901, 8_000_000},
 		"perpustakaan": {973, 12_000_000}, "balai_warga": {1029, 15_000_000},
 		"sekolah": {1653, 20_000_000}, "puskesmas": {2941, 25_000_000},
 		"pasar": {2269, 30_000_000}, "masjid": {2285, 40_000_000},
+		"apartemen": {2120, 50_000_000},
 	}
 	for _, f := range Fasilitas {
 		m, ok := mau[f.Kunci]
@@ -51,15 +52,15 @@ func TestFasilitasVotingTokoPancing(t *testing.T) {
 	if f.Biaya != 0 {
 		t.Errorf("biaya toko_pancing = %d, mau 0 (kas tidak dipotong)", f.Biaya)
 	}
-	// Tidak menimpa / tidak menggeser 8 fasilitas baku.
-	if len(Fasilitas) != 8 {
+	// Tidak menimpa / tidak menggeser 9 fasilitas baku.
+	if len(Fasilitas) != 9 {
 		t.Errorf("fasilitas baku berubah: %d", len(Fasilitas))
 	}
 	semua := SemuaFasilitas()
-	if len(semua) != 9 || semua[8].Kunci != "toko_pancing" {
-		t.Errorf("SemuaFasilitas = %d item, item ke-9 = %v", len(semua), semua[8].Kunci)
+	if len(semua) != 10 || semua[9].Kunci != "toko_pancing" {
+		t.Errorf("SemuaFasilitas = %d item, item ke-10 = %v", len(semua), semua[9].Kunci)
 	}
-	// Bloknya tidak bertabrakan dengan blok 8 fasilitas baku.
+	// Bloknya tidak bertabrakan dengan blok 9 fasilitas baku.
 	for _, b := range Fasilitas {
 		if b.Kol == f.Kol && b.Bar == f.Bar {
 			t.Errorf("blok toko_pancing menimpa fasilitas baku %s", b.Kunci)

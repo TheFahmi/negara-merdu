@@ -42,6 +42,7 @@
   // sama dengan pengecualian BlokTerlarang di server: (38,23) Taman di
   // barat Blok 1880 & (41,23) Toko Pancing di timur Blok 1881.
   TAMAN.add("38,23"); TAMAN.add("41,23");
+  TAMAN.add("39,26"); // Blok 2120 — Apartemen Merdu Residence (selatan plaza, Fahmi 2026-11-22)
   /* Fasilitas desa (pembangunan bertahap): 8 dari 60 blok lahan dicadangkan
      untuk fasilitas bernama. Nama/biaya/status datang dari server
      (GET /api/pembangunan); peta blok ini harus sama dengan FASILITAS di
@@ -56,6 +57,9 @@
     // dinilai Fahmi terlalu jauh dari keramaian. Taman juga dipindah
     // (?v=35) ke Blok 1879 tepat di barat Blok 1880.
     toko_pancing: { kol: 41, bar: 23 },
+    // Apartemen Merdu Residence (Fahmi 2026-11-22): Blok 2120 tepat di
+    // selatan plaza — rencana pembangunan Rp50.000.000 (status dari server).
+    apartemen: { kol: 39, bar: 26 },
   };
 
   /* ===== Hierarki wilayah (WAJIB sama dengan goserver/internal/db/db.go) =====

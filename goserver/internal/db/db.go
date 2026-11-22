@@ -134,8 +134,10 @@ func JumlahWarga(ctx context.Context, q Querier) (int, error) {
 // 2026-11-22, fasilitas dipindah dekat keramaian): Blok 1879 (kol 38,
 // bar 23 — Taman, di barat Blok 1880) dan Blok 1882 (kol 41, bar 23 —
 // Toko Pancing, di timur Blok 1881); keduanya juga masuk set TAMAN klien.
+// DITAMBAH Blok 2120 (kol 39, bar 26 — Apartemen Merdu Residence di
+// selatan plaza, perintah Fahmi 2026-11-22); juga masuk set TAMAN klien.
 func BlokTerlarang(blok int) bool {
-	if blok == 1879 || blok == 1882 {
+	if blok == 1879 || blok == 1882 || blok == 2120 {
 		return true
 	}
 	idx := blok - 1
@@ -150,13 +152,14 @@ func BlokTerlarang(blok int) bool {
 // tengah. Blok perumahan diurutkan menurut jarak kuadrat pusat blok ke
 // plaza (0,0), tie-break nomor blok menaik. Blok terlarang (70 blok)
 // ditambahkan di akhir menurut nomor menaik sebagai cadangan luapan,
-// supaya kapasitas total tetap tepat 100.000 kavling.
+// supaya kapasitas total tetap tepat 100.000 kavling. (Blok terlarang
+// kini 71: 8 reservasi + 60 lahan berkala + 2 tepi cluster + 1 apartemen.)
 var urutanBlok = bangunUrutanBlok()
 
 func bangunUrutanBlok() []int {
 	type entri struct{ blok, d2 int }
-	perumahan := make([]entri, 0, 3930)
-	cadangan := make([]int, 0, 70)
+	perumahan := make([]entri, 0, 3929)
+	cadangan := make([]int, 0, 71)
 	for blok := 1; blok <= BlokKolom*BlokBaris; blok++ {
 		idx := blok - 1
 		bar, kol := idx/BlokKolom, idx%BlokKolom

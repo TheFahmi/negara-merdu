@@ -3,8 +3,9 @@
 import "./warna.js"; // HARUS pertama: manajemen warna sRGB (lihat warna.js)
 import { $, KOTA_D, KOTA_W, POS_KADES, PUSAT_X, PUSAT_Z } from "./inti.js";
 import { ambilData, awanGrup, camera, pantauFrame, perbaruiLaluLintas, renderer, scene, tambahWaktuSiklus, terapkanKualitas, terapkanWaktu } from "./bersama.js";
-import { bangunKotaMassal } from "./kota.js";
+import { bangunKotaMassal, bangunLaluLintasMobil, perbaruiMobil } from "./kota.js";
 import { bangunLahanPembangunan } from "./fasilitas.js";
+import { perbaruiApartemen } from "./fasilitasBaru.js";
 import { animasiHidup, animasiJalan } from "./karakter.js";
 import { bangunDistrik, diInterior, npcList, perbaruiAksiInterior, posisiJalurNpc, rintanganFasilitas } from "./rumah.js";
 import { animasiKades, bangunPusatKota } from "./istana.js";
@@ -13,7 +14,7 @@ import { bukaLengkapi, perbaruiChipSaya, sesi, tampilLangkah } from "./ui.js";
 import { kirimPosisi, pemainDirender, perbaruiPemainLain, sambungWS } from "./jaringan.js";
 import { gambarMinimap } from "./peta.js";
 import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
-import { bangunLaluLintas, bangunMobilParkir, perbaruiLaluLintasMobil } from "./kendaraan.js";
+import { bangunLaluLintas, bangunMobilPajangan, bangunMobilParkir, perbaruiLaluLintasMobil } from "./kendaraan.js";
 import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } from "./apartemen.js";
 
   /* ================= ANIMASI ================= */
@@ -67,6 +68,8 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
     terapkanWaktu(dt, false); // fase cahaya: lerp halus ke preset aktif (Paket 3 ?v=15)
     perbaruiLaluLintas(t);
     perbaruiIklan(t);
+    perbaruiMobil(dt, t);
+    perbaruiApartemen(dt, t); // lift Residensia 10 (kembali diam-diam bila belum terbangun)
     perbaruiLaluLintasMobil(t, dt); // mobil berjalan, patuh lampu merah
     perbaruiLift(dt); perbaruiApartemenLuar();
     if (animasiKades) {
@@ -137,9 +140,11 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
     try {
       bangunPusatKota(); // plaza + istana (dulu IIFE evaluasi modul di istana.js — TDZ-nya mengunci loading 22 Nov 15:13; kini di dalam jaring pengaman ini)
       window.__kotaMassal = bangunKotaMassal();
+      bangunLaluLintasMobil(); // 64 mobil arteri kota (instanced, lajur kiri)
       bangunDistrik();
       bangunMobilParkir(); // 1 mobil per rumah terisi
       bangunLaluLintas();  // mobil berjalan di jalan sekitar pusat
+      bangunMobilPajangan(); // 8 mobil detail parkir tepi jalan (plaza & fasilitas)
       bangunApartemen(); rintanganFasilitas.push(...tapakApartemen());
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
       bangunLahanPembangunan(); // petak kosong + fasilitas terbangun (status dari ambilData)
