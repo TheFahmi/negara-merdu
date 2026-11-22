@@ -1,0 +1,1 @@
+{"dependencies":{"next":"^15.1.6","react":"^19.0.0","react-dom":"^19.0.0"},"description":"Frontend Next.js Negara Merdu (merdu.id) — game 3D low-poly; backend tetap Go (API + WebSocket).","name":"negara-merdu-web","private":true,"scripts":{"build":"next build","dev":"next dev","start":"next start"},"version":"1.0.0"}

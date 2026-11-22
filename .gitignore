@@ -35,3 +35,7 @@ goserver/pinarak-server
 goserver/server
 pinarak-server
 node_modules/
+
+# === Frontend Next.js ===
+web/.next/
+web/node_modules/

@@ -1663,3 +1663,41 @@ Desa Pinarak → **Negara Merdu**; game menggantikan website Merdu di root **mer
 - Harness: uji_satublok **3.423/0** (+16 cek ?v=37: papan gerbang, cincin, bak air mancur, atap gazebo, ayunan, lampu LAMPU_TAMAN, bunga setColorAt, 4 AABB baru + kolam lama utuh, jalan lama hilang, invariant batas blok), uji_istana 432/0, uji_skill3d 192/0; pin versi → ?v=37 di ketiga harness.
 - Deploy: backup `/opt/pinarak/bak-tamanwah/` (app.js + index.html ?v=36); upload app.js + index.html (lewat `dd of=` via hst — redirect `>` ditelan fish hop Oracle); rebuild COPY-only + up -d app. app.js md5 `2b6097b378ac6c38180d9443d8320092`, index.html `3d0386bfb617f35d2de16da5a98a46ee`; md5 tersaji (?v=37) == lokal. Verifikasi API: /api/pembangunan tetap terbangun 2/9 (taman Blok 1879 tanggal asli + toko_pancing), /api/statistik normal (34 warga).
 - Bukti render pinjam-scene situs live (rig `lihat_tamanwah.py` + foto malam ulang `lihat_tamanwah2.py`; scene terukur: taman @ (-119,-119) mesh 29 → **121** — air mancur 17, gerbang 12, gazebo 13, area main 19): `~/workspace/wsdiag/bukti-pancing2/taman_wah_depan.jpg` (dari gerbang timur: papan TAMAN NEGARA MERDU terbaca, petak bunga mengapit jalan masuk, gazebo di kiri, air mancur di kejauhan), `taman_wah_atas.jpg` (miring dari atas: seluruh komposisi satu blok — kolam, air mancur + cincin, petak bunga, gazebo, ayunan + perosotan, gerbang), `taman_wah_malam.jpg` (mode malam via pinarak_waktu=malam di rig: kepala lampu taman menyala terang mengelilingi air mancur; pengaturan rig dikembalikan ke senja sesudahnya).
+
+## Frontend Next.js (migrasi) — 22 Nov 2026
+
+Perintah Fahmi: "Frontend pake nextjs". Frontend vanilla (public/index.html + style.css + app.js monolit 5.502 baris) dimigrasikan ke Next.js; backend Go (API + WebSocket + PostgreSQL) TIDAK berubah sama sekali. `public/` lama TIDAK dihapus dari server maupun repo pada tahap ini.
+
+### Arsitektur
+- Proyek baru `web/` (Next.js 15.5, App Router, React 19). `web/app/page.js` (client component) me-render markup body index.html lama APA ADANYA dari `web/game/markup.js` (34,4 KB, lewat dangerouslySetInnerHTML — struktur DOM identik), lalu memuat kode game lewat dynamic `import("../game/main.js")` di useEffect. `web/app/layout.js` memuat `three.min.js` vendored (Script beforeInteractive, global THREE seperti dulu) + metadata/PWA yang sama; `web/app/globals.css` = style.css lama utuh. Aset PWA (three.min.js, manifest.webmanifest, ikon 180/192/512) di `web/public/` — path publik sama persis.
+- Routing produksi (Traefik di Hostinger, semua label di container web; container Go TIDAK di-recreate): router `negara-api` (Host merdu.id && PathPrefix /api|/ws, prioritas 100) → service Go `pinarak`; router `negara-web` (Host merdu.id, prioritas 50) → service Next `negaraweb` (port 3000). Router lama di container Go tetap ada (kalah prioritas) — ROLLBACK = hapus label merdu.id dari service web lalu `docker compose up -d web`, Go kembali melayani semuanya dari public/ statisnya.
+- Build WAJIB di X99 (aturan Fahmi): `docker build` di X99 → push registry `100.120.212.116:5000/negara-merdu-web` (tag `next3`, digest sha256:1f89583d71b6512909b000cba21d688a1b4a123c18926a5392df7cb045e50f70) → Hostinger `docker pull` (digest cocok). Runner memakai `next start` (output standalone Next tidak ter-emit di build X99 — dicatat apa adanya; pola next start terverifikasi jalan).
+- Host uji: `uji.merdu.id` (record A Cloudflare dibuat dari Oracle via kredensial certbot, proxied, id fcfa638628014ccd0f94b02cbbb7998b) dengan router uji di container yang sama (web-uji + uji-api) — tetap aktif sesudah cutover untuk pengujian berikutnya.
+
+### Peta modul (app.js dipecah menjadi ES modules di web/game/)
+Pemecahan otomatis (skrip splitter satu-kali; 359 nama top-level terdaftar, 0 assignment lintas-modul, impor dihasilkan dari analisis pemakaian):
+- `inti.js` — konstanta kota, ikon SVG, logika murni (posisi kavling, jalur NPC, kualitas, waktu).
+- `bersama.js` — state bersama, tekstur prosedural, ambilData + cache, scene/renderer/kamera/lampu/langit, siklus waktu.
+- `kota.js` — bangunKotaMassal (kota instanced 100.000 kavling).
+- `fasilitas.js` — MODEL_FASILITAS + bangunLahanPembangunan (taman, toko pancing, dst.), papan, bendera, pinggiran kota.
+- `karakter.js` — buatKarakter + animasi jalan/hidup warga & NPC.
+- `rumah.js` — rumah detail, interior, distrik (bangunDistrik), rintangan, TAPAK_FASILITAS.
+- `istana.js` — pusat kota / Istana Negara.
+- `kamera.js` — orbit, mode kamera (orbit/orang pertama/orang ketiga/drone), pergerakan, tabrakan, joystick.
+- `ui.js` — seluruh wiring UI: gerbang masuk/daftar, lengkapi profil, KTP/KK, keluarga, pemilu, pembangunan, chip, menu.
+- `jaringan.js` — WebSocket multiplayer + chat.
+- `peta.js` — minimap + peta besar.
+- `main.js` — rotator status layar muat, loop animasi, boot `mulai()`.
+- `markup.js` — markup halaman (bukan kode).
+Penyesuaian lintas-modul yang terpaksa (perilaku identik): assignment langsung ke binding modul lain diganti setter/fungsi pemilik state — `setPutarOtomatis`/`setPetunjukDitutup`/`putarOrbitBilaOtomatis` (kamera), `setPulihInterior` (rumah), `resetWaktuSiklus`/`tambahWaktuSiklus`/`pantauFrame` (bersama), deklarasi `animasiKades` pindah ke istana (pemilik satu-satunya yang meng-assign).
+Dua bug splitter yang ketahuan oleh verifikasi host uji dan diperbaiki sebelum cutover: (1) pemakaian spread `[...TAMAN]` terbaca sebagai akses properti → impor TAMAN hilang → ReferenceError saat bangun lahan; lexer diperbaiki (spread + interpolasi template kini terbaca sebagai pemakaian). (2) Baris multi-deklarasi (`let dinamis…; const rumahKlik…; const npcList…;`) hanya mengekspor nama pertama → npcList/rumahKlik hilang → ReferenceError di loop animasi; splitter kini memecah baris multi-deklarasi.
+
+### Verifikasi host uji (uji.merdu.id, rig Chrome X99 jalur publik, tab baru, cache bersih)
+Baseline pembanding = merdu.id ?v=37 di rig yang sama: #muat hilang, HUD tampil, taman 121 mesh, toko_pancing 118 mesh, grup lahan 18, kota massal 24 anak / 261.252 instance, scene 2.963 mesh, 0 exception.
+Hasil uji (build next3): SEMUA angka identik (kotaInstance 261.256 hanya selama warga uji ke-35 ada; kembali 261.252 sesudah dibersihkan). 0 exception JS di semua run. Login warga uji: gerbang tertutup, chip saya tampil. Chat WebSocket: status "Chat sebagai @uji_next_migrasi" (soket OPEN lewat routing uji), pesan terkirim dan tersimpan di DB (id 61/62), riwayat 39 baris ter-render penuh di klien Next. Panel keluarga/pemilu/pembangunan/peta besar buka-tutup normal; mode kamera Orbit/1st Person/3rd Person/Drone + toggle putar otomatis jalan; semua tanpa exception. /api/statistik lewat domain uji normal (membuktikan split routing). Warga uji `uji_next_migrasi` + sesi + 2 chat + keluarga-nya DIHAPUS bersih sesudah tes (warga kembali 34, terverifikasi via /api/statistik).
+
+### Cutover (22 Nov 2026)
+Backup compose: `/opt/pinarak/bak-nextmigrasi/docker-compose.yml.pre` (pra-web) dan `.pre-cutover`. Sesudah verifikasi uji lulus penuh, label router merdu.id ditambahkan ke service web + `docker compose up -d web` (app & db tidak disentuh). Verifikasi ulang jalur publik merdu.id: /api/statistik dari Go (34 warga), halaman dari Next (title + chunk _next), www → 301 ke root, http → 302 ke https, rig browser: #muat hilang, HUD tampil, UKUR identik baseline (121/118/2.963/261.252), 0 exception. Screenshot bukti: X99 `/root/bukti-next/merdu.id.jpg` (baseline) & `uji.merdu.id.jpg`.
+
+### Harness
+Diperbarui ke susunan modul baru (SRC = gabungan web/game/*.js urutan muat; cek ?v=37 diganti cek kabel Next.js di page.js): uji_satublok **3.423/0**, uji_istana **432/0**, uji_skill3d **192/0**. uji_distrik resmi PENSIUN: target ekstraknya (blok LOGIKA DISTRIK) sudah dihapus sejak ?v=18 sehingga harness itu memang tidak bisa jalan jauh sebelum migrasi ini; file-nya kini menegaskan invarian pensiun pada modul baru (5/0) dan menunjuk uji_satublok sebagai pengganti.

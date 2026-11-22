@@ -1,0 +1,619 @@
+/* Negara Merdu — modul game "bersama" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
+   Bersama: state kualitas/waktu, tekstur prosedural, data dari API, dan scene Three.js (renderer, kamera, cahaya, langit, tanah, geometri bantu) + penerapan kualitas/waktu. */
+import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGKA_WAKTU, KUNCI_HEX_WAKTU, PITCH, SISI, WARNA_LAMPU_LL, evaluasiOtomatis, faseLaluLintas, hashInt, indeksUntukPilihan, parameterKualitas, parameterWaktu } from "./inti.js";
+
+  /* ================= KUALITAS GRAFIK (keadaan aktif) ================= */
+  export let pilihanKualitas = "otomatis";
+  try {
+    const s = localStorage.getItem("pinarak_kualitas");
+    if (s === "rendah" || s === "tinggi" || s === "otomatis") pilihanKualitas = s;
+  } catch (e) {}
+  export let langkahKualitas = indeksUntukPilihan(pilihanKualitas);
+  export let PARAM = parameterKualitas(langkahKualitas, window.devicePixelRatio || 1);
+  export const REG_TEX = [];       // {tex, buat} tekstur prosedural — digambar ulang saat skalaTekstur berubah
+  export const IM_LINGKUNGAN = []; // {mesh, penuh} InstancedMesh dekorasi kavling — count diatur kepadatan
+  export const LL_AKTIF = { mat: null, kunci: "" }; // material cakram lampu lalu lintas milik grup kota yang sedang tampil + fase terakhir yang diterapkan (diisi bangunKotaMassal)
+  /* Waktu negara (Paket 3 ?v=15): pilihan user tersimpan seperti kualitas;
+     bawaan "senja" = golden hour ?v=14 persis. */
+  export let pilihanWaktu = "senja";
+  try {
+    const s = localStorage.getItem("pinarak_waktu");
+    if (s === "siang" || s === "senja" || s === "malam" || s === "siklus") pilihanWaktu = s;
+  } catch (e) {}
+  export const LAMPU_JALAN = { matKepala: null }; // material kepala lampu jalan instanced (diisi bangunKotaMassal) — emissive-nya digerakkan fase waktu
+  export const MAT_JENDELA = { mat: null };       // material jendela istana negara (diisi pusatKota) — menyala hangat di malam hari
+  export const LAMPU_TAMAN = { mat: null };       // material kepala lampu taman istana (diisi pusatKota) — emissive-nya digerakkan fase waktu (kepalaLampu)
+
+  /* ================= TEKSTUR PROSEDURAL (canvas, dibuat sekali) =================
+     Semua tekstur dekoratif digambar dari fungsi buat(skala) supaya opsi
+     kualitas bisa menggambar ulangnya di resolusi lain tanpa reload.
+     Palet mengikuti poster: plesteran krem terang, genteng terang (diwarnai
+     per instans lewat instanceColor), jalan pasir + trotoar, sawah berpetak. */
+  export function buatKanvasDinding(skala) {
+    const S = Math.max(32, Math.round(256 * skala));
+    const cv = document.createElement("canvas"); cv.width = cv.height = S;
+    const c = cv.getContext("2d"); const u = S / 256;
+    c.fillStyle = "#f8f3e6"; c.fillRect(0, 0, S, S);
+    for (let i = 0; i < 260; i++) { // bintik plesteran halus
+      c.fillStyle = i % 2 ? "rgba(120,90,50,0.05)" : "rgba(255,255,255,0.07)";
+      c.fillRect(hashInt(i * 3 + 1) * S, hashInt(i * 7 + 2) * S, 2.4 * u, 2.4 * u);
+    }
+    c.fillStyle = "rgba(110,85,55,0.045)"; // coretan vertikal sangat halus
+    for (let i = 0; i < 12; i++) c.fillRect(hashInt(i * 13 + 5) * S, 0, 3 * u, S);
+    for (const wx of [0.16, 0.60]) { // dua jendela bingkai kayu + kaca
+      const x = wx * S, y = 0.30 * S, w = 0.24 * S, h = 0.34 * S;
+      c.fillStyle = "#7a5230"; c.fillRect(x - 4 * u, y - 4 * u, w + 8 * u, h + 8 * u);
+      c.fillStyle = "#bfe0ee"; c.fillRect(x, y, w, h);
+      c.fillStyle = "rgba(255,255,255,0.5)";
+      c.beginPath(); c.moveTo(x, y + h); c.lineTo(x + w * 0.55, y); c.lineTo(x + w, y); c.lineTo(x + w * 0.45, y + h); c.closePath(); c.fill();
+      c.fillStyle = "#7a5230";
+      c.fillRect(x + w / 2 - 2 * u, y, 4 * u, h); c.fillRect(x, y + h / 2 - 2 * u, w, 4 * u);
+      c.fillStyle = "#8a5f36"; c.fillRect(x - 6 * u, y + h + 4 * u, w + 12 * u, 5 * u);
+    }
+    const grd = c.createLinearGradient(0, S * 0.86, 0, S); // pita bawah: rumah terasa menapak
+    grd.addColorStop(0, "rgba(110,80,45,0)"); grd.addColorStop(1, "rgba(110,80,45,0.20)");
+    c.fillStyle = grd; c.fillRect(0, S * 0.86, S, S * 0.14);
+    return cv;
+  }
+  export function buatKanvasAtap(skala) {
+    const S = Math.max(32, Math.round(256 * skala));
+    const cv = document.createElement("canvas"); cv.width = cv.height = S;
+    const c = cv.getContext("2d"); const u = S / 256;
+    c.fillStyle = "#f4ede1"; c.fillRect(0, 0, S, S);
+    const baris = 8, hBaris = S / baris, lebar = S / 8;
+    for (let r = 0; r < baris; r++) {
+      const y = r * hBaris, geser = (r % 2) * lebar / 2;
+      for (let k = -1; k < 9; k++) {
+        const x = k * lebar + geser, v = hashInt(r * 31 + k * 7 + 3);
+        c.fillStyle = v > 0.5 ? "rgba(255,255,255,0.10)" : "rgba(90,50,25,0.07)";
+        c.fillRect(x + 1.5 * u, y + 1.5 * u, lebar - 3 * u, hBaris - 3 * u);
+        c.strokeStyle = "rgba(96,52,26,0.40)"; c.lineWidth = 2.4 * u;
+        c.beginPath(); c.arc(x + lebar / 2, y + hBaris, lebar / 2 - 1.5 * u, Math.PI, 0); c.stroke();
+      }
+      c.fillStyle = "rgba(70,38,18,0.20)"; c.fillRect(0, y + hBaris - 2.4 * u, S, 2.4 * u);
+    }
+    return cv;
+  }
+  export function buatKanvasTanah(skala) { // ubin 1 blok: jalan di tepi kiri+atas, sisanya kavling rumput
+    const S = Math.max(64, Math.round(256 * skala));
+    const cv = document.createElement("canvas"); cv.width = cv.height = S;
+    const c = cv.getContext("2d"); const u = S / 256;
+    c.fillStyle = "#63ac4e"; c.fillRect(0, 0, S, S); // rumput #7fbd68 -> #63ac4e: hijau lebih dalam (perbaikan warna)
+    c.fillStyle = "rgba(255,255,255,0.05)";
+    for (let i = 0; i < 40; i++) c.fillRect((i * 67) % S, (i * 97) % S, 22 * u, 14 * u);
+    const j = Math.round(S * JALAN / PITCH); // lebar jalan di ubin (~43px @256)
+    const tro = Math.max(2, Math.round(7 * u)); // lebar trotoar
+    c.fillStyle = "#d9c9a3"; // trotoar (diperdalam dari #e6dcc2): sisi kavling ubin ini + sisi kavling ubin tetangga
+    c.fillRect(j, 0, tro, S); c.fillRect(0, j, S, tro);
+    c.fillRect(S - tro, 0, tro, S); c.fillRect(0, S - tro, S, tro);
+    c.fillStyle = "#b39d72"; c.fillRect(0, 0, j, S); c.fillRect(0, 0, S, j); // badan jalan (diperdalam dari #c8b992 supaya kontras vs rumput)
+    c.fillStyle = "rgba(90,70,40,0.25)";
+    c.fillRect(j - 2 * u, 0, 2 * u, S); c.fillRect(0, j - 2 * u, S, 2 * u);
+    c.fillRect(0, 0, 2 * u, S); c.fillRect(0, 0, S, 2 * u);
+    c.fillStyle = "#fff8dc"; // garis tengah putus-putus — kala 32u membagi habis sisi ubin
+    // di semua skala (256/192/128/64), jadi pola menyambung mulus antar ubin:
+    // tidak ada garis dobel/patah di sambungan blok seperti pola lama (kala 30).
+    const tgh = Math.round(j / 2 - 1.5 * u);
+    const kalaGaris = 32 * u, pjgGaris = Math.round(18 * u),
+      awalGaris = Math.round(7 * u), lebarGaris = Math.max(2, Math.round(3 * u));
+    for (let y = awalGaris; y + pjgGaris <= S; y += kalaGaris) {
+      c.fillRect(tgh, y, lebarGaris, pjgGaris);
+      c.fillRect(y, tgh, pjgGaris, lebarGaris);
+    }
+    c.strokeStyle = "rgba(60,80,50,0.20)"; c.lineWidth = Math.max(1, u);
+    const langkah = (S - j - tro) / SISI, awal = j + tro;
+    for (let i = 1; i < SISI; i++) {
+      c.beginPath(); c.moveTo(awal + i * langkah, awal); c.lineTo(awal + i * langkah, S); c.stroke();
+      c.beginPath(); c.moveTo(awal, awal + i * langkah); c.lineTo(S, awal + i * langkah); c.stroke();
+    }
+    return cv;
+  }
+  export function buatKanvasSawah(skala) { // petak 8x8: variasi hijau, sebagian berair, galengan cokelat
+    const S = Math.max(64, Math.round(512 * skala));
+    const cv = document.createElement("canvas"); cv.width = cv.height = S;
+    const c = cv.getContext("2d"); const u = S / 512;
+    const WARNA_SAWAH = ["#8fce5e", "#a9d95f", "#7cb84a", "#c9d95f", "#95c94f", "#b5cf57"];
+    const sel = S / 8;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      const h1 = hashInt(x * 7 + y * 31 + 3), h2 = hashInt(x * 13 + y * 17 + 9);
+      const px = x * sel, py = y * sel;
+      if (h2 < 0.16) { // petak berair: memantulkan langit
+        c.fillStyle = "#a9cfae"; c.fillRect(px, py, sel, sel);
+        c.fillStyle = "rgba(255,255,255,0.28)";
+        for (let i = 0; i < 3; i++) c.fillRect(px + 6 * u, py + (10 + i * 18) * u, sel - 12 * u, 3 * u);
+      } else {
+        c.fillStyle = WARNA_SAWAH[Math.floor(h1 * WARNA_SAWAH.length)];
+        c.fillRect(px, py, sel, sel);
+        c.strokeStyle = h1 > 0.5 ? "rgba(46,90,30,0.20)" : "rgba(240,255,210,0.20)";
+        c.lineWidth = Math.max(1, 1.6 * u);
+        for (let i = 0; i < 12; i++) { // barisan padi halus
+          const lx = px + 4 * u + hashInt(x * 101 + y * 57 + i * 7) * (sel - 8 * u);
+          c.beginPath(); c.moveTo(lx, py + sel * 0.24); c.lineTo(lx, py + sel * 0.82); c.stroke();
+        }
+      }
+      c.strokeStyle = "rgba(122,100,58,0.55)"; c.lineWidth = Math.max(1.5, 5 * u); // galengan/pematang
+      c.strokeRect(px + 1, py + 1, sel - 2, sel - 2);
+      c.strokeStyle = "rgba(255,255,240,0.20)"; c.lineWidth = Math.max(1, 2 * u);
+      c.beginPath(); c.moveTo(px + 3, py + 3); c.lineTo(px + sel - 3, py + 3); c.stroke();
+    }
+    return cv;
+  }
+  export function buatTeksturProsedural(buat) {
+    const tex = new THREE.CanvasTexture(buat(PARAM.skalaTekstur));
+    REG_TEX.push({ tex, buat });
+    return tex;
+  }
+  export function segarkanTekstur() { // gambar ulang semua tekstur prosedural di skala aktif
+    const perBuat = new Map();
+    for (const r of REG_TEX) {
+      if (!perBuat.has(r.buat)) perBuat.set(r.buat, r.buat(PARAM.skalaTekstur));
+      r.tex.image = perBuat.get(r.buat);
+      r.tex.needsUpdate = true;
+    }
+  }
+  export const TEX_DINDING = buatTeksturProsedural(buatKanvasDinding);
+  export const TEX_ATAP = buatTeksturProsedural(buatKanvasAtap);
+  TEX_DINDING.anisotropy = 4; TEX_ATAP.anisotropy = 4;
+
+  /* ================= DATA ================= */
+  export let statistik = { warga: 0, terisi: 0, kapasitas: KAPASITAS };
+  export let wargaTerbaru = [];           // untuk distrik detail + NPC
+  export const warnaPemilik = new Map();  // "blok,kavling" -> warna baju (<= 2000 warga pertama)
+  export const rumahTerisi = new Set();   // "blok,kavling" yang ADA warganya — satu-satunya dasar rumah massal & tabrakannya
+  export const rumahDetailSet = new Set(); // "blok,kavling" milik <=30 warga terbaru yang punya rumah DETAIL di kavling aslinya — instans massalnya dilewati, tabrakannya via rintanganDetail
+  export const daftarRumah = [];          // {nomor, blok, kavling, warna} warga termuat — untuk titik rumah di peta
+  export let dataPembangunan = [];        // status fasilitas dari /api/pembangunan (dibaca sekali saat muat)
+
+  export async function ambilData() {
+    try {
+      const st = await (await fetch("/api/statistik")).json();
+      statistik = st;
+      try { // status pembangunan: gagal memuat = semua dianggap belum terbangun
+        const pb = await (await fetch("/api/pembangunan")).json();
+        dataPembangunan = pb.fasilitas || [];
+      } catch (e) { dataPembangunan = []; }
+      const hal = await (await fetch("/api/warga?limit=60&urut=terbaru")).json();
+      wargaTerbaru = hal.warga || [];
+      rumahDetailSet.clear(); // himpunan detail harus sama persis dengan irisan yang dibangun bangunDistrik
+      wargaTerbaru.slice(0, 30).forEach((w) => rumahDetailSet.add(w.blok + "," + w.kavling));
+      warnaPemilik.clear(); rumahTerisi.clear(); daftarRumah.length = 0;
+      let offset = 0, total = st.warga || 0;
+      while (offset < Math.min(total, 2000)) {
+        const p = await (await fetch(`/api/warga?limit=500&offset=${offset}`)).json();
+        (p.warga || []).forEach((w) => {
+          warnaPemilik.set(w.blok + "," + w.kavling, w.warna_baju);
+          rumahTerisi.add(w.blok + "," + w.kavling);
+          daftarRumah.push({ nomor: w.nomor_rumah, blok: w.blok, kavling: w.kavling, warna: w.warna_baju });
+        });
+        offset += 500;
+      }
+    } catch (e) { /* kota tetap tampil */ }
+    $("#stat-warga").textContent = statistik.warga;
+    $("#stat-rumah").textContent = statistik.terisi + " / " + (statistik.kapasitas || KAPASITAS).toLocaleString("id-ID");
+    const pmW = $("#pm-warga"), pmR = $("#pm-rumah");
+    if (pmW) pmW.textContent = (statistik.warga || 0).toLocaleString("id-ID");
+    if (pmR) pmR.textContent = (statistik.terisi || 0).toLocaleString("id-ID") + " kavling";
+  }
+
+  /* ================= SCENE ================= */
+  export const kanvas = $("#kanvas");
+  export const renderer = new THREE.WebGLRenderer({ canvas: kanvas, antialias: true });
+  renderer.setPixelRatio(PARAM.pixelRatio);
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = PARAM.bayangan;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; // filmic: warna poster yang hangat & lembut
+  renderer.toneMappingExposure = 1.05; // 1,2 -> 1,05 (perbaikan warna): pastel tidak lagi meledak ke putih
+
+  export const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xaad9f2);
+  scene.fog = new THREE.Fog(0xf6d9a8, 2600, 9000); // kabut hangat golden hour. PERBAIKAN WARNA: near 900 -> 2600 & far 5600 -> 9000 — dulu kabut mulai di 900 sehingga hampir seluruh kota yang terlihat (skala 6.720x4.200) terpapar kabut krem dan pucat; kini area pandang normal jernih, kabut hanya kabur di cakrawala. far 9000 = far mode 1st Person, di bawah far Orbit/Drone (13000): aman.
+  /* Kubah langit gradasi: horizon krem hangat -> biru lembut di atas.
+     ShaderMaterial tidak kena tone mapping/fog — warna dipilih sebagai nilai akhir.
+     Radius 8200 < far mode 1st Person (9000) dan < far Orbit/Drone (13000) dari posisi ekstrem mana pun. */
+  export const kubahLangit = new THREE.Mesh(
+    new THREE.SphereGeometry(8200, 24, 12),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: {
+        atas: { value: new THREE.Color(0x5fa8dd) },
+        tengah: { value: new THREE.Color(0xaad9f2) },
+        bawah: { value: new THREE.Color(0xffe3ae) },
+      },
+      vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: "varying vec3 vP; uniform vec3 atas; uniform vec3 tengah; uniform vec3 bawah;" +
+        "void main(){ float h = normalize(vP).y;" +
+        " vec3 c = h > 0.12 ? mix(tengah, atas, smoothstep(0.12, 0.65, h)) : mix(bawah, tengah, smoothstep(-0.08, 0.12, h));" +
+        " gl_FragColor = vec4(c, 1.0); }",
+    }));
+  kubahLangit.frustumCulled = false; kubahLangit.renderOrder = -1;
+  scene.add(kubahLangit);
+  /* near/far diperketat per mode di aturMode() (anti z-fighting): rasio far/near
+     menentukan presisi depth buffer; nilai awal ini untuk mode Orbit. */
+  export const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 2, 13000);
+  camera.rotation.order = "YXZ"; // supaya yaw/pitch mode 1st Person & Drone berperilaku seperti FPS
+
+  /* Golden hour: matahari miring dari barat (-x), cahaya & ambient hangat. */
+  export const OFSET_MATAHARI = { x: -240, y: 150, z: 90 };
+  export const hemi = new THREE.HemisphereLight(0xffe7c4, 0x86a860, 0.62); // ambient 0,85 -> 0,62: kurang cuci, kontras arah cahaya terasa
+  scene.add(hemi);
+  export const matahari = new THREE.DirectionalLight(0xffc384, 1.15); // kunci cahaya 1,05 -> 1,15: sisi terang/jatuh bayangan lebih tegas
+  matahari.position.set(OFSET_MATAHARI.x, OFSET_MATAHARI.y, OFSET_MATAHARI.z);
+  matahari.castShadow = PARAM.bayangan;
+  matahari.shadow.mapSize.set(PARAM.petaBayangan || 2048, PARAM.petaBayangan || 2048);
+  matahari.shadow.camera.left = -150; matahari.shadow.camera.right = 150;
+  matahari.shadow.camera.top = 150; matahari.shadow.camera.bottom = -150;
+  matahari.shadow.camera.far = 600;
+  scene.add(matahari); scene.add(matahari.target);
+
+  /* ---------- Siklus cahaya (Paket 3 ?v=15) ----------
+     Lapisan bintang: 700 titik deterministik di kubah langit (r 7.900,
+     hanya belahan atas), 1 draw call, TANPA PointLight baru. Opasitasnya
+     digerakkan fase waktu — siang/senja 0, malam menyala. */
+  export const matBintang = new THREE.PointsMaterial({
+    color: 0xffffff, size: 2.4, sizeAttenuation: false,
+    transparent: true, opacity: 0, depthWrite: false, fog: false,
+  });
+  (function buatBintang() {
+    const pos = new Float32Array(700 * 3);
+    for (let i = 0; i < 700; i++) {
+      const az = hashInt(i * 7 + 1) * Math.PI * 2;
+      const el = Math.asin(0.06 + hashInt(i * 13 + 5) * 0.92);
+      pos[i * 3] = Math.cos(el) * Math.cos(az) * 7900;
+      pos[i * 3 + 1] = Math.sin(el) * 7900;
+      pos[i * 3 + 2] = Math.cos(el) * Math.sin(az) * 7900;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const bintang = new THREE.Points(geo, matBintang);
+    bintang.frustumCulled = false; bintang.renderOrder = -1;
+    scene.add(bintang);
+  })();
+  /* Keadaan cahaya AKTIF: warna THREE.Color + angka yang dilerp halus ke
+     sasaran preset tiap frame (konstanta waktu ±0,7 dtk -> mantap dalam
+     ±2 detik). Dimulai persis dari preset pilihan tersimpan, jadi tidak
+     ada loncatan saat halaman dimuat. */
+  export const wkt = {};
+  (function mulaiWaktu() {
+    const p = parameterWaktu(pilihanWaktu, 0);
+    for (const k of KUNCI_HEX_WAKTU) wkt[k] = new THREE.Color(p[k]);
+    for (const k of KUNCI_ANGKA_WAKTU) wkt[k] = p[k];
+  })();
+  export let waktuSiklus = 0; // jam berjalan untuk mode "siklus" (detik)
+  export const _warnaSasaran = new THREE.Color();
+  export function terapkanWaktu(dt, jepret) {
+    const target = parameterWaktu(pilihanWaktu, waktuSiklus);
+    const k = jepret ? 1 : 1 - Math.exp(-(dt || 0) / 0.7);
+    for (const key of KUNCI_HEX_WAKTU) wkt[key].lerp(_warnaSasaran.setHex(target[key]), k);
+    for (const key of KUNCI_ANGKA_WAKTU) wkt[key] += (target[key] - wkt[key]) * k;
+    matahari.color.copy(wkt.matahari); matahari.intensity = wkt.intMatahari;
+    hemi.color.copy(wkt.langitHemi); hemi.groundColor.copy(wkt.tanahHemi); hemi.intensity = wkt.intHemi;
+    kubahLangit.material.uniforms.atas.value.copy(wkt.kubahAtas);
+    kubahLangit.material.uniforms.tengah.value.copy(wkt.kubahTengah);
+    kubahLangit.material.uniforms.bawah.value.copy(wkt.kubahBawah);
+    scene.fog.color.copy(wkt.kabut);
+    if (scene.background && scene.background.isColor) scene.background.copy(wkt.latar);
+    renderer.toneMappingExposure = wkt.paparan;
+    if (LAMPU_JALAN.matKepala) LAMPU_JALAN.matKepala.emissiveIntensity = wkt.kepalaLampu;
+    if (LAMPU_TAMAN.mat) LAMPU_TAMAN.mat.emissiveIntensity = wkt.kepalaLampu;
+    matBintang.opacity = wkt.bintang;
+    matAwan.color.copy(wkt.awan); matAwan.emissiveIntensity = wkt.intAwan;
+    if (MAT_JENDELA.mat) MAT_JENDELA.mat.emissiveIntensity = wkt.jendela;
+  }
+
+  export const M = (warna, kasar) => new THREE.MeshStandardMaterial({ color: warna, roughness: kasar == null ? 0.95 : kasar, flatShading: true });
+  export function kotak(w, h, d, warna, x, y, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(warna));
+    m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; m.receiveShadow = true;
+    return m;
+  }
+
+  /* ---------- Tanah kota: tekstur grid per blok ---------- */
+  (function tanahKota() {
+    const tex = buatTeksturProsedural(buatKanvasTanah);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(BLOK_KOLOM, BLOK_BARIS);
+    tex.anisotropy = 4;
+    const tanah = new THREE.Mesh(new THREE.PlaneGeometry(KOTA_W, KOTA_D),
+      new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
+    tanah.rotation.x = -Math.PI / 2; tanah.receiveShadow = true; scene.add(tanah);
+    const alas = kotak(KOTA_W + 60, 6, KOTA_D + 60, 0x8a6844, 0, -3.4, 0); alas.castShadow = false; scene.add(alas);
+  })();
+
+  /* ---------- Helper geometri gabungan (untuk instancing & awan) ----------
+     Menggabungkan beberapa geometri primitif (masing-masing dengan transform
+     sendiri) menjadi SATU BufferGeometry non-indexed — supaya pagar & awan
+     tetap 1 draw call per InstancedMesh/mesh. */
+  export function gabungGeometri(daftar) {
+    const pos = [], nor = [], uv = [];
+    const m4 = new THREE.Matrix4(), eu = new THREE.Euler(), qt = new THREE.Quaternion(),
+      vv = new THREE.Vector3(), sv = new THREE.Vector3();
+    for (const d of daftar) {
+      const g = d.geo.index ? d.geo.toNonIndexed() : d.geo.clone();
+      eu.set(d.rx || 0, d.ry || 0, d.rz || 0); qt.setFromEuler(eu);
+      vv.set(d.x || 0, d.y || 0, d.z || 0);
+      sv.set(d.sx == null ? 1 : d.sx, d.sy == null ? 1 : d.sy, d.sz == null ? 1 : d.sz);
+      m4.compose(vv, qt, sv); g.applyMatrix4(m4);
+      const p = g.attributes.position, n = g.attributes.normal, t = g.attributes.uv;
+      for (let i = 0; i < p.count; i++) {
+        pos.push(p.getX(i), p.getY(i), p.getZ(i));
+        if (n) nor.push(n.getX(i), n.getY(i), n.getZ(i));
+        if (t) uv.push(t.getX(i), t.getY(i));
+      }
+      g.dispose();
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    if (nor.length === pos.length) geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    if (uv.length === pos.length / 3 * 2) geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    return geo;
+  }
+  /* Varian berwarna dari gabungGeometri: tiap bagian membawa warna
+     sendiri yang ditulis sebagai atribut color (material vertexColors).
+     Dipakai geometriDetailMassal supaya detail muka rumah massal tetap
+     SATU InstancedMesh / satu draw call (ronde skill-3d). */
+  export function gabungBerwarna(daftar) {
+    const pos = [], nor = [], uv = [], col = [];
+    const m4 = new THREE.Matrix4(), eu = new THREE.Euler(), qt = new THREE.Quaternion(),
+      vv = new THREE.Vector3(), sv = new THREE.Vector3(), cc = new THREE.Color();
+    for (const d of daftar) {
+      const g = d.geo.index ? d.geo.toNonIndexed() : d.geo.clone();
+      eu.set(d.rx || 0, d.ry || 0, d.rz || 0); qt.setFromEuler(eu);
+      vv.set(d.x || 0, d.y || 0, d.z || 0);
+      sv.set(d.sx == null ? 1 : d.sx, d.sy == null ? 1 : d.sy, d.sz == null ? 1 : d.sz);
+      m4.compose(vv, qt, sv); g.applyMatrix4(m4);
+      cc.setHex(d.warna == null ? 0xffffff : d.warna);
+      const p = g.attributes.position, n = g.attributes.normal, t = g.attributes.uv;
+      for (let i = 0; i < p.count; i++) {
+        pos.push(p.getX(i), p.getY(i), p.getZ(i));
+        if (n) nor.push(n.getX(i), n.getY(i), n.getZ(i));
+        if (t) uv.push(t.getX(i), t.getY(i));
+        col.push(cc.r, cc.g, cc.b);
+      }
+      g.dispose();
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    if (nor.length === pos.length) geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    if (uv.length === pos.length / 3 * 2) geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    return geo;
+  }
+  /* Detail muka rumah massal (ronde skill-3d, img2threejs part-based):
+     plinth + lis atap + pintu berbingkai + jendela berbingkai dengan
+     kusen silang, digabung jadi satu geometri berwarna. Bingkai jendela
+     DIALIGNKAN PERSIS ke jendela lukisan TEX_DINDING (pusat u 0,28/0,72
+     -> x ±1,89; v 0,36..0,70 -> y 1,51..2,94 pada dinding 8,6 x 4,2),
+     jadi bingkai 3D duduk di atas kaca lukisan, bukan di sebelahnya.
+     Origo di tanah (y=0) — instans memakai skala-y yang sama dengan
+     dinding, jadi alignmen bertahan di semua variasi tinggi rumah. */
+  export function geometriDetailMassal() {
+    const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+    const TRIM = 0xfdf3d8, KAYU = 0x7a5230;
+    const bagian = [
+      { geo: B(9.3, 0.55, 8.3), x: 0, y: 0.27, z: 0, warna: 0x9a938a },        // plinth pondasi
+      { geo: B(9.0, 0.4, 8.0), x: 0, y: 4.02, z: 0, warna: TRIM },             // lis di bawah atap
+      { geo: B(1.6, 2.7, 0.14), x: 0, y: 1.35, z: 3.82, warna: TRIM },         // bingkai pintu
+      { geo: B(1.34, 2.5, 0.16), x: 0, y: 1.25, z: 3.85, warna: 0x7a4a21 },    // daun pintu
+      { geo: B(0.14, 0.14, 0.1), x: 0.45, y: 1.25, z: 3.94, warna: 0xd9a441 }, // kenop
+    ];
+    for (const sx of [-1, 1]) {
+      bagian.push({ geo: B(2.26, 1.64, 0.12), x: sx * 1.89, y: 2.22, z: 3.81, warna: KAYU }); // bingkai jendela
+      bagian.push({ geo: B(0.09, 1.46, 0.14), x: sx * 1.89, y: 2.22, z: 3.83, warna: KAYU }); // kusen vertikal
+      bagian.push({ geo: B(2.08, 0.09, 0.14), x: sx * 1.89, y: 2.22, z: 3.83, warna: KAYU }); // kusen horizontal
+      bagian.push({ geo: B(2.42, 0.12, 0.22), x: sx * 1.89, y: 1.36, z: 3.85, warna: TRIM }); // ambang
+    }
+    return gabungBerwarna(bagian);
+  }
+  /* Atap pelana (prisma segitiga): bubungan sejajar sumbu z, ujung segitiga
+     menghadap depan/belakang rumah. Basis di y=0, tinggi h. Non-indexed ->
+     normal wajah datar (flat shading) dari computeVertexNormals. */
+  export function geometriAtapPelana(w, h, d) {
+    const A = [-w / 2, 0, -d / 2], B = [w / 2, 0, -d / 2], C = [w / 2, 0, d / 2],
+      D = [-w / 2, 0, d / 2], E = [0, h, -d / 2], F = [0, h, d / 2];
+    const wajah = [
+      [A, F, E, [0, 1], [1, 0], [0, 0]], [A, D, F, [0, 1], [1, 1], [1, 0]], // lereng kiri (v: bubungan 0 -> tepi 1)
+      [B, E, F, [0, 0], [0, 1], [1, 0]], [B, F, C, [0, 0], [1, 1], [1, 1]], // lereng kanan
+      [D, C, F, [0, 0], [1, 0], [0.5, 1]],                                  // ujung depan (+z)
+      [B, A, E, [1, 0], [0, 0], [0.5, 1]],                                  // ujung belakang (-z)
+    ];
+    const pos = [], uv = [];
+    for (const [p1, p2, p3, t1, t2, t3] of wajah) {
+      pos.push(...p1, ...p2, ...p3);
+      uv.push(t1[0] * 2, t1[1], t2[0] * 2, t2[1], t3[0] * 2, t3[1]);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    geo.computeVertexNormals();
+    return geo;
+  }
+  export function geometriPagar() { // pagar kayu: 4 tiang + 2 rel, panjang 12,6, basis y=0
+    const bagian = [];
+    for (const px of [-6, -2, 2, 6]) bagian.push({ geo: new THREE.BoxGeometry(0.22, 1.15, 0.22), x: px, y: 0.575, z: 0 });
+    bagian.push({ geo: new THREE.BoxGeometry(12.6, 0.16, 0.1), x: 0, y: 0.88, z: 0 });
+    bagian.push({ geo: new THREE.BoxGeometry(12.6, 0.16, 0.1), x: 0, y: 0.45, z: 0 });
+    return gabungGeometri(bagian);
+  }
+  export function geometriAwan(seed) { // 4–5 gumpalan bola pipih digabung jadi 1 geometri
+    const bagian = [];
+    const n = 4 + Math.floor(hashInt(seed * 3 + 1) * 2);
+    for (let j = 0; j < n; j++) {
+      bagian.push({
+        geo: new THREE.SphereGeometry(5 + hashInt(seed * 7 + j * 13) * 7, 7, 5),
+        x: (j - (n - 1) / 2) * 8.5 + hashInt(seed + j) * 3,
+        y: hashInt(seed * 5 + j) * 2.4, z: hashInt(seed * 11 + j) * 5, sy: 0.5,
+      });
+    }
+    return gabungGeometri(bagian);
+  }
+  /* Kilau matahari di permukaan danau: bidang aditif bergradasi radial —
+     BUKAN refleksi real-time. Bidang diletakkan >= 0,35 di atas air (audit
+     z-fighting: air danau besar y=0,10 -> kilau 0,45; danau taman 0,52 -> 0,87). */
+  export const TEX_KILAU = (() => {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+    const c = cv.getContext("2d");
+    const grd = c.createRadialGradient(64, 64, 4, 64, 64, 62);
+    grd.addColorStop(0, "rgba(255,240,200,0.95)");
+    grd.addColorStop(0.4, "rgba(255,220,150,0.45)");
+    grd.addColorStop(1, "rgba(255,210,130,0)");
+    c.fillStyle = grd; c.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(cv);
+  })();
+  export function tambahKilau(x, z, y, w, d, opasitas) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ map: TEX_KILAU, transparent: true, opacity: opasitas, depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, y, z);
+    scene.add(m);
+    return m;
+  }
+
+  /* ---------- Rumah massal: InstancedMesh ----------
+     ATURAN RUMAH (Fahmi 21 Nov 2026): rumah hanya milik warga terdaftar.
+     Dinding/atap/cerobong/teras instanced HANYA dibuat untuk kavling yang
+     posisinya (blok,kavling) ada di rumahTerisi (data /api/warga di ambilData) — jumlah
+     instans rumah == jumlah warga terdaftar di blok perumahan massal,
+     DIKURANGI kavling detail ?v=18 (rumahDetailSet): rumah detail milik
+     <=30 warga terbaru berdiri di petak yang sama menggantikan instans
+     ini, jadi tiap warga tetap terlihat tepat 1 rumah.
+     Kavling kosong tetap lahan kosong: petaknya dari tekstur tanah +
+     dekorasi berpola (pagar/semak/pohon kecil, di bawah) yang memang
+     berada di luar tapak rumah, jadi terbaca sebagai petak siap bangun,
+     bukan rumah yang hilang.
+     PERAPIAN 3D: warna rumah tidak lagi acak per rumah (karpet tabrakan
+     warna) — atap & dinding diturunkan dari zona RW bloknya (lihat LOGIKA
+     PERAPIAN di atas): satu zona satu keluarga warna, jitter kecil per
+     rumah. Rumah terisi yang warna pemiliknya tercatat tetap memakai warna
+     baju pemilik sebagai warna atap (identitas pemilik dipertahankan). */
+  export const awanGrup = new THREE.Group(); scene.add(awanGrup);
+  export const matAwan = new THREE.MeshStandardMaterial({
+    color: 0xfff8ec, roughness: 1, transparent: true, opacity: 0.94,
+    emissive: 0xffd9a0, emissiveIntensity: 0.22, // pantulan hangat golden hour
+  });
+  for (let i = 0; i < 18; i++) {
+    const m = new THREE.Mesh(geometriAwan(i + 1), matAwan);
+    m.position.set(-2600 + hashInt(i * 31) * 5200, 150 + hashInt(i * 17) * 110, -1800 + hashInt(i * 13) * 3600);
+    m.userData.kecepatan = 0.35 + hashInt(i * 7) * 0.4;
+    awanGrup.add(m);
+  }
+
+  /* ================= PENERAPAN KUALITAS GRAFIK =================
+     terapkanKualitas() mendorong PARAM aktif ke renderer, matahari,
+     dekorasi kavling (count), awan (visible) dan tekstur (gambar ulang).
+     Dipanggil saat muat, saat user mengganti pilihan, dan saat tangga
+     otomatis naik/turun. Mode kamera & interior tidak disentuh sama sekali. */
+  export const fpsStat = { bingkai: 0, akumulasi: 0, diAtasSejak: 0, jedaSampai: 0 };
+  export let frameTerakhirMs = 0, indikatorTimer = null;
+  export function terapkanKualitas() {
+    const pBaru = parameterKualitas(langkahKualitas, window.devicePixelRatio || 1);
+    const bayanganBerubah = pBaru.bayangan !== PARAM.bayangan;
+    const texBerubah = pBaru.skalaTekstur !== PARAM.skalaTekstur;
+    PARAM = pBaru;
+    renderer.setPixelRatio(PARAM.pixelRatio);
+    if (bayanganBerubah) {
+      renderer.shadowMap.enabled = PARAM.bayangan;
+      matahari.castShadow = PARAM.bayangan;
+      scene.traverse((o) => { // program shader harus dibangun ulang tanpa/dengan bayangan
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; });
+      });
+    }
+    if (PARAM.bayangan && PARAM.petaBayangan && matahari.shadow.mapSize.x !== PARAM.petaBayangan) {
+      matahari.shadow.mapSize.set(PARAM.petaBayangan, PARAM.petaBayangan);
+      if (matahari.shadow.map) { matahari.shadow.map.dispose(); matahari.shadow.map = null; }
+    }
+    for (const d of IM_LINGKUNGAN) d.mesh.count = Math.floor(d.penuh * PARAM.kepadatan);
+    const awanTampil = Math.max(4, Math.round(awanGrup.children.length * PARAM.kepadatan));
+    awanGrup.children.forEach((g, i) => { g.visible = i < awanTampil; });
+    if (texBerubah) segarkanTekstur();
+    perbaruiInfoKualitas();
+  }
+  export function tampilIndikatorKualitas() {
+    const el = $("#indikator-kualitas"); if (!el) return;
+    el.textContent = "Kualitas otomatis: " + PARAM.nama;
+    el.hidden = false;
+    clearTimeout(indikatorTimer);
+    indikatorTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  }
+  export function perbaruiInfoKualitas() {
+    document.querySelectorAll("#seg-kualitas button").forEach((b) =>
+      b.classList.toggle("on", b.dataset.kualitas === pilihanKualitas));
+    const info = $("#info-kualitas");
+    if (!info) return;
+    info.textContent = pilihanKualitas === "otomatis"
+      ? "Otomatis aktif — tingkat saat ini: " + PARAM.nama + ". Naik/turun sendiri mengikuti kelancaran HP."
+      : pilihanKualitas === "rendah"
+        ? "Rendah: hemat baterai & lancar di HP kentang (tanpa bayangan, detail sedikit)."
+        : "Tinggi: tampilan paling bagus (bayangan lembut, detail penuh).";
+  }
+  export function setPilihanKualitas(v) {
+    pilihanKualitas = v;
+    try { localStorage.setItem("pinarak_kualitas", v); } catch (e) {}
+    langkahKualitas = indeksUntukPilihan(v); // otomatis & tinggi mulai dari langkah teratas, rendah dari terbawah
+    fpsStat.diAtasSejak = 0; fpsStat.bingkai = 0; fpsStat.akumulasi = 0;
+    terapkanKualitas();
+  }
+  /* Waktu negara (Paket 3 ?v=15): pilihan Siang / Senja / Malam / Siklus.
+     Mengganti pilihan TIDAK memotong cahaya — terapkanWaktu() di loop
+     animasi melerp keadaan aktif ke preset baru dalam ±2 detik. */
+  export function perbaruiInfoWaktu() {
+    document.querySelectorAll("#seg-waktu button").forEach((b) =>
+      b.classList.toggle("on", b.dataset.waktu === pilihanWaktu));
+    const info = $("#info-waktu");
+    if (!info) return;
+    info.textContent = pilihanWaktu === "siang"
+      ? "Siang: cahaya terang, lampu jalan padam."
+      : pilihanWaktu === "malam"
+        ? "Malam: lampu jalan & jendela balai menyala, bintang tampil."
+        : pilihanWaktu === "siklus"
+          ? "Siklus: siang → senja → malam berputar sendiri perlahan (4 menit per putaran)."
+          : "Senja: golden hour khas Negara Merdu (tampilan bawaan).";
+  }
+  export function setPilihanWaktu(v) {
+    pilihanWaktu = v;
+    try { localStorage.setItem("pinarak_waktu", v); } catch (e) {}
+    if (v !== "siklus") waktuSiklus = 0;
+    perbaruiInfoWaktu();
+  }
+  /* Monitor FPS bergulir ±5 detik (hanya mode otomatis): sampel dt mentah
+     antar-frame; jeda >250 ms (pindah tab dsb.) diabaikan. */
+  export function pantauKualitas(dtMs, kini) {
+    if (pilihanKualitas !== "otomatis") return;
+    if (dtMs <= 0 || dtMs > 250) return;
+    fpsStat.bingkai++; fpsStat.akumulasi += dtMs;
+    if (fpsStat.akumulasi < 5000) return;
+    const fps = fpsStat.bingkai / (fpsStat.akumulasi / 1000);
+    fpsStat.bingkai = 0; fpsStat.akumulasi = 0;
+    const st = { langkah: langkahKualitas, diAtasSejak: fpsStat.diAtasSejak, jedaSampai: fpsStat.jedaSampai };
+    const hasil = evaluasiOtomatis(st, fps, kini);
+    fpsStat.diAtasSejak = st.diAtasSejak; fpsStat.jedaSampai = st.jedaSampai;
+    if (hasil) {
+      langkahKualitas = st.langkah;
+      terapkanKualitas();
+      tampilIndikatorKualitas();
+    }
+  }
+
+  /* Fase lampu lalu lintas: material bersama per sumbu/warna ditukar HANYA
+     saat fase berubah (paling sering 1x/detik di perbatasan kuning) —
+     biaya per frame di luar itu nol, tanpa PointLight baru. */
+  export function perbaruiLaluLintas(t) {
+    const mat = LL_AKTIF.mat; if (!mat) return;
+    const f = faseLaluLintas(t), kunci = f.us + "|" + f.tb;
+    if (kunci === LL_AKTIF.kunci) return;
+    LL_AKTIF.kunci = kunci;
+    for (const sumbu of ["us", "tb"]) for (const w of ["merah", "kuning", "hijau"]) {
+      const m = mat[sumbu][w], nyala = f[sumbu] === w;
+      m.emissiveIntensity = nyala ? 2.4 : 0;
+      m.color.setHex(nyala ? WARNA_LAMPU_LL[w].nyala : WARNA_LAMPU_LL[w].mati);
+    }
+  }
+
+
+  /* Helper lintas-modul (migrasi Next.js): waktuSiklus & frameTerakhirMs
+     hanya boleh diubah dari modul ini (pemilik deklarasinya). */
+  export function resetWaktuSiklus() { waktuSiklus = 0; }
+  export function tambahWaktuSiklus(dt) { waktuSiklus += dt; }
+  export function pantauFrame(kiniMs) {
+    if (frameTerakhirMs) pantauKualitas(kiniMs - frameTerakhirMs, kiniMs); // tangga kualitas otomatis
+    frameTerakhirMs = kiniMs;
+  }

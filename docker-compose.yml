@@ -47,5 +47,21 @@ services:
     ports:
       - "127.0.0.1:8026:8026"
 
+  # Frontend Next.js (web/) — sejak migrasi 22 Nov 2026 inilah yang melayani
+  # halaman di merdu.id; app Go hanya melayani /api/* dan /ws. Di produksi
+  # (Hostinger) service ini memakai image registry
+  # 100.120.212.116:5000/negara-merdu-web:<tag> (build di X99) + label
+  # Traefik pemisah rute; blok di bawah varian dev lokalnya.
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:3000:3000"
+
 volumes:
   pinarak-db:
