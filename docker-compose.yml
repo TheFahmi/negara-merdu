@@ -1,0 +1,51 @@
+# Desa Pinarak — stack Docker: app (Go, binary statis) + PostgreSQL 16.
+# Implementasi resmi server = Go (goserver/); server.py Python hanya
+# referensi warisan dan TIDAK dipakai stack ini.
+#
+# Salin .env.example menjadi .env dan isi nilainya sebelum menjalankan di
+# server. Tanpa .env pun stack jalan untuk pengembangan lokal memakai nilai
+# bawaan di bawah (password dev — JANGAN dipakai di produksi).
+#
+# App hanya terekspos di loopback host (127.0.0.1:8026); nginx host yang
+# meneruskannya ke publik (pola sama seperti service lama di port 8026).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pinarak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pinarak_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-pinarak}
+      # Default zona waktu sesi database (kolom waktu app disimpan sebagai
+      # string UTC oleh app sendiri; ini hanya memengaruhi now() mentah).
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+    volumes:
+      - pinarak-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pinarak} -d ${POSTGRES_DB:-pinarak}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: goserver/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pinarak}:${POSTGRES_PASSWORD:-pinarak_dev_password}@db:5432/${POSTGRES_DB:-pinarak}
+      # Token admin (buka pemilu, bangun fasilitas) — isi di .env host.
+      PINARAK_ADMIN_TOKEN: ${PINARAK_ADMIN_TOKEN:-}
+      HOST: "0.0.0.0"
+      PORT: "8026"
+      TZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:8026:8026"
+
+volumes:
+  pinarak-db:

@@ -1,0 +1,37 @@
+# === Rahasia & kredensial ===
+.env
+.env.*
+!.env.example
+**/.env
+*secret*
+*.pem
+*.key
+*credential*
+
+# === Data runtime (bergerak terus / berisi data warga) ===
+data/
+kas-desa/kas.json
+autoreg/state.json
+*.log
+
+# === Media produksi besar (konten episode) ===
+# Skrip (.py/.sh) dan caption (.txt) tetap masuk repo.
+konten/**/*.mp4
+konten/**/*.wav
+konten/**/*.mp3
+konten/**/*.tar
+konten/**/*.jpg
+konten/**/*.png
+konten/**/frames/
+konten/**/frames_*/
+konten/**/contoh*/
+konten/**/rakit/
+
+# === Artefak build & cache ===
+__pycache__/
+*.pyc
+*.bak
+goserver/pinarak-server
+goserver/server
+pinarak-server
+node_modules/

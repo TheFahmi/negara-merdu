@@ -1,0 +1,23 @@
+# Desa Pinarak — app (Python stdlib http.server + psycopg 3 -> PostgreSQL).
+# Database TIDAK dibundel di image ini; app membaca DATABASE_URL dari
+# environment dan menunggu DB siap saat start (lihat __main__ server.py).
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY server.py ./
+COPY public/ ./public/
+
+# Jalan sebagai user non-root.
+RUN useradd --create-home --uid 10001 pinarak \
+    && chown -R pinarak:pinarak /app
+USER pinarak
+
+EXPOSE 8026
+CMD ["python", "server.py"]

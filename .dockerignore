@@ -1,0 +1,16 @@
+# Yang TIDAK ikut ke dalam image Docker app.
+.env
+.git
+__pycache__/
+*.pyc
+data/
+*.db
+*.db-shm
+*.db-wal
+kas-desa/
+coming-soon/
+deploy/
+DEPLOY_REPORT.md
+.dockerignore
+Dockerfile
+docker-compose.yml
