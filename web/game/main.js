@@ -70,7 +70,11 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
     perbaruiIklan(t);
     perbaruiMobil(dt, t);
     perbaruiApartemen(dt, t); // lift Residensia 10 (kembali diam-diam bila belum terbangun)
-    perbaruiLaluLintasMobil(t, dt); // mobil berjalan, patuh lampu merah
+    // DIMATIKAN 22 Nov (keputusan Fahmi): sistem mobil berjalan kendaraan.js
+    // (±320) dimatikan, yang hidup hanya arteri kota.js (64 mobil).
+    // Kode sistemnya tetap utuh di kendaraan.js; hidupkan lagi cukup dengan
+    // mengembalikan baris ini + pemanggilan bangunLaluLintas() di mulai().
+    // perbaruiLaluLintasMobil(t, dt); // mobil berjalan kendaraan.js
     perbaruiLift(dt); perbaruiApartemenLuar();
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
@@ -143,7 +147,7 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
       bangunLaluLintasMobil(); // 64 mobil arteri kota (instanced, lajur kiri)
       bangunDistrik();
       bangunMobilParkir(); // 1 mobil per rumah terisi
-      bangunLaluLintas();  // mobil berjalan di jalan sekitar pusat
+      // bangunLaluLintas(); // DIMATIKAN 22 Nov (keputusan Fahmi): mobil berjalan kendaraan.js ±320 mati; arteri kota.js 64 yang dipakai. Lihat catatan di loop animasi.
       bangunMobilPajangan(); // 8 mobil detail parkir tepi jalan (plaza & fasilitas)
       bangunApartemen(); rintanganFasilitas.push(...tapakApartemen());
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
