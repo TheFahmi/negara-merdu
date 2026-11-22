@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
-import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungGeometri, geometriAtapPelana, geometriDetailMassal, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
+import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
   export function bangunKotaMassal() {
     IM_LINGKUNGAN.length = 0; // daftar dekorasi dibangun ulang bersama grup kota
@@ -231,15 +231,37 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
        kepadatan kualitas (tidak masuk IM_LINGKUNGAN) dan tidak ditabrak
        (tiang di trotoar, sama seperti lampu jalan). */
     const tiangLL = tiangLaluLintas();
-    const geoTiangLL = gabungGeometri([ // tiang menghadap +z, basis y=0
-      { geo: new THREE.BoxGeometry(0.56, 0.22, 0.56), x: 0, y: 0.11, z: 0 },      // alas
-      { geo: new THREE.BoxGeometry(0.16, 3.7, 0.16), x: 0, y: 2.07, z: 0 },       // tiang
-      { geo: new THREE.BoxGeometry(0.62, 1.5, 0.42), x: 0, y: 4.42, z: 0.08 },     // kotak lampu
-      { geo: new THREE.BoxGeometry(0.7, 0.09, 0.5), x: 0, y: 5.21, z: 0.08 },      // topi kotak
-    ]);
+    /* Desain lampu lalu lintas (perbaikan): dulu tiang hitam pendek dengan
+       kotak lampu di pucuknya — dari kamera Orbit terbaca sebagai "tongkat".
+       Kini tiang galvanis model LENGAN (mast arm) seperti persimpangan
+       kota: tiang 5,8 tinggi, lengan menjulur 4,9 ke atas lajur yang
+       didekati, kepala lampu 3 susun bergantung di ujung lengan lengkap
+       dengan papan latar hitam berlis kuning (backplate) & topi (visor)
+       per lampu. Lokal: hadap +z, lengan ke -x (lihat tiangLaluLintas:
+       hadap (hx,hz) diputar ry -> -x lokal selalu mengarah ke lajur). */
+    const ABU = 0x7b8086, HITAM = 0x1d2124, KUNING_LIS = 0xf2c230;
+    const silinder = (r, h, seg) => new THREE.CylinderGeometry(r, r, h, seg || 8);
+    const LENGAN = 4.9, KX = -4.35, KY = 4.62; // ujung lengan & pusat kepala lampu
+    const bagianLL = [
+      { geo: silinder(0.36, 0.3, 8), x: 0, y: 0.15, z: 0, warna: 0x5f646a },        // alas beton
+      { geo: silinder(0.13, 5.6, 8), x: 0, y: 3.0, z: 0, warna: ABU },               // tiang
+      { geo: silinder(0.16, 0.12, 8), x: 0, y: 5.86, z: 0, warna: ABU },             // tutup pucuk
+      { geo: new THREE.BoxGeometry(LENGAN, 0.16, 0.16), x: -LENGAN / 2, y: 5.62, z: 0, warna: ABU }, // lengan
+      { geo: new THREE.BoxGeometry(1.9, 0.08, 0.08), x: -0.95, y: 5.05, z: 0, rz: -0.55, warna: ABU }, // penyangga miring
+      { geo: new THREE.BoxGeometry(0.08, 0.45, 0.08), x: KX, y: 5.36, z: 0.05, warna: HITAM },   // penggantung
+      { geo: new THREE.BoxGeometry(1.02, 2.02, 0.02), x: KX, y: KY, z: 0.05, warna: KUNING_LIS }, // lis backplate (hanya terlihat dari depan)
+      { geo: new THREE.BoxGeometry(1.06, 2.06, 0.08), x: KX, y: KY, z: 0.0, warna: HITAM },       // backplate
+      { geo: new THREE.BoxGeometry(0.9, 1.9, 0.02), x: KX, y: KY, z: 0.065, warna: HITAM },      // muka backplate di dalam lis
+      { geo: new THREE.BoxGeometry(0.6, 1.66, 0.44), x: KX, y: KY, z: 0.26, warna: HITAM },      // rumah lampu
+      { geo: new THREE.BoxGeometry(0.42, 0.34, 0.2), x: 0.22, y: 2.6, z: 0.2, warna: 0xe8e4d8 }, // kotak tombol penyeberang
+    ];
+    for (const dy of [0.5, 0, -0.5]) // topi/visor tiap lampu
+      bagianLL.push({ geo: new THREE.BoxGeometry(0.5, 0.05, 0.32), x: KX, y: KY + dy + 0.24, z: 0.62, rx: 0.18, warna: HITAM });
+    const geoTiangLL = gabungBerwarna(bagianLL);
     const imTiangLL = new THREE.InstancedMesh(geoTiangLL,
-      new THREE.MeshStandardMaterial({ color: 0x2e3236, roughness: 0.85, flatShading: true }), Math.max(1, tiangLL.length));
-    const geoCakramLL = new THREE.CylinderGeometry(0.155, 0.155, 0.09, 10);
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.15, flatShading: true }), Math.max(1, tiangLL.length));
+    imTiangLL.castShadow = true;
+    const geoCakramLL = new THREE.CylinderGeometry(0.19, 0.19, 0.08, 14);
     geoCakramLL.rotateX(Math.PI / 2); // sumbu cakram -> +z (arah hadap tiang)
     const matLLBaru = {}, imCakramPeta = {};
     for (const sumbu of ["us", "tb"]) {
@@ -247,7 +269,7 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
       const nSumbu = tiangLL.filter((s) => s.sumbu === sumbu).length;
       for (const w of ["merah", "kuning", "hijau"]) {
         const mat = new THREE.MeshStandardMaterial({
-          color: WARNA_LAMPU_LL[w].mati, emissive: WARNA_LAMPU_LL[w].nyala, emissiveIntensity: 0, roughness: 0.4,
+          color: WARNA_LAMPU_LL[w].mati, emissive: WARNA_LAMPU_LL[w].nyala, emissiveIntensity: 0, roughness: 0.3,
         });
         matLLBaru[sumbu][w] = mat;
         const im = new THREE.InstancedMesh(geoCakramLL, mat, Math.max(1, nSumbu));
@@ -255,15 +277,16 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
         imCakramPeta[sumbu + w] = im; grup.add(im);
       }
     }
-    const Y_CAKRAM_LL = { merah: 4.87, kuning: 4.42, hijau: 3.97 }; // di muka kotak (z lokal 0,29) -> cakram di 0,31
-    const hitungCakram = { us: 0, tb: 0 };
+    const DY_CAKRAM_LL = { merah: 0.5, kuning: 0, hijau: -0.5 };
+    const hitungCakram = { us: 0, tb: 0 }, _lok = new THREE.Vector3();
     tiangLL.forEach((s, i) => {
       const ry = Math.atan2(s.hx, s.hz);
       dummy.position.set(s.x, 0, s.z); dummy.scale.set(1, 1, 1); dummy.rotation.set(0, ry, 0);
       dummy.updateMatrix(); imTiangLL.setMatrixAt(i, dummy.matrix);
       const j = hitungCakram[s.sumbu]++;
       for (const w of ["merah", "kuning", "hijau"]) {
-        dummy.position.set(s.x + s.hx * 0.31, Y_CAKRAM_LL[w], s.z + s.hz * 0.31);
+        _lok.set(KX, KY + DY_CAKRAM_LL[w], 0.5).applyAxisAngle(THREE.Object3D.DefaultUp, ry);
+        dummy.position.set(s.x + _lok.x, _lok.y, s.z + _lok.z);
         dummy.updateMatrix(); imCakramPeta[s.sumbu + w].setMatrixAt(j, dummy.matrix);
       }
     });
@@ -276,8 +299,8 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
        z, tapi warna per instans yang membedakan). */
     const marka = markaPersimpangan();
     const semuaMarka = [];
-    for (const r of marka.tutup) semuaMarka.push({ x: r.x, z: r.z, w: r.w, d: r.d, warna: 0xb39d72 });
-    for (const r of marka.zebra) semuaMarka.push({ x: r.x, z: r.z, w: r.w, d: r.d, warna: 0xfffdf2 });
+    // marka.tutup tidak dipakai lagi: tekstur aspal sudah bersih di persimpangan (lihat buatKanvasTanah)
+    for (const r of marka.zebra) semuaMarka.push({ x: r.x, z: r.z, w: r.w, d: r.d, warna: 0xf4f1e6 });
     for (const r of marka.henti) semuaMarka.push({ x: r.x, z: r.z, w: r.w, d: r.d, warna: 0xfffdf2 });
     const imMarka = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.06, 1),
       new THREE.MeshStandardMaterial({ roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),

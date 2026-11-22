@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "rumah" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
-import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
+import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PUSAT_X, PUSAT_Z, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
 import { M, TEX_ATAP, dataPembangunan, geometriAtapPelana, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
@@ -162,7 +162,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
   export let dinamis = null;
   export const rumahKlik = [];
   export const npcList = [];
-  export const JALUR_PLAZA = [[-88, 16], [88, 16], [88, 40], [-88, 40]];
+  export const JALUR_PLAZA = [[-88, 16], [88, 16], [88, 40], [-88, 40]].map(([x, z]) => [x + PUSAT_X, z + PUSAT_Z]); // relatif pusat plaza
   export const SEGMEN = [];
   export let PANJANG_JALUR = 0;
   for (let i = 0; i < JALUR_PLAZA.length; i++) {
@@ -176,7 +176,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
       const t = sg.len ? (s - sg.mulai) / sg.len : 0;
       return { x: sg.a[0] + (sg.b[0] - sg.a[0]) * t, z: sg.a[1] + (sg.b[1] - sg.a[1]) * t, dx: sg.b[0] - sg.a[0], dz: sg.b[1] - sg.a[1] };
     }
-    return { x: 0, z: 20, dx: 1, dz: 0 };
+    return { x: PUSAT_X, z: 20 + PUSAT_Z, dx: 1, dz: 0 };
   }
   /* Penempatan rumah detail (?v=18, keputusan Fahmi: "1 blok beda nomor
      rumah aja" — tidak ada lagi rumah pajangan di plaza, tidak berjejer

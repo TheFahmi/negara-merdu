@@ -1,12 +1,13 @@
 /* Negara Merdu — modul game "istana" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Istana: pohon pot plaza dan kompleks Istana Negara (pusatKota) + karakter Pak Presiden. */
-import { LAMPU_TAMAN, M, MAT_JENDELA, kotak, scene } from "./bersama.js";
+import { LAMPU_TAMAN, M, MAT_JENDELA, buatTeksturProsedural, kotak, scene } from "./bersama.js";
+import { PUSAT_X, PUSAT_Z, hashInt } from "./inti.js";
 import { bangkuTaman, teksturBenderaMerdu } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js";
 
   export let animasiKades = null; // diisi pusatKota(): karakter Pak Presiden (dipindah dari rumah.js — di-assign di sini)
-  export function pohonPot(x, z) { // pohon dalam pot terakota (palet balai 0xb5533c), basis di puncak slab plaza
+  export function pohonPot(x, z, induk) { // pohon dalam pot terakota (palet balai 0xb5533c), basis di puncak slab plaza
     const g = new THREE.Group();
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.42, 0.8, 8), M(0xb5533c));
     pot.position.y = 0.4; pot.castShadow = true; g.add(pot);
@@ -14,13 +15,41 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     batang.position.y = 1.4; g.add(batang);
     const daun = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25, 0), M(0x4da653));
     daun.position.y = 2.9; daun.castShadow = true; g.add(daun);
-    g.position.set(x, 0.3, z); scene.add(g);
+    g.position.set(x, 0.3, z); (induk || scene).add(g);
     return g;
   }
+  function buatKanvasPlaza(skala) { // ubin paving 8x8 unit: 4x4 batu, nat gelap tipis, variasi warna halus
+    const S = Math.max(32, Math.round(128 * skala));
+    const cv = document.createElement("canvas"); cv.width = cv.height = S;
+    const c = cv.getContext("2d"); const u = S / 128, sel = S / 4;
+    c.fillStyle = "#a99a80"; c.fillRect(0, 0, S, S); // nat
+    const PALET = ["#ddd0b6", "#d6c7aa", "#e3d8c1", "#cfbf9f", "#d9cbb0"];
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+      const h = hashInt(x * 17 + y * 5 + 11);
+      c.fillStyle = PALET[Math.floor(h * PALET.length)];
+      c.fillRect(x * sel + 1.2 * u, y * sel + 1.2 * u, sel - 2.4 * u, sel - 2.4 * u);
+      c.fillStyle = "rgba(255,255,255,0.18)"; c.fillRect(x * sel + 1.2 * u, y * sel + 1.2 * u, sel - 2.4 * u, 1.4 * u);
+      c.fillStyle = "rgba(80,60,30,0.10)"; c.fillRect(x * sel + 1.2 * u, (y + 1) * sel - 2.6 * u, sel - 2.4 * u, 1.4 * u);
+    }
+    return cv;
+  }
   (function pusatKota() {
+    /* Seluruh kompleks plaza + istana dibangun di grup yang berpusat di
+       (PUSAT_X, PUSAT_Z) = as persimpangan jalan tengah — istana tepat
+       segaris dengan jalan utara-selatan. Koordinat di bawah tetap lokal. */
+    const pusat = new THREE.Group(); pusat.position.set(PUSAT_X, 0, PUSAT_Z); scene.add(pusat);
+    const rintanganPusat = (r) => rintangan.push({ minX: r.minX + PUSAT_X, maxX: r.maxX + PUSAT_X, minZ: r.minZ + PUSAT_Z, maxZ: r.maxZ + PUSAT_Z });
     // AUDIT Z-FIGHTING: pusat y 0,15 -> 0,17 supaya wajah bawah plaza (dulu persis y=0,
     // koplanar dengan plane tanah) kini menggantung 0,02 di atasnya; puncak 0,32.
-    const plaza = kotak(208, 0.3, 104, 0xbfae87, 0, 0.17, 0); plaza.castShadow = false; scene.add(plaza); // tanah plaza 0xcfc4a5 -> 0xbfae87: pasir hangat, tidak lagi hampir putih
+    const plaza = kotak(208, 0.3, 104, 0xffffff, 0, 0.17, 0); plaza.castShadow = false; pusat.add(plaza);
+    /* Perkerasan plaza (perbaikan 3D): dulu satu bidang pasir polos 208x104
+       yang dari kamera Orbit terbaca sebagai "lempeng kosong". Kini paving
+       batu berpola 4x4 per ubin dengan variasi warna & nat, diulang tiap
+       8 unit — skala terasa, plaza tidak lagi datar. */
+    const texPlaza = buatTeksturProsedural(buatKanvasPlaza);
+    texPlaza.wrapS = texPlaza.wrapT = THREE.RepeatWrapping;
+    texPlaza.repeat.set(208 / 8, 104 / 8); texPlaza.anisotropy = 4;
+    plaza.material.map = texPlaza; plaza.material.needsUpdate = true;
     /* ================= ISTANA NEGARA MEWAH (?v=24) =================
        Gedung kantor Pak Presiden dibangun ulang total: badan bertingkat
        beratap hijau tua + menara kubah berpuncak emas, portico 6 kolom
@@ -289,24 +318,24 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
       const semak2 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.12, 0), M(0x4da653));
       semak2.position.set(sisi * 8.4, 3.35, 8.4); semak2.castShadow = true; g.add(semak2);
     }
-    g.position.set(0, 0, -34); scene.add(g);
+    g.position.set(0, 0, -34); pusat.add(g);
     /* Tapak istana mewah (?v=24): podium + badan + portico + sayap menyatu
        satu kompleks tertabrak (AABB menyatu menutup seluruh tapak podium
        x[-28.2,28.2] z lokal[-8.8,11.0]); air mancur & pagar pelataran
        ditabrak terpisah, gerbang selatan (x -4.2..4.2) terbuka. Tangga
        (z lokal 10.8..17.2) & pelataran rendah (0.34) di luar AABB —
        bisa dinaiki/diinjaki seperti teras rumah. */
-    rintangan.push({ minX: -15.6, maxX: 15.6, minZ: -42.8, maxZ: -23 });    // badan utama + portico istana
-    rintangan.push({ minX: -28.2, maxX: -13.8, minZ: -42.8, maxZ: -23 });   // sayap barat + podium depannya
-    rintangan.push({ minX: 13.8, maxX: 28.2, minZ: -42.8, maxZ: -23 });     // sayap timur + podium depannya
-    rintangan.push({ minX: -4.1, maxX: 4.1, minZ: -14.2, maxZ: -5.8 });     // air mancur
-    rintangan.push({ minX: -28.2, maxX: -4.2, minZ: -3.7, maxZ: -3.1 });    // pagar selatan, barat gerbang
-    rintangan.push({ minX: 4.2, maxX: 28.2, minZ: -3.7, maxZ: -3.1 });      // pagar selatan, timur gerbang
-    rintangan.push({ minX: -28.2, maxX: -27.6, minZ: -29.4, maxZ: -3.1 });  // pagar barat
-    rintangan.push({ minX: 27.6, maxX: 28.2, minZ: -29.4, maxZ: -3.1 });    // pagar timur
+    rintanganPusat({ minX: -15.6, maxX: 15.6, minZ: -42.8, maxZ: -23 });    // badan utama + portico istana
+    rintanganPusat({ minX: -28.2, maxX: -13.8, minZ: -42.8, maxZ: -23 });   // sayap barat + podium depannya
+    rintanganPusat({ minX: 13.8, maxX: 28.2, minZ: -42.8, maxZ: -23 });     // sayap timur + podium depannya
+    rintanganPusat({ minX: -4.1, maxX: 4.1, minZ: -14.2, maxZ: -5.8 });     // air mancur
+    rintanganPusat({ minX: -28.2, maxX: -4.2, minZ: -3.7, maxZ: -3.1 });    // pagar selatan, barat gerbang
+    rintanganPusat({ minX: 4.2, maxX: 28.2, minZ: -3.7, maxZ: -3.1 });      // pagar selatan, timur gerbang
+    rintanganPusat({ minX: -28.2, maxX: -27.6, minZ: -29.4, maxZ: -3.1 });  // pagar barat
+    rintanganPusat({ minX: 27.6, maxX: 28.2, minZ: -29.4, maxZ: -3.1 });    // pagar timur
     const kades = buatKarakter({ baju: "#6e4525", kulit: "#f1c27d", topi: "peci" });
-    kades.scale.setScalar(1.5); kades.position.set(4.6, 0.34, -16.6); scene.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
-    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(4.6, 3.7, -16.6); scene.add(lk);
+    kades.scale.setScalar(1.5); kades.position.set(4.6, 0.34, -16.6); pusat.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
+    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(4.6, 3.7, -16.6); pusat.add(lk);
     // tugu — palet diseragamkan dengan balai: badan krem 0xfdf3d8 + sabuk terakota 0xb5533c
     const tugu = new THREE.Group();
     const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.4, 5.4, 4), M(0xfdf3d8));
@@ -314,8 +343,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     const pita = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.45, 0.5, 4), M(0xb5533c));
     pita.position.y = 1.7; pita.castShadow = true; tugu.add(pita);
     const bola = new THREE.Mesh(new THREE.SphereGeometry(0.9, 10, 8), M(0xf2b13d, 0.5));
-    bola.position.y = 6.1; tugu.add(bola); tugu.position.set(-30, 0.3, 8); scene.add(tugu);
-    rintangan.push({ minX: -31.6, maxX: -28.4, minZ: 6.4, maxZ: 9.6 }); // tugu
+    bola.position.y = 6.1; tugu.add(bola); tugu.position.set(-30, 0.3, 8); pusat.add(tugu);
+    rintanganPusat({ minX: -31.6, maxX: -28.4, minZ: 6.4, maxZ: 9.6 }); // tugu
     // papan raksasa
     const pg = new THREE.Group();
     pg.add(kotak(0.5, 6, 0.5, 0x7a4a21, -5.4, 3, 0));
@@ -325,8 +354,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
        new THREE.MeshStandardMaterial({ map: papanTex, roughness: 0.9 }), M(0x7a4a21)]);
     board.position.y = 7.4; board.castShadow = true; pg.add(board);
     pg.position.set(34, 0, 26); pg.rotation.y = Math.PI + 0.45;
-    scene.add(pg);
-    rintangan.push({ minX: 26.5, maxX: 41.5, minZ: 18.5, maxZ: 33.5 }); // papan raksasa (perkiraan, papan miring)
+    pusat.add(pg);
+    rintanganPusat({ minX: 26.5, maxX: 41.5, minZ: 18.5, maxZ: 33.5 }); // papan raksasa (perkiraan, papan miring)
     // papan RENCANA PEMBANGUNAN — cermin papan raksasa di sisi barat plaza
     const pr = new THREE.Group();
     pr.add(kotak(0.5, 7.6, 0.5, 0x7a4a21, -6.2, 3.8, 0));
@@ -337,8 +366,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
        new THREE.MeshStandardMaterial({ map: rencanaTex, roughness: 0.9 }), M(0x7a4a21)]);
     panelRencana.position.y = 3.9; panelRencana.castShadow = true; pr.add(panelRencana);
     pr.position.set(-34, 0, 26); pr.rotation.y = Math.PI - 0.45;
-    scene.add(pr);
-    rintangan.push({ minX: -41.5, maxX: -26.5, minZ: 18.5, maxZ: 33.5 }); // papan rencana (perkiraan, papan miring)
+    pusat.add(pr);
+    rintanganPusat({ minX: -41.5, maxX: -26.5, minZ: 18.5, maxZ: 33.5 }); // papan rencana (perkiraan, papan miring)
     gambarPapanRencana();
     // pohon plaza
     for (const [x, z] of [[-95, -45], [95, -45], [-95, 45], [95, 45], [-60, 45], [60, 45], [-60, -45], [60, -45]]) {
@@ -347,17 +376,17 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
       batang.position.y = 1.3; pohon.add(batang);
       const daun = new THREE.Mesh(new THREE.IcosahedronGeometry(2.6, 0), M(0x4da653));
       daun.position.y = 4.4; daun.castShadow = true; pohon.add(daun);
-      pohon.position.set(x, 0.3, z); scene.add(pohon);
+      pohon.position.set(x, 0.3, z); pusat.add(pohon);
     }
     /* Perapian plaza: bangku & pohon pot ditaruh SIMETRIS terhadap sumbu
        plaza (berpasangan ±x), menghadap pita tengah tempat warga berjalan.
        Paletnya keluarga balai (kayu + terakota). Tanpa rintangan baru —
        perlakuan sama seperti pohon plaza: dekorasi tidak ditabrak. */
     for (const bx of [-24, 24]) {
-      const b1 = bangkuTaman(bx, 28, Math.PI); b1.position.y = 0.3; scene.add(b1); // menghadap balai (-z)
-      const b2 = bangkuTaman(bx, 2, 0); b2.position.y = 0.3; scene.add(b2);        // menghadap jalur (+z)
+      const b1 = bangkuTaman(bx, 28, Math.PI); b1.position.y = 0.3; pusat.add(b1); // menghadap balai (-z)
+      const b2 = bangkuTaman(bx, 2, 0); b2.position.y = 0.3; pusat.add(b2);        // menghadap jalur (+z)
     }
-    for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2], [-10, -20], [10, -20]]) pohonPot(px, pz);
+    for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2], [-10, -20], [10, -20]]) pohonPot(px, pz, pusat);
   })();
 
   /* ================= DISTRIK DETAIL (WARGA TERBARU) ================= */

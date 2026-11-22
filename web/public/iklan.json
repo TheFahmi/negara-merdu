@@ -1,0 +1,10 @@
+{
+  "_catatan": "Isi papan iklan Negara Merdu. Edit/tambah entri di 'iklan' — bergilir tiap 8 detik di 8 papan sekeliling plaza. Wajib: judul. Opsional: sub, cta, link (https://...), latar [warna1, warna2], aksen, gambar (path gambar 2:1, mis. /iklan/promo.png 1024x512 — menggantikan desain teks).",
+  "iklan": [
+    { "judul": "Jadi Warga Negara Merdu", "sub": "Daftar pakai username Instagram — dapat rumah & KTP digital", "cta": "Daftar gratis", "latar": ["#1f7a4d", "#2fa36b"], "aksen": "#ffd54a" },
+    { "judul": "Follow @negaramerdu", "sub": "Update pembangunan, pemilu & acara warga tiap hari", "cta": "Instagram", "link": "https://instagram.com/negaramerdu", "latar": ["#7b2ff7", "#f107a3"], "aksen": "#ffffff" },
+    { "judul": "Pasang Iklan di Sini", "sub": "Papan strategis di jantung kota — dilihat semua warga", "cta": "Hubungi admin", "link": "https://instagram.com/negaramerdu", "latar": ["#ff8a00", "#e52e71"], "aksen": "#fff3c4" },
+    { "judul": "Pemilu Negara Merdu", "sub": "Suaramu menentukan Presiden berikutnya. Ayo memilih!", "cta": "Buka menu Pemilu", "latar": ["#0f4c81", "#1f8ad1"], "aksen": "#ffd54a" },
+    { "judul": "Pembangunan Desa", "sub": "Usulkan fasilitas baru: sekolah, pasar, puskesmas…", "cta": "Lihat rencana", "latar": ["#5b3a1e", "#a8672f"], "aksen": "#ffe08a" }
+  ]
+}

@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "bersama" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Bersama: state kualitas/waktu, tekstur prosedural, data dari API, dan scene Three.js (renderer, kamera, cahaya, langit, tanah, geometri bantu) + penerapan kualitas/waktu. */
-import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGKA_WAKTU, KUNCI_HEX_WAKTU, PITCH, SISI, WARNA_LAMPU_LL, evaluasiOtomatis, faseLaluLintas, hashInt, indeksUntukPilihan, parameterKualitas, parameterWaktu } from "./inti.js";
+import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGKA_WAKTU, KUNCI_HEX_WAKTU, PITCH, SISI, WARNA_ASPAL_CSS, WARNA_LAMPU_LL, evaluasiOtomatis, faseLaluLintas, hashInt, indeksUntukPilihan, parameterKualitas, parameterWaktu } from "./inti.js";
 
   /* ================= KUALITAS GRAFIK (keadaan aktif) ================= */
   export let pilihanKualitas = "otomatis";
@@ -67,7 +67,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
         const x = k * lebar + geser, v = hashInt(r * 31 + k * 7 + 3);
         c.fillStyle = v > 0.5 ? "rgba(255,255,255,0.10)" : "rgba(90,50,25,0.07)";
         c.fillRect(x + 1.5 * u, y + 1.5 * u, lebar - 3 * u, hBaris - 3 * u);
-        c.strokeStyle = "rgba(96,52,26,0.40)"; c.lineWidth = 2.4 * u;
+        c.strokeStyle = "rgba(96,52,26,0.26)"; c.lineWidth = 2 * u; // 0,40 -> 0,26: setelah koreksi sRGB garis genteng terlalu kasar
         c.beginPath(); c.arc(x + lebar / 2, y + hBaris, lebar / 2 - 1.5 * u, Math.PI, 0); c.stroke();
       }
       c.fillStyle = "rgba(70,38,18,0.20)"; c.fillRect(0, y + hBaris - 2.4 * u, S, 2.4 * u);
@@ -75,36 +75,65 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
     return cv;
   }
   export function buatKanvasTanah(skala) { // ubin 1 blok: jalan di tepi kiri+atas, sisanya kavling rumput
-    const S = Math.max(64, Math.round(256 * skala));
+    /* Desain jalan (perbaikan): jalan pasir rata diganti ASPAL abu dengan
+       butiran halus, garis tepi putih, garis tengah putus-putus, kerb
+       beton di antara aspal & trotoar, trotoar paving bernat. Resolusi
+       dasar 256 -> 512 px per blok supaya marka tetap tajam dari dekat. */
+    const S = Math.max(64, Math.round(512 * skala));
     const cv = document.createElement("canvas"); cv.width = cv.height = S;
     const c = cv.getContext("2d"); const u = S / 256;
-    c.fillStyle = "#63ac4e"; c.fillRect(0, 0, S, S); // rumput #7fbd68 -> #63ac4e: hijau lebih dalam (perbaikan warna)
-    c.fillStyle = "rgba(255,255,255,0.05)";
-    for (let i = 0; i < 40; i++) c.fillRect((i * 67) % S, (i * 97) % S, 22 * u, 14 * u);
-    const j = Math.round(S * JALAN / PITCH); // lebar jalan di ubin (~43px @256)
-    const tro = Math.max(2, Math.round(7 * u)); // lebar trotoar
-    c.fillStyle = "#d9c9a3"; // trotoar (diperdalam dari #e6dcc2): sisi kavling ubin ini + sisi kavling ubin tetangga
-    c.fillRect(j, 0, tro, S); c.fillRect(0, j, S, tro);
-    c.fillRect(S - tro, 0, tro, S); c.fillRect(0, S - tro, S, tro);
-    c.fillStyle = "#b39d72"; c.fillRect(0, 0, j, S); c.fillRect(0, 0, S, j); // badan jalan (diperdalam dari #c8b992 supaya kontras vs rumput)
-    c.fillStyle = "rgba(90,70,40,0.25)";
-    c.fillRect(j - 2 * u, 0, 2 * u, S); c.fillRect(0, j - 2 * u, S, 2 * u);
-    c.fillRect(0, 0, 2 * u, S); c.fillRect(0, 0, S, 2 * u);
-    c.fillStyle = "#fff8dc"; // garis tengah putus-putus — kala 32u membagi habis sisi ubin
-    // di semua skala (256/192/128/64), jadi pola menyambung mulus antar ubin:
-    // tidak ada garis dobel/patah di sambungan blok seperti pola lama (kala 30).
-    const tgh = Math.round(j / 2 - 1.5 * u);
-    const kalaGaris = 32 * u, pjgGaris = Math.round(18 * u),
-      awalGaris = Math.round(7 * u), lebarGaris = Math.max(2, Math.round(3 * u));
+    c.fillStyle = "#6aa652"; c.fillRect(0, 0, S, S); // rumput
+    for (let i = 0; i < 70; i++) { // bercak rumput halus terang/gelap
+      c.fillStyle = i % 2 ? "rgba(255,255,220,0.05)" : "rgba(30,70,20,0.06)";
+      c.fillRect(hashInt(i * 11 + 3) * S, hashInt(i * 17 + 5) * S, (10 + hashInt(i) * 18) * u, (8 + hashInt(i + 9) * 12) * u);
+    }
+    const j = Math.round(S * JALAN / PITCH); // lebar jalan di ubin (~43u)
+    const tro = Math.max(3, Math.round(8 * u)); // lebar trotoar
+    const kerb = Math.max(1, Math.round(1.6 * u));
+    // trotoar: sisi kavling ubin ini + sisi kavling ubin tetangga
+    c.fillStyle = "#d9d3c4";
+    // hanya di sisi kavling (j..S) — trotoar tidak lagi melintang di atas persimpangan
+    c.fillRect(j, j, tro, S - j); c.fillRect(j, j, S - j, tro);
+    c.fillRect(S - tro, j, tro, S - j); c.fillRect(j, S - tro, S - j, tro);
+    c.fillStyle = "rgba(110,100,85,0.35)"; // nat paving trotoar
+    const ubinT = 8 * u;
+    for (let y = j; y < S; y += ubinT) { c.fillRect(j, y, tro, Math.max(1, 0.6 * u)); c.fillRect(S - tro, y, tro, Math.max(1, 0.6 * u)); }
+    for (let x = j; x < S; x += ubinT) { c.fillRect(x, j, Math.max(1, 0.6 * u), tro); c.fillRect(x, S - tro, Math.max(1, 0.6 * u), tro); }
+    // aspal
+    c.fillStyle = WARNA_ASPAL_CSS; c.fillRect(0, 0, j, S); c.fillRect(0, 0, S, j);
+    for (let i = 0; i < 900; i++) { // butiran aspal (seimbang terang/gelap -> rata-rata tetap WARNA_ASPAL)
+      const x = hashInt(i * 7 + 1) * S, y = hashInt(i * 13 + 2) * S;
+      if (x > j && y > j) continue;
+      c.fillStyle = i % 2 ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
+      c.fillRect(x, y, 1.4 * u, 1.4 * u);
+    }
+    // kerb beton (tepi aspal ke trotoar, kedua sisi jalan)
+    c.fillStyle = "#b9b4a8";
+    c.fillRect(j, j, kerb, S - j); c.fillRect(j, j, S - j, kerb);
+    c.fillRect(S - kerb, j, kerb, S - j); c.fillRect(j, S - kerb, S - j, kerb);
+    // garis tepi putih menerus, 3u dari kerb — berhenti di bibir persimpangan (petak 0..j bersih)
+    c.fillStyle = "rgba(244,241,230,0.85)";
+    const tepi = Math.max(1, Math.round(1.2 * u));
+    c.fillRect(j - 3 * u - tepi, j, tepi, S - j); c.fillRect(j, j - 3 * u - tepi, S - j, tepi);
+    c.fillRect(3 * u, j, tepi, S - j); c.fillRect(j, 3 * u, S - j, tepi);
+    // garis tengah putus-putus — kala 32u membagi habis sisi ubin di semua skala: menyambung mulus antar blok
+    c.fillStyle = "#f4f1e6";
+    const lebarGaris = Math.max(2, Math.round(1.6 * u));
+    const tgh = Math.round(j / 2 - lebarGaris / 2);
+    const kalaGaris = 32 * u, pjgGaris = Math.round(16 * u), awalGaris = Math.round(8 * u);
+    // tidak digambar di petak persimpangan & zona zebra (5,8 unit di tiap sisi) — dulu ditutup instans "tutup"
+    const bebas = Math.round(S * (JALAN + 5.8) / PITCH), bebasAkhir = S - Math.round(S * 5.8 / PITCH);
     for (let y = awalGaris; y + pjgGaris <= S; y += kalaGaris) {
+      if (y < bebas || y + pjgGaris > bebasAkhir) continue;
       c.fillRect(tgh, y, lebarGaris, pjgGaris);
       c.fillRect(y, tgh, pjgGaris, lebarGaris);
     }
-    c.strokeStyle = "rgba(60,80,50,0.20)"; c.lineWidth = Math.max(1, u);
+    // petak kavling: garis batas halus
+    c.strokeStyle = "rgba(40,70,30,0.18)"; c.lineWidth = Math.max(1, u);
     const langkah = (S - j - tro) / SISI, awal = j + tro;
     for (let i = 1; i < SISI; i++) {
-      c.beginPath(); c.moveTo(awal + i * langkah, awal); c.lineTo(awal + i * langkah, S); c.stroke();
-      c.beginPath(); c.moveTo(awal, awal + i * langkah); c.lineTo(S, awal + i * langkah); c.stroke();
+      c.beginPath(); c.moveTo(awal + i * langkah, awal); c.lineTo(awal + i * langkah, S - tro); c.stroke();
+      c.beginPath(); c.moveTo(awal, awal + i * langkah); c.lineTo(S - tro, awal + i * langkah); c.stroke();
     }
     return cv;
   }
@@ -225,7 +254,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
       fragmentShader: "varying vec3 vP; uniform vec3 atas; uniform vec3 tengah; uniform vec3 bawah;" +
         "void main(){ float h = normalize(vP).y;" +
         " vec3 c = h > 0.12 ? mix(tengah, atas, smoothstep(0.12, 0.65, h)) : mix(bawah, tengah, smoothstep(-0.08, 0.12, h));" +
-        " gl_FragColor = vec4(c, 1.0); }",
+        " gl_FragColor = linearToOutputTexel(vec4(c, 1.0)); }", // uniform linear (warna.js) -> encode sRGB
     }));
   kubahLangit.frustumCulled = false; kubahLangit.renderOrder = -1;
   scene.add(kubahLangit);
@@ -235,7 +264,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
   camera.rotation.order = "YXZ"; // supaya yaw/pitch mode 1st Person & Drone berperilaku seperti FPS
 
   /* Golden hour: matahari miring dari barat (-x), cahaya & ambient hangat. */
-  export const OFSET_MATAHARI = { x: -240, y: 150, z: 90 };
+  export const OFSET_MATAHARI = { x: -480, y: 300, z: 180 };
   export const hemi = new THREE.HemisphereLight(0xffe7c4, 0x86a860, 0.62); // ambient 0,85 -> 0,62: kurang cuci, kontras arah cahaya terasa
   scene.add(hemi);
   export const matahari = new THREE.DirectionalLight(0xffc384, 1.15); // kunci cahaya 1,05 -> 1,15: sisi terang/jatuh bayangan lebih tegas
@@ -244,8 +273,23 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
   matahari.shadow.mapSize.set(PARAM.petaBayangan || 2048, PARAM.petaBayangan || 2048);
   matahari.shadow.camera.left = -150; matahari.shadow.camera.right = 150;
   matahari.shadow.camera.top = 150; matahari.shadow.camera.bottom = -150;
-  matahari.shadow.camera.far = 600;
+  matahari.shadow.camera.far = 1500;
+  matahari.shadow.bias = -0.0004; matahari.shadow.normalBias = 0.6; // anti shadow acne di atap/dinding flat-shaded
+  matahari.shadow.radius = 3;
   scene.add(matahari); scene.add(matahari.target);
+  /* Jangkauan bayangan mengikuti jarak kamera: dulu kotak tetap ±150 sehingga
+     di mode Orbit (radius 300) hanya tengah layar yang berbayang dan sisanya
+     terlihat datar. Dibulatkan per 20 unit supaya proyeksi tidak dihitung
+     ulang tiap frame saat zoom halus. */
+  let _jangkauBayangan = 150;
+  export function aturJangkauBayangan(j) {
+    j = Math.max(90, Math.min(460, Math.round(j / 20) * 20));
+    if (j === _jangkauBayangan) return;
+    _jangkauBayangan = j;
+    const c = matahari.shadow.camera;
+    c.left = -j; c.right = j; c.top = j; c.bottom = -j;
+    c.updateProjectionMatrix();
+  }
 
   /* ---------- Siklus cahaya (Paket 3 ?v=15) ----------
      Lapisan bintang: 700 titik deterministik di kubah langit (r 7.900,
@@ -313,7 +357,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
   (function tanahKota() {
     const tex = buatTeksturProsedural(buatKanvasTanah);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(BLOK_KOLOM, BLOK_BARIS);
-    tex.anisotropy = 4;
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); // jalan tetap tajam di sudut pandang landai
     const tanah = new THREE.Mesh(new THREE.PlaneGeometry(KOTA_W, KOTA_D),
       new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
     tanah.rotation.x = -Math.PI / 2; tanah.receiveShadow = true; scene.add(tanah);

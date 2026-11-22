@@ -1,17 +1,18 @@
 /* Negara Merdu — modul game "kamera" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kamera: mode orbit/1st person/3rd person/drone, gerak pemain, tabrakan, joystick & sentuh. */
-import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, RESERVASI, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
-import { OFSET_MATAHARI, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
+import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
+import { OFSET_MATAHARI, aturJangkauBayangan, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { INT, dekatPintuKeluar, diInterior, keluarInterior, masukInterior, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
 import { sesi } from "./ui.js";
 import { buangGrup } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
+import { ketukIklan } from "./iklan.js";
 import { waktuLalu } from "./main.js";
 
   /* ================= KAMERA ORBIT ================= */
   export let theta = 0.8, phi = 1.02, radius = 300, putarOtomatis = true;
-  export const target = new THREE.Vector3(0, 0, 6);
+  export const target = new THREE.Vector3(PUSAT_X, 0, 6 + PUSAT_Z);
   export function terapkanKamera() {
     camera.position.set(
       target.x + radius * Math.sin(phi) * Math.sin(theta),
@@ -20,6 +21,7 @@ import { waktuLalu } from "./main.js";
     camera.lookAt(target);
     matahari.position.set(target.x + OFSET_MATAHARI.x, OFSET_MATAHARI.y, target.z + OFSET_MATAHARI.z);
     matahari.target.position.set(target.x, 0, target.z);
+    aturJangkauBayangan(radius * 1.15);
   }
   export function fokusKe(x, z, r) {
     target.set(x, 0, z); radius = r || 60; interaksiTerakhir = 0;
@@ -108,6 +110,7 @@ import { waktuLalu } from "./main.js";
     v2.set((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1);
     ray.setFromCamera(v2, camera);
     const kena = ray.intersectObjects(rumahKlik, true);
+    if (ketukIklan(ray, kena.length ? kena[0].distance : Infinity)) return; // papan iklan lebih dekat dari rumah mana pun
     if (!kena.length) return;
     let obj = kena[0].object;
     while (obj && !obj.userData.pemilik) obj = obj.parent;
@@ -154,9 +157,10 @@ import { waktuLalu } from "./main.js";
   addEventListener("keyup", (e) => tombolKey.delete(e.code));
   addEventListener("blur", () => tombolKey.clear());
 
-  export function ikutiMatahari(x, z) {
+  export function ikutiMatahari(x, z, jangkau) {
     matahari.position.set(x + OFSET_MATAHARI.x, OFSET_MATAHARI.y, z + OFSET_MATAHARI.z);
     matahari.target.position.set(x, 0, z);
+    aturJangkauBayangan(jangkau || 110); // jalan kaki: kotak rapat = bayangan tajam
   }
   /* Tabrakan sederhana: lingkaran pemain (r=0,55) vs AABB rintangan, didorong keluar lewat sisi terdekat.
      Rintangan AABB: objek Distrik Pusat (balai, tugu, papan, rumah detail) +
@@ -370,7 +374,7 @@ import { waktuLalu } from "./main.js";
     dr.y = jepit(dr.y, 3, 1000);
     camera.position.set(dr.x, dr.y, dr.z);
     camera.rotation.set(dr.pitch, dr.yaw, 0);
-    ikutiMatahari(dr.x, dr.z);
+    ikutiMatahari(dr.x, dr.z, 120 + dr.y * 1.2);
   }
   export const PETUNJUK = {
     orbit: "Seret untuk memutar · Cubit/scroll untuk zoom",
@@ -415,7 +419,7 @@ import { waktuLalu } from "./main.js";
         fp.pitch = 0;
         const pos = tabrakan(fp.x, fp.z); fp.x = pos.x; fp.z = pos.z;
       } else { // mulai di plaza, menghadap istana negara & Pak Presiden
-        fp.x = 8; fp.z = 22; fp.yaw = Math.atan2(8, 22);
+        fp.x = 8 + PUSAT_X; fp.z = 22 + PUSAT_Z; fp.yaw = Math.atan2(8, 22);
         fp.pitch = 0;
         const pos = tabrakan(fp.x, fp.z); fp.x = pos.x; fp.z = pos.z;
       }

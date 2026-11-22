@@ -14,6 +14,16 @@
   export const BLOK_KOLOM = 80, BLOK_BARIS = 50, PER_BLOK = 25, SISI = 5;
   export const PITCH = 84, JALAN = 14, KAV_PITCH = 14;
   export const KAPASITAS = 100000;
+  /* Warna aspal: SATU sumber untuk tekstur jalan (buatKanvasTanah) dan
+     tutup marka persimpangan (kota.js) — dulu dua nilai terpisah sehingga
+     persimpangan tampak sebagai tambalan berbentuk salib. */
+  export const WARNA_ASPAL_HEX = 0x5c6066, WARNA_ASPAL_CSS = "#5c6066";
+  /* Pusat plaza / Istana Negara diselaraskan dengan SUMBU JALAN kota
+     (perbaikan posisi istana): jalan tengah utara-selatan & barat-timur
+     berada di x/z 0..14 (as 7), sedangkan plaza dulu dipusatkan di (0,0)
+     sehingga istana menggeser 7 unit dari as jalan dan terlihat miring
+     terhadap grid. Semua koordinat plaza kini relatif ke titik ini. */
+  export const PUSAT_X = JALAN / 2, PUSAT_Z = JALAN / 2;
   export const KOTA_W = BLOK_KOLOM * PITCH, KOTA_D = BLOK_BARIS * PITCH;
   export const RESERVASI = new Set(); // blok pusat: plaza + balai + distrik detail
   for (let k = 38; k <= 41; k++) for (let b = 24; b <= 25; b++) RESERVASI.add(k + "," + b);
@@ -64,10 +74,10 @@
   /* Warna atap/dinding satu rumah dalam keluarga zonanya: hue tetap,
      jitter kecil dari dua nilai hash (a, b dalam 0..1) supaya tetap hidup. */
   export function warnaAtapZonaHSL(zona, a, b) {
-    return [(HUE_ZONA[zona] + (a - 0.5) * 0.03 + 1) % 1, 0.58, 0.46 + (b - 0.5) * 0.07];
+    return [(HUE_ZONA[zona] + (a - 0.5) * 0.03 + 1) % 1, 0.46, 0.54 + (b - 0.5) * 0.08]; // S 0,58->0,46 & L 0,46->0,54: kalibrasi ulang setelah manajemen warna sRGB (warna.js) — dulu terkompensasi tampilan pucat
   }
   export function warnaDindingZonaHSL(zona, a, b) { // pastel sekeluarga dengan atapnya
-    return [(HUE_ZONA[zona] + (a - 0.5) * 0.03 + 1) % 1, 0.42, 0.80 + (b - 0.5) * 0.05];
+    return [(HUE_ZONA[zona] + (a - 0.5) * 0.03 + 1) % 1, 0.32, 0.84 + (b - 0.5) * 0.05];
   }
   export function warnaZonaPeta(zona, terang) { // warna keluarga zona (dulu warna blok di peta; blok peta kini petak lahan — lihat WARNA_PETA.petak)
     return "hsl(" + Math.round(HUE_ZONA[zona] * 360) + ", 45%, " + (terang ? 60 : 53) + "%)";
@@ -275,14 +285,14 @@
      bintang = opasitas lapisan bintang; jendela = emissive jendela balai. */
   export const PRESET_WAKTU = {
     siang: {
-      matahari: 0xfff2d8, intMatahari: 1.25, langitHemi: 0xd8ecff, tanahHemi: 0x8fae6a, intHemi: 0.75,
+      matahari: 0xfff0d6, intMatahari: 1.7, langitHemi: 0xcfe6ff, tanahHemi: 0x5f7f45, intHemi: 0.5,
       kubahAtas: 0x3f8fd2, kubahTengah: 0x9fd0f5, kubahBawah: 0xe9f4e2, kabut: 0xdcefe8, latar: 0x9fd0f5,
       paparan: 1.0, kepalaLampu: 0.05, bintang: 0, awan: 0xfff8ec, intAwan: 0.1, jendela: 0.06,
     },
     senja: {
-      matahari: 0xffc384, intMatahari: 1.15, langitHemi: 0xffe7c4, tanahHemi: 0x86a860, intHemi: 0.62,
+      matahari: 0xffc890, intMatahari: 1.6, langitHemi: 0xd9e4f2, tanahHemi: 0x6a7f48, intHemi: 0.46,
       kubahAtas: 0x5fa8dd, kubahTengah: 0xaad9f2, kubahBawah: 0xffe3ae, kabut: 0xf6d9a8, latar: 0xaad9f2,
-      paparan: 1.05, kepalaLampu: 0.85, bintang: 0, awan: 0xfff8ec, intAwan: 0.22, jendela: 0.25,
+      paparan: 1.0, kepalaLampu: 0.85, bintang: 0, awan: 0xfff8ec, intAwan: 0.22, jendela: 0.25,
     },
     malam: {
       matahari: 0x8fb4e8, intMatahari: 0.38, langitHemi: 0x35497a, tanahHemi: 0x1d2a22, intHemi: 0.42,
@@ -338,9 +348,9 @@
     if (i < 2) return { jenis: "pembawa", alat: i === 0 ? "karung" : "kardus" };
     if (i < 6) {
       const p = PASANGAN_NGOBROL[(i - 2) >> 1], sisi = (i - 2) % 2;
-      return { jenis: "ngobrol", x: p[sisi].x, z: p[sisi].z, hadap: Math.atan2(p[1 - sisi].x - p[sisi].x, p[1 - sisi].z - p[sisi].z) };
+      return { jenis: "ngobrol", x: p[sisi].x + PUSAT_X, z: p[sisi].z + PUSAT_Z, hadap: Math.atan2(p[1 - sisi].x - p[sisi].x, p[1 - sisi].z - p[sisi].z) };
     }
-    if (i < 10) { const b = BANGKU_PLAZA[i - 6]; return { jenis: "duduk", x: b.x, z: b.z, rot: b.rot }; }
+    if (i < 10) { const b = BANGKU_PLAZA[i - 6]; return { jenis: "duduk", x: b.x + PUSAT_X, z: b.z + PUSAT_Z, rot: b.rot }; }
     return { jenis: "jalan" };
   }
   /* === AKHIR LOGIKA AKTIVITAS NPC === */

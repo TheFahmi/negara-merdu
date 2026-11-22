@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "peta" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Peta: minimap dan peta besar negara. */
-import { $, BLOK_BARIS, BLOK_KOLOM, FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, RESERVASI, TAMAN, posisiKavling } from "./inti.js";
+import { $, BLOK_BARIS, BLOK_KOLOM, FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, TAMAN, posisiKavling } from "./inti.js";
 import { daftarRumah, dataPembangunan } from "./bersama.js";
 import { diInterior } from "./rumah.js";
 import { dr, fp, modeKamera, tp } from "./kamera.js";
@@ -125,7 +125,7 @@ import { pemainOnline, titikAcuan } from "./jaringan.js";
       const q = titik(wx, wz);
       if (dalam(q)) { c.fillStyle = warnaCss; c.fillRect(q.x - 1.7, q.y - 1.7, 3.4, 3.4); }
     });
-    let p = titik(0, -34); // penanda istana negara di plaza
+    let p = titik(PUSAT_X, -34 + PUSAT_Z); // penanda istana negara di plaza
     if (dalam(p)) lingkaranPeta(c, p.x, p.y, 5, "#d9462e");
     if (sesi.saya) { // rumah sendiri: berlian emas
       const rp = posisiKavling(sesi.saya.blok, sesi.saya.kavling);
@@ -152,7 +152,7 @@ import { pemainOnline, titikAcuan } from "./jaringan.js";
       const q = titik(wx, wz);
       c.fillStyle = warnaCss; c.fillRect(q.x - 2, q.y - 2, 4, 4);
     });
-    let p = titik(0, -34);
+    let p = titik(PUSAT_X, -34 + PUSAT_Z);
     lingkaranPeta(c, p.x, p.y, 9, "#d9462e");
     c.fillStyle = "#21332a"; c.font = "bold 21px system-ui, sans-serif"; c.textAlign = "left";
     c.fillText("Istana Negara", p.x + 15, p.y + 7);

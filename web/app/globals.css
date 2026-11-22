@@ -671,3 +671,164 @@ body {
 
 /* Ikon SVG gambar sendiri (pengganti emoji, keputusan Fahmi 21 Nov 2026) */
 .ik { width: 1.15em; height: 1.15em; vertical-align: -0.22em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* =====================================================================
+   POLES UI (22 Nov 2026) — lapisan penimpa di akhir berkas supaya aturan
+   lama tetap utuh. Inti: kaca buram (backdrop blur) di semua elemen HUD,
+   bar mode jadi tab-bar ikon+label di HP, panel tidak lagi tertimpa bar
+   bawah, teks info waktu & statistik menu dirapikan, umpan balik tekan.
+   ===================================================================== */
+:root {
+  --nm-kertas: rgba(255, 251, 240, .82);
+  --nm-gelap: rgba(24, 38, 30, .62);
+  --nm-hijau: #2e9e5b;
+  --nm-bayang: 0 6px 20px rgba(24, 38, 30, .20);
+}
+#hud .info, .chip-stat, .tombol-atas button, #chip-saya, #petunjuk, #mode-bar, #kartu, #panel-menu, #panel-chat {
+  -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
+}
+#hud .info { background: var(--nm-kertas); box-shadow: var(--nm-bayang); border: 1px solid rgba(255,255,255,.6); }
+#hud .info b { letter-spacing: -.01em; }
+.chip-stat { background: rgba(238, 246, 230, .82); border-color: rgba(207, 227, 189, .9); font-weight: 500; }
+.chip-stat b { font-weight: 700; }
+.tombol-atas button { background: var(--nm-kertas); border: 1px solid rgba(255,255,255,.6); box-shadow: var(--nm-bayang); }
+#tombol-akun { background: linear-gradient(180deg, #35ad67, #278a4f); border-color: rgba(255,255,255,.25); color: #fff; }
+.tombol-atas button, #mode-bar button, #kartu .btn-masuk, #panel-menu button, .seg button, #drone-naik-turun button {
+  transition: transform .12s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.tombol-atas button:active, #kartu .btn-masuk:active, #panel-menu button:active, .seg button:active { transform: scale(.96); }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid rgba(46,158,91,.55); outline-offset: 2px; }
+
+/* Bar bawah */
+#petunjuk { background: var(--nm-gelap); border: 1px solid rgba(255,255,255,.12); }
+#mode-bar { background: var(--nm-gelap); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 8px 24px rgba(24,38,30,.28); }
+#mode-bar button { display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+#mode-bar button:not(.on):hover { background: rgba(255,255,255,.10); color: #fff; }
+#mode-bar button.on { background: #fffbf0; color: #1d3a2a; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+@media (max-width: 560px) {
+  /* tab-bar: 4 kolom sama lebar, ikon di atas label — tidak pernah meluber */
+  #mode-bar { width: min(96vw, 420px); max-width: none; border-radius: 22px; gap: 2px; }
+  #mode-bar button {
+    flex: 1 1 0; min-width: 0; flex-direction: column; gap: 3px;
+    padding: 7px 2px 6px; min-height: 52px; font-size: 11px; border-radius: 18px; line-height: 1.1;
+  }
+  #mode-bar button .ik { width: 20px; height: 20px; vertical-align: 0; }
+  #tombol-akun { padding: 9px 13px; }
+}
+@media (max-width: 400px) {
+  #mode-bar button { font-size: 10.5px; padding: 7px 1px 6px; }
+}
+
+/* Panel sekunder: bar bawah disembunyikan saat panel terbuka (tidak saling timpa) */
+#hud:has(#panel-menu:not([hidden])) #bar-bawah,
+#hud:has(#panel-chat:not([hidden])) #bar-bawah,
+#hud:has(#panel-menu:not([hidden])) #minimap { opacity: 0; pointer-events: none; }
+#bar-bawah, #minimap { transition: opacity .18s ease; }
+#panel-menu {
+  background: rgba(255, 251, 240, .94); border: 1px solid rgba(255,255,255,.7);
+  max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  width: min(88vw, 320px); overscroll-behavior: contain;
+}
+#panel-chat { background: rgba(255, 251, 240, .95); border: 1px solid rgba(255,255,255,.7); }
+.pm-stat div { align-items: center; padding: 8px 11px; }
+.pm-stat span { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.pm-stat b { text-align: right; font-size: 13px; line-height: 1.35; min-width: 0; }
+#info-waktu { font-size: 12.5px; color: #5b7263; line-height: 1.45; margin-top: 7px; }
+.pm-kualitas-judul { display: inline-flex; align-items: center; gap: 6px; }
+.seg button { transition: all .15s ease; }
+
+/* Kartu info (rumah / papan iklan) */
+#kartu { background: rgba(255, 251, 240, .95); border: 1px solid rgba(255,255,255,.7); animation: kartuMasuk .2s ease-out; }
+#kartu .isi h3 { padding-right: 26px; }
+#kartu a.btn-masuk { text-align: center; text-decoration: none; }
+#kartu .isi p.kecil { font-size: 11.5px; color: #8a9a8f; margin-top: 10px; }
+@keyframes kartuMasuk { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Gerbang */
+#gerbang { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+#gerbang .kartu-form { border: 1px solid rgba(255,255,255,.7); animation: gerbangMasuk .25s ease-out; }
+@keyframes gerbangMasuk { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+
+#minimap { border: 2px solid rgba(255,255,255,.8); }
+@media (prefers-reduced-motion: reduce) {
+  #kartu, #gerbang .kartu-form { animation: none; }
+}
+
+/* =====================================================================
+   KTP & KARTU KELUARGA RESPONSIF (22 Nov 2026)
+   Masalah lama: ukuran huruf memakai vw (lebar LAYAR) padahal kartu
+   dibatasi 580px & rasio 1,586 — di HP sempit teks meluber keluar kartu,
+   di landscape pendek kartu + tombol terpotong atas-bawah, dan tabel KK
+   5 kolom tumpah di layar <420px.
+   Solusi: container query — semua ukuran di dalam kartu memakai cqw
+   (persen lebar KARTU), jadi kartu berskala utuh seperti gambar di
+   viewport apa pun. Lebar kartu juga dibatasi tinggi layar.
+   ===================================================================== */
+#ktp-overlay, #kk-overlay { justify-content: flex-start; padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom)); }
+#ktp-overlay > :first-child, #kk-overlay > :first-child { margin-top: auto; }
+#ktp-overlay > :last-child, #kk-overlay > :last-child { margin-bottom: auto; }
+
+.ktp-kartu {
+  container-type: inline-size;
+  width: min(94vw, 600px, calc((100dvh - 120px) * 1.586));
+  min-width: 260px; border-radius: 3.2cqw; padding: 4cqw 4.4cqw 3.4cqw;
+}
+.ktp-kepala { gap: 2.6cqw; align-items: center; }
+.ktp-lambang { width: 9cqw; max-width: none; }
+.ktp-judul-besar { font-size: 4.5cqw; letter-spacing: .05cqw; }
+.ktp-judul-kecil { font-size: 2.9cqw; letter-spacing: .5cqw; margin-top: .3cqw; }
+.ktp-foto-label { font-size: 2.2cqw; letter-spacing: .35cqw; padding-top: 0; width: 22cqw; text-align: center; }
+.ktp-badan { gap: 3cqw; margin-top: 2.8cqw; }
+.ktp-data { border-radius: 2cqw; padding: 2.2cqw 2.6cqw; gap: .4cqw; }
+.ktp-baris { font-size: 2.6cqw; gap: 1.4cqw; line-height: 1.32; }
+.ktp-baris span { width: 17.5cqw; }
+#ktp-nik { font-size: 3.1cqw; letter-spacing: .05cqw; font-variant-numeric: tabular-nums; }
+.ktp-foto { width: 22cqw; border-width: .5cqw; border-radius: 2cqw; }
+.ktp-foto canvas { object-fit: cover; }
+.ktp-kaki { margin-top: 2.6cqw; font-size: 1.85cqw; padding: .9cqw 2.4cqw; letter-spacing: .05cqw; }
+.ktp-aksi { width: min(94vw, 600px); }
+.ktp-aksi button, .kk-aksi button { flex: 1 1 160px; max-width: 260px; }
+
+.kk-dokumen { container-type: inline-size; width: min(96vw, 620px); }
+.kk-kepala { gap: 2.4cqw; padding: 2.6cqw 3cqw; }
+.kk-lambang { width: 8.5cqw; min-width: 34px; }
+.kk-judul-besar { font-size: clamp(17px, 5cqw, 30px); }
+.kk-judul-kecil { font-size: clamp(11px, 2.8cqw, 17px); letter-spacing: .5cqw; }
+.kk-info { padding: 3cqw 3cqw .5cqw; }
+.kk-info-baris { font-size: clamp(12.5px, 2.6cqw, 15.5px); }
+.kk-info-baris span { width: clamp(108px, 30%, 170px); }
+.kk-tabel { width: calc(100% - 6cqw); margin: 2cqw 3cqw 0; font-size: clamp(11px, 2.2cqw, 13.5px); }
+.kk-tabel td:nth-child(3) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kk-ttd { padding: 5cqw 5cqw 0; }
+.kk-aksi { width: min(96vw, 620px); }
+
+/* KK di wadah sempit (HP portrait): tiap anggota jadi blok berlabel, bukan tabel 5 kolom */
+@container (max-width: 480px) {
+  .kk-tabel, .kk-tabel tbody, .kk-tabel tr, .kk-tabel td { display: block; width: 100%; }
+  .kk-tabel { width: calc(100% - 24px); margin: 10px 12px 0; font-size: 13px; }
+  .kk-tabel thead { display: none; }
+  .kk-tabel tr { border: 1px solid rgba(29,78,121,.4); border-radius: 8px; overflow: hidden; margin-bottom: 8px; background: #fff; }
+  .kk-tabel tbody tr:nth-child(even) { background: #f5f9fd; }
+  .kk-tabel td { border: 0; border-bottom: 1px solid rgba(29,78,121,.15); display: flex; gap: 10px; padding: 6px 10px; }
+  .kk-tabel td:last-child { border-bottom: 0; }
+  .kk-tabel td::before { flex: none; width: 82px; font-weight: 600; color: #1d4e79; }
+  .kk-tabel td:nth-child(1) { background: #4a86c5; color: #fff; font-weight: 700; }
+  .kk-tabel td:nth-child(1)::before { content: "Anggota"; color: #e7f1fb; }
+  .kk-tabel td:nth-child(2)::before { content: "Nama"; }
+  .kk-tabel td:nth-child(3)::before { content: "NIK"; }
+  .kk-tabel td:nth-child(4)::before { content: "Hubungan"; }
+  .kk-tabel td:nth-child(5)::before { content: "Terdaftar"; }
+  .kk-info-baris span { width: 40%; }
+  .kk-ttd { padding: 22px 14px 0; }
+  .kk-ttd-kolom span { margin-bottom: 26px; }
+}
+/* Landscape pendek: tombol aksi di samping-bawah lebih rapat */
+@media (max-height: 480px) {
+  #ktp-overlay, #kk-overlay { gap: 10px; }
+  .ktp-aksi button, .kk-aksi button { min-height: 40px; padding: 8px 14px; font-size: 13.5px; }
+}
+.ktp-baris { font-size: clamp(9.5px, 2.6cqw, 16px); }
+.kk-tabel td:nth-child(1) { width: 1%; white-space: nowrap; }
+.kk-tabel td:nth-child(2) { overflow-wrap: break-word; word-break: normal; }
+.kk-tabel td:nth-child(4), .kk-tabel td:nth-child(5) { white-space: nowrap; }
+@container (max-width: 480px) { .kk-tabel td:nth-child(1) { width: 100%; } .kk-tabel td:nth-child(2) { overflow-wrap: anywhere; } }

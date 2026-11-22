@@ -1,6 +1,7 @@
 /* Negara Merdu — modul game "main" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Main: rotator status layar muat, loop animasi, dan boot mulai(). */
-import { $, KOTA_D, KOTA_W } from "./inti.js";
+import "./warna.js"; // HARUS pertama: manajemen warna sRGB (lihat warna.js)
+import { $, KOTA_D, KOTA_W, PUSAT_X, PUSAT_Z } from "./inti.js";
 import { ambilData, awanGrup, camera, pantauFrame, perbaruiLaluLintas, renderer, scene, tambahWaktuSiklus, terapkanKualitas, terapkanWaktu } from "./bersama.js";
 import { bangunKotaMassal } from "./kota.js";
 import { bangunLahanPembangunan } from "./fasilitas.js";
@@ -11,6 +12,7 @@ import { dr, fp, karSaya, modeKamera, putarOrbitBilaOtomatis, target, terapkanKa
 import { bukaLengkapi, perbaruiChipSaya, sesi, tampilLangkah } from "./ui.js";
 import { kirimPosisi, pemainDirender, perbaruiPemainLain, sambungWS } from "./jaringan.js";
 import { gambarMinimap } from "./peta.js";
+import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
 
   /* ================= ANIMASI ================= */
   export const jam = new THREE.Clock();
@@ -62,6 +64,7 @@ import { gambarMinimap } from "./peta.js";
     tambahWaktuSiklus(dt); // waktuSiklus milik bersama.js
     terapkanWaktu(dt, false); // fase cahaya: lerp halus ke preset aktif (Paket 3 ?v=15)
     perbaruiLaluLintas(t);
+    perbaruiIklan(t);
     if (animasiKades) {
       animasiKades.position.y = 0.34 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);
@@ -72,7 +75,7 @@ import { gambarMinimap } from "./peta.js";
       const uK = animasiKades.userData;
       if (uK.lenganR) {
         const acuan = modeKamera === "orbit" ? target : modeKamera === "drone" ? dr : fp;
-        const dekatKades = Math.hypot(acuan.x - 3, acuan.z + 24) < 34;
+        const dekatKades = Math.hypot(acuan.x - 3 - PUSAT_X, acuan.z + 24 - PUSAT_Z) < 34; // relatif pusat plaza
         uK.lenganR.rotation.z = dekatKades && (t % 5) < 1.8 ? 2.55 + Math.sin(t * 9) * 0.32 : 0.12;
       }
     }
@@ -130,6 +133,7 @@ import { gambarMinimap } from "./peta.js";
     try {
       window.__kotaMassal = bangunKotaMassal();
       bangunDistrik();
+      bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
       bangunLahanPembangunan(); // petak kosong + fasilitas terbangun (status dari ambilData)
       terapkanKualitas(); // dorong kepadatan awan & info panel sesuai pilihan tersimpan
       terapkanWaktu(0, true); // jepret fase waktu ke pilihan tersimpan (sesudah kota & lahan terbangun, sebelum frame pertama)
