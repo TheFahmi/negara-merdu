@@ -95,14 +95,70 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
     panel.position.set(0, 2.9, 0); panel.castShadow = true; g.add(panel);
     return g;
   }
+  /* Pohon fasilitas (perbaikan 3D): dulu 1 ikosahedron hijau seragam —
+     kini batang + 3 gumpal daun berlapis, warna daun bervariasi per posisi
+     (deterministik), siluet lebih rimbun & alami. */
+  const WARNA_DAUN = [0x4da653, 0x3f8f4f, 0x5fae4a, 0x6aa84f, 0x2f7d4a];
   export function pohonKecil(x, z, s) {
     const g = new THREE.Group();
-    const batang = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.4, 1.9, 6), M(0x8a5a30));
-    batang.position.y = 0.95; batang.castShadow = true; g.add(batang);
-    const daun = new THREE.Mesh(new THREE.IcosahedronGeometry(2.0, 0), M(0x4da653));
-    daun.position.y = 3.1; daun.castShadow = true; g.add(daun);
-    g.position.set(x, 0, z); g.scale.setScalar(s || 1);
+    const h = Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1;
+    const batang = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.42, 2.2, 8), M(0x7a5030));
+    batang.position.y = 1.1; batang.castShadow = true; g.add(batang);
+    const c1 = WARNA_DAUN[Math.floor(h * WARNA_DAUN.length)], c2 = WARNA_DAUN[Math.floor(h * 7) % WARNA_DAUN.length];
+    for (const [ox, oy, oz, r, c] of [[0, 3.0, 0, 1.9, c1], [0.9, 2.5, 0.5, 1.3, c2], [-0.8, 2.6, -0.4, 1.35, c2], [0.1, 4.1, -0.1, 1.25, c1]]) {
+      const daun = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), M(c));
+      daun.position.set(ox, oy, oz); daun.castShadow = true; daun.receiveShadow = true; g.add(daun);
+    }
+    g.position.set(x, 0, z); g.scale.setScalar((s || 1) * (0.9 + h * 0.25)); g.rotation.y = h * 6.28;
     return g;
+  }
+  /* Air alami (perbaikan taman & pemancingan): tepi dangkal terang ->
+     tengah dalam, permukaan sedikit mengilap, daun teratai opsional.
+     Menggantikan cakram biru polos rata. rx/rz = jari-jari elips. */
+  export function airAlami(g, x, z, rx, rz, y, teratai) {
+    const lapis = [[1.0, 0x8fd0df, 0.25], [0.82, 0x4fa9c9, 0.15], [0.55, 0x2f86ad, 0.08]];
+    lapis.forEach(([f, warna, kasar], i) => {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 40),
+        new THREE.MeshStandardMaterial({ color: warna, roughness: kasar, metalness: 0.05, polygonOffset: true, polygonOffsetFactor: -1 - i, polygonOffsetUnits: -1 - i }));
+      m.rotation.x = -Math.PI / 2; m.scale.set(rx * f, rz * f, 1); m.position.set(x, y + i * 0.006, z); m.receiveShadow = true; g.add(m);
+    });
+    for (let i = 0; i < (teratai || 0); i++) { // daun teratai: cakram bertakik + bunga
+      const a = i * 2.39996, rr = 0.35 + (i % 3) * 0.17;
+      const px = x + Math.cos(a) * rx * rr * 1.4, pz = z + Math.sin(a) * rz * rr * 1.4;
+      const daun = new THREE.Mesh(new THREE.CircleGeometry(0.55 + (i % 2) * 0.2, 14, 0.4, Math.PI * 2 - 0.5), M(0x4f9a3e));
+      daun.rotation.x = -Math.PI / 2; daun.rotation.z = a; daun.position.set(px, y + 0.03, pz); g.add(daun);
+      if (i % 3 === 0) {
+        const bunga = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.25, 6), M(0xf2a3c0));
+        bunga.position.set(px + 0.15, y + 0.15, pz); g.add(bunga);
+      }
+    }
+  }
+  /* Bebek kecil (taman): badan + kepala + paruh, mengapung. */
+  export function bebek(x, z, y, ry) {
+    const b = new THREE.Group();
+    const badan = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), M(0xfaf6ea)); badan.scale.set(1, 0.7, 1.35); b.add(badan);
+    const kepala = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 8), M(0xfaf6ea)); kepala.position.set(0, 0.38, 0.42); b.add(kepala);
+    const paruh = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 6), M(0xf2a33a)); paruh.rotation.x = Math.PI / 2; paruh.position.set(0, 0.36, 0.7); b.add(paruh);
+    b.position.set(x, y + 0.12, z); b.rotation.y = ry || 0;
+    return b;
+  }
+  /* Pagar semak keliling blok (±L), dengan celah di titik masuk. */
+  export function pagarSemak(g, L, celah) {
+    const mat = M(0x3f8a45);
+    const ruas = (x1, z1, x2, z2) => {
+      const pj = Math.hypot(x2 - x1, z2 - z1); if (pj < 0.5) return;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(x1 === x2 ? 1.0 : pj, 1.15, x1 === x2 ? pj : 1.0), mat);
+      m.position.set((x1 + x2) / 2, 0.58, (z1 + z2) / 2); m.castShadow = true; m.receiveShadow = true; g.add(m);
+    };
+    for (const sisi of ["n", "s", "w", "e"]) {
+      const lubang = (celah[sisi] || []).slice().sort((a, b) => a[0] - b[0]);
+      let mulai = -L;
+      for (const [a, b] of [...lubang, [L, L]]) {
+        if (sisi === "n") ruas(mulai, -L, a, -L); if (sisi === "s") ruas(mulai, L, a, L);
+        if (sisi === "w") ruas(-L, mulai, -L, a); if (sisi === "e") ruas(L, mulai, L, a);
+        mulai = b;
+      }
+    }
   }
   export function bangkuTaman(x, z, rot) {
     const g = new THREE.Group();
@@ -139,9 +195,11 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
         new THREE.MeshStandardMaterial({ color: 0xd9c58f, roughness: 1, flatShading: true, side: THREE.DoubleSide }));
       cincin.rotation.x = -Math.PI / 2; cincin.position.y = 0.13; g.add(cincin);
       // kolam lama — dipertahankan persis
-      const kolam = new THREE.Mesh(new THREE.CylinderGeometry(6.5, 6.5, 0.5, 20),
-        new THREE.MeshStandardMaterial({ color: 0x57b7d6, roughness: 0.18, flatShading: true }));
-      kolam.position.set(-14, 0.25, -12); g.add(kolam);
+      // kolam: bibir batu + air berlapis (dangkal -> dalam) + teratai + bebek
+      const bibir = new THREE.Mesh(new THREE.TorusGeometry(6.6, 0.38, 6, 28), M(0xb8a888));
+      bibir.rotation.x = Math.PI / 2; bibir.position.set(-14, 0.18, -12); bibir.scale.z = 0.5; g.add(bibir);
+      airAlami(g, -14, -12, 6.5, 6.5, 0.12, 7);
+      g.add(bebek(-12.5, -10.5, 0.12, 0.6)); g.add(bebek(-16, -13.5, 0.12, 2.4)); g.add(bebek(-15.2, -9.8, 0.12, 4.0));
       /* air mancur tengah (pola istana diperkecil): bak bundar batu +
          air + tiang berundak + mangkuk + bola emas. Tanpa semprotan —
          pelajaran istana: kerucut semprotan terbaca murahan. */
@@ -151,7 +209,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       const lisBak = new THREE.Mesh(new THREE.CylinderGeometry(4.1, 4.1, 0.2, 16), batuT);
       lisBak.position.y = 0.82; g.add(lisBak);
       const airM = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 0.08, 16),
-        new THREE.MeshStandardMaterial({ color: 0x6fb7cf, roughness: 0.25, flatShading: true, transparent: true, opacity: 0.9 }));
+        new THREE.MeshStandardMaterial({ color: 0x3f98bf, roughness: 0.1, metalness: 0.05 }));
       airM.position.y = 0.8; g.add(airM);
       const tiangM = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.68, 1.05, 10), batuT);
       tiangM.position.y = 1.3; tiangM.castShadow = true; g.add(tiangM);
@@ -272,6 +330,17 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       for (const [x, z, w] of [[-20, -4, 0xf28bb4], [-2, 16, 0xf28bb4], [26, 8, 0xe86a5e], [-24, 24, 0xf2b13d]]) {
         const b = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1, 0), M(w));
         b.position.set(x, 0.7, z); b.castShadow = true; g.add(b);
+      }
+      /* Perbaikan taman: pagar semak keliling (celah di 4 ujung jalan
+         setapak + gerbang timur), deret pohon rindang di tepi, & alas
+         piknik — taman terasa tertutup, teduh, dan ramai. */
+      pagarSemak(g, 33.6, { n: [[-3, 3]], s: [[-3, 3]], w: [[-3, 3]], e: [[-5, 5]] });
+      for (const [x, z, sk] of [[-30, -30, 1.1], [-30, -18, 0.95], [-30, 17, 1.0], [-30, 30, 1.1], [-18, -30, 1.0], [-6, -30, 0.9],
+        [8, -30, 0.95], [30, -30, 1.1], [30, -24, 0.9], [-18, 30, 1.05], [-9, 30, 0.9], [18, 30, 1.0], [30, 30, 1.15], [30, 20, 0.9]])
+        g.add(pohonKecil(x, z, sk));
+      for (const [mx, mz, mw] of [[-20, 4, 0xe86a5e], [-12, 25, 0x57b7d6]]) { // tikar piknik + keranjang
+        g.add(kotak(3.0, 0.05, 2.2, mw, mx, 0.03, mz));
+        g.add(kotak(0.7, 0.45, 0.5, 0xa9743f, mx + 0.8, 0.25, mz - 0.4));
       }
     },
     lapangan(g) {
@@ -469,10 +538,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
         new THREE.MeshStandardMaterial({ color: 0xd9c58f, roughness: 1, flatShading: true }));
       pasirKolam.rotation.x = -Math.PI / 2; pasirKolam.scale.set(9.0, 12.9, 1);
       pasirKolam.position.set(KX, 0.04, 0); g.add(pasirKolam);
-      const airKolam = new THREE.Mesh(new THREE.CircleGeometry(1, 30),
-        new THREE.MeshStandardMaterial({ color: 0x57b7d6, roughness: 0.18, flatShading: true }));
-      airKolam.rotation.x = -Math.PI / 2; airKolam.scale.set(7.6, 10.6, 1);
-      airKolam.position.set(KX, 0.10, 0); g.add(airKolam);
+      airAlami(g, KX, 0, 7.6, 10.6, 0.10, 5); // air berlapis dangkal->dalam + teratai (dulu cakram biru polos)
       const kilauKolam = new THREE.Mesh(new THREE.PlaneGeometry(9, 6),
         new THREE.MeshBasicMaterial({ map: TEX_KILAU, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
       kilauKolam.rotation.x = -Math.PI / 2; kilauKolam.position.set(KX - 1.8, 0.45, -1.5); g.add(kilauKolam);
@@ -521,6 +587,26 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       g.add(ilalang(21.8, -12.4)); g.add(ilalang(29.8, 10.4)); g.add(ilalang(18.6, 9.8));
       g.add(pohonKecil(15, -12, 0.9));
       g.add(pohonKecil(-15.5, -13, 1.05));
+      /* Perbaikan pemancingan: lahan kosong luas di barat & selatan kini
+         taman pinggir kolam — deret pohon peneduh, pagar semak keliling
+         (celah masuk di utara depan toko), meja piknik, & ikan meloncat. */
+      pagarSemak(g, 33.6, { n: [[-9, 3]], e: [[-14, 14]] }); // timur dibuka: tepi pasir kolam sampai x 33,8
+      for (const [x, z, sk] of [[-30, -28, 1.1], [-30, -16, 0.95], [-30, -4, 1.05], [-30, 8, 0.95], [-30, 20, 1.1], [-30, 30, 1.0],
+        [-20, 30, 1.0], [-8, 30, 0.95], [6, 30, 1.05], [18, 29, 0.9], [31, 22, 1.0], [-22, -26, 0.9], [12, -28, 1.0], [30, -28, 1.05]])
+        g.add(pohonKecil(x, z, sk));
+      for (const [mx, mz] of [[-20, 6], [-20, 20], [-8, 22]]) { // meja piknik kayu
+        g.add(kotak(2.6, 0.12, 1.3, 0xa9743f, mx, 0.95, mz));
+        for (const dz of [-1.0, 1.0]) g.add(kotak(2.6, 0.1, 0.45, 0x8a5a30, mx, 0.55, mz + dz));
+        for (const dx of [-1.0, 1.0]) g.add(kotak(0.14, 0.95, 1.2, 0x7a4a21, mx + dx, 0.47, mz));
+      }
+      for (const [fx, fz, rot] of [[26, -4, 0.6], [22, 5, 2.2]]) { // ikan meloncat di kolam
+        const ikan = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 6), M(0xf2a33a));
+        ikan.scale.set(0.6, 0.6, 1.4); ikan.position.set(fx, 0.75, fz); ikan.rotation.set(-0.6, rot, 0); g.add(ikan);
+        const ekor = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.3, 4), M(0xe0782a));
+        ekor.position.set(fx - Math.sin(rot) * 0.45, 0.6, fz - Math.cos(rot) * 0.45); ekor.rotation.set(-0.6 - Math.PI / 2, rot, 0); g.add(ekor);
+        const riak = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.65, 20), new THREE.MeshBasicMaterial({ color: 0xdff4fa, transparent: true, opacity: 0.7 }));
+        riak.rotation.x = -Math.PI / 2; riak.position.set(fx, 0.14, fz); g.add(riak);
+      }
     },
   };
   export function bangunLahanPembangunan() {

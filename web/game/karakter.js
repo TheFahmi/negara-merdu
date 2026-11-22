@@ -74,35 +74,35 @@ import { M } from "./bersama.js";
   export function geoKarakter() {
     if (GEO_KARAKTER) return GEO_KARAKTER;
     const def = {
-      celana: new THREE.CylinderGeometry(0.105, 0.088, 0.42, 6),
-      lipatCelana: new THREE.CylinderGeometry(0.112, 0.118, 0.09, 6),
+      celana: new THREE.CylinderGeometry(0.105, 0.088, 0.42, 14),
+      lipatCelana: new THREE.CylinderGeometry(0.112, 0.118, 0.09, 14),
       sepatu: new THREE.BoxGeometry(0.2, 0.1, 0.27),
       solSepatu: new THREE.BoxGeometry(0.22, 0.04, 0.3),
-      badan: new THREE.CylinderGeometry(0.35, 0.27, 0.62, 8),
-      kerah: new THREE.CylinderGeometry(0.3, 0.345, 0.11, 8),
+      badan: new THREE.CylinderGeometry(0.35, 0.27, 0.62, 14),
+      kerah: new THREE.CylinderGeometry(0.3, 0.345, 0.11, 14),
       plaket: new THREE.BoxGeometry(0.1, 0.46, 0.03),
-      kancing: new THREE.SphereGeometry(0.021, 6, 5),
-      lenganAtas: new THREE.CylinderGeometry(0.078, 0.066, 0.34, 6),
-      lenganBawah: new THREE.CylinderGeometry(0.06, 0.052, 0.3, 6),
-      tangan: new THREE.SphereGeometry(0.068, 6, 5),
-      kepala: bentukKepala(new THREE.IcosahedronGeometry(0.44, 1)),
-      mataPutih: new THREE.SphereGeometry(0.088, 8, 6),
-      pupil: new THREE.SphereGeometry(0.052, 7, 5),
-      highlight: new THREE.SphereGeometry(0.02, 6, 4),
+      kancing: new THREE.SphereGeometry(0.021, 16, 12),
+      lenganAtas: new THREE.CylinderGeometry(0.078, 0.066, 0.34, 14),
+      lenganBawah: new THREE.CylinderGeometry(0.06, 0.052, 0.3, 14),
+      tangan: new THREE.SphereGeometry(0.068, 16, 12),
+      kepala: bentukKepala(new THREE.SphereGeometry(0.44, 32, 24)), // bola halus (dulu ikosahedron berfaset)
+      mataPutih: new THREE.SphereGeometry(0.088, 16, 12),
+      pupil: new THREE.SphereGeometry(0.052, 16, 12),
+      highlight: new THREE.SphereGeometry(0.02, 16, 12),
       alis: new THREE.BoxGeometry(0.19, 0.05, 0.035),
       hidung: new THREE.ConeGeometry(0.068, 0.15, 7),
-      telinga: new THREE.SphereGeometry(0.095, 6, 5),
+      telinga: new THREE.SphereGeometry(0.095, 16, 12),
       mulut: new THREE.TorusGeometry(0.125, 0.02, 5, 10, Math.PI),
       gigi: new THREE.TorusGeometry(0.092, 0.015, 5, 10, Math.PI),
       pipi: new THREE.CircleGeometry(0.07, 9),
-      bahu: new THREE.SphereGeometry(0.115, 7, 5),
+      bahu: new THREE.SphereGeometry(0.115, 16, 12),
       kerahDepan: new THREE.BoxGeometry(0.1, 0.17, 0.025),
-      manset: new THREE.CylinderGeometry(0.068, 0.072, 0.08, 6),
-      rambut: new THREE.SphereGeometry(0.458, 7, 5, 0, Math.PI * 2, 0, Math.PI * 0.42),
-      peci: new THREE.CylinderGeometry(0.345, 0.39, 0.3, 9),
-      peciSabuk: new THREE.CylinderGeometry(0.398, 0.408, 0.07, 9),
-      peciAtas: new THREE.SphereGeometry(0.345, 9, 4, 0, Math.PI * 2, 0, Math.PI / 2),
-      topiAtas: new THREE.SphereGeometry(0.462, 7, 4, 0, Math.PI * 2, 0, Math.PI * 0.35),
+      manset: new THREE.CylinderGeometry(0.068, 0.072, 0.08, 14),
+      rambut: new THREE.SphereGeometry(0.458, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.42),
+      peci: new THREE.CylinderGeometry(0.345, 0.39, 0.3, 14),
+      peciSabuk: new THREE.CylinderGeometry(0.398, 0.408, 0.07, 14),
+      peciAtas: new THREE.SphereGeometry(0.345, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+      topiAtas: new THREE.SphereGeometry(0.462, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.35),
       topiLidah: new THREE.BoxGeometry(0.38, 0.045, 0.26),
     };
     for (const k in def) SUMBER_BERSAMA.add(def[k]);
@@ -112,7 +112,10 @@ import { M } from "./bersama.js";
   export const CACHE_MAT_KARAKTER = new Map();
   export function matKarakter(warna) {
     let m = CACHE_MAT_KARAKTER.get(warna);
-    if (!m) { m = M(warna); CACHE_MAT_KARAKTER.set(warna, m); SUMBER_BERSAMA.add(m); }
+    if (!m) { // shading HALUS (bukan flat) — karakter tampil bulat lembut, bukan berfaset kaku
+      m = new THREE.MeshStandardMaterial({ color: warna, roughness: 0.78, flatShading: false });
+      CACHE_MAT_KARAKTER.set(warna, m); SUMBER_BERSAMA.add(m);
+    }
     return m;
   }
   // Warna celana & topi diturunkan deterministik dari warna baju (hash

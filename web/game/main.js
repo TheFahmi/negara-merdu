@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "main" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Main: rotator status layar muat, loop animasi, dan boot mulai(). */
 import "./warna.js"; // HARUS pertama: manajemen warna sRGB (lihat warna.js)
-import { $, KOTA_D, KOTA_W, PUSAT_X, PUSAT_Z } from "./inti.js";
+import { $, KOTA_D, KOTA_W, POS_KADES, PUSAT_X, PUSAT_Z } from "./inti.js";
 import { ambilData, awanGrup, camera, pantauFrame, perbaruiLaluLintas, renderer, scene, tambahWaktuSiklus, terapkanKualitas, terapkanWaktu } from "./bersama.js";
 import { bangunKotaMassal } from "./kota.js";
 import { bangunLahanPembangunan } from "./fasilitas.js";
@@ -66,7 +66,7 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
     perbaruiLaluLintas(t);
     perbaruiIklan(t);
     if (animasiKades) {
-      animasiKades.position.y = 0.34 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
+      animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);
       /* Pak Presiden melambai saat ada pemain dekat (Paket 1 ?v=15): acuan
          pemain = target orbit / posisi drone / posisi jalan kaki. Lengan
@@ -75,7 +75,7 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
       const uK = animasiKades.userData;
       if (uK.lenganR) {
         const acuan = modeKamera === "orbit" ? target : modeKamera === "drone" ? dr : fp;
-        const dekatKades = Math.hypot(acuan.x - 3 - PUSAT_X, acuan.z + 24 - PUSAT_Z) < 34; // relatif pusat plaza
+        const dekatKades = Math.hypot(acuan.x - POS_KADES.x - PUSAT_X, acuan.z - POS_KADES.z - PUSAT_Z) < 40; // relatif pusat plaza
         uK.lenganR.rotation.z = dekatKades && (t % 5) < 1.8 ? 2.55 + Math.sin(t * 9) * 0.32 : 0.12;
       }
     }

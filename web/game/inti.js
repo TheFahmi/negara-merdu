@@ -24,6 +24,14 @@
      sehingga istana menggeser 7 unit dari as jalan dan terlihat miring
      terhadap grid. Semua koordinat plaza kini relatif ke titik ini. */
   export const PUSAT_X = JALAN / 2, PUSAT_Z = JALAN / 2;
+  /* Ukuran plaza & istana (relatif pusat plaza). Istana diskalakan 1,45x
+     dan pusat grupnya di z -50 (dulu skala 1 di z -34). Pak Presiden
+     berdiri di pelataran, di kaki tangga istana. PINTU_ISTANA = titik
+     masuk interior (di puncak tangga, depan portico). */
+  export const PLAZA_W = 260, PLAZA_D = 130;
+  export const SKALA_ISTANA = 1.45, Z_ISTANA = -50;
+  export const POS_KADES = { x: 4.6 * SKALA_ISTANA, z: Z_ISTANA + 17.4 * SKALA_ISTANA };
+  export const PINTU_ISTANA = { x: 0, z: Z_ISTANA + 12.6 * SKALA_ISTANA };
   export const KOTA_W = BLOK_KOLOM * PITCH, KOTA_D = BLOK_BARIS * PITCH;
   export const RESERVASI = new Set(); // blok pusat: plaza + balai + distrik detail
   for (let k = 38; k <= 41; k++) for (let b = 24; b <= 25; b++) RESERVASI.add(k + "," + b);
@@ -92,11 +100,38 @@
   for (let i = 0; i < 20; i++) HUE_ZONA.push((i * 0.045) % 1);
   /* Warna atap/dinding satu rumah dalam keluarga zonanya: hue tetap,
      jitter kecil dari dua nilai hash (a, b dalam 0..1) supaya tetap hidup. */
+  /* Palet atap & dinding (perbaikan 3D rumah): dulu hue menyapu seluruh
+     spektrum per zona -> atap ungu/magenta/hijau neon yang norak setelah
+     koreksi sRGB. Kini atap dari palet material NYATA (genteng terakota,
+     bata, tanah liat, sirap cokelat, seng biru/hijau tua, arang) dan
+     dinding plesteran pastel hangat. Tiap zona RW punya 3 warna atap
+     dominan (keluarga warnanya tetap terbaca di peta), dijitter halus. */
+  export const PALET_ATAP_HSL = [
+    [0.030, 0.58, 0.46], // terakota
+    [0.010, 0.52, 0.40], // genteng bata
+    [0.060, 0.62, 0.50], // tanah liat oranye
+    [0.075, 0.38, 0.33], // sirap cokelat
+    [0.580, 0.30, 0.40], // seng biru batu
+    [0.430, 0.30, 0.34], // hijau tua
+    [0.110, 0.55, 0.47], // genteng mustard
+    [0.610, 0.10, 0.30], // arang
+  ];
+  export const PALET_DINDING_HSL = [
+    [0.11, 0.55, 0.90], // krem
+    [0.08, 0.40, 0.92], // putih hangat
+    [0.14, 0.60, 0.86], // kuning gading
+    [0.05, 0.55, 0.88], // persik
+    [0.30, 0.25, 0.86], // sage
+    [0.56, 0.25, 0.88], // biru pucat
+    [0.97, 0.35, 0.90], // merah muda pucat
+  ];
   export function warnaAtapZonaHSL(zona, a, b) {
-    return [(HUE_ZONA[zona] + (a - 0.5) * 0.03 + 1) % 1, 0.46, 0.54 + (b - 0.5) * 0.08]; // S 0,58->0,46 & L 0,46->0,54: kalibrasi ulang setelah manajemen warna sRGB (warna.js) — dulu terkompensasi tampilan pucat
+    const P = PALET_ATAP_HSL, w = P[(zona * 3 + Math.floor(a * 3)) % P.length];
+    return [(w[0] + (b - 0.5) * 0.02 + 1) % 1, w[1], w[2] + (b - 0.5) * 0.06];
   }
-  export function warnaDindingZonaHSL(zona, a, b) { // pastel sekeluarga dengan atapnya
-    return [(HUE_ZONA[zona] + (a - 0.5) * 0.03 + 1) % 1, 0.32, 0.84 + (b - 0.5) * 0.05];
+  export function warnaDindingZonaHSL(zona, a, b) {
+    const P = PALET_DINDING_HSL, w = P[(zona + Math.floor(b * 4)) % P.length];
+    return [w[0], w[1], w[2] + (a - 0.5) * 0.04];
   }
   export function warnaZonaPeta(zona, terang) { // warna keluarga zona (dulu warna blok di peta; blok peta kini petak lahan — lihat WARNA_PETA.petak)
     return "hsl(" + Math.round(HUE_ZONA[zona] * 360) + ", 45%, " + (terang ? 60 : 53) + "%)";
@@ -361,7 +396,7 @@
   ];
   export const PASANGAN_NGOBROL = [
     [{ x: -10, z: 18 }, { x: -8.4, z: 18 }],
-    [{ x: 12, z: -14 }, { x: 13.6, z: -14 }],
+    [{ x: 12, z: 10 }, { x: 13.6, z: 10 }], // dulu (12,-14): kini di dalam pelataran istana
   ];
   export function aktivitasUntukNpc(i) {
     if (i < 2) return { jenis: "pembawa", alat: i === 0 ? "karung" : "kardus" };

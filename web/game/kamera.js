@@ -3,11 +3,12 @@
 import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, wilayahLengkap, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
 import { OFSET_MATAHARI, aturJangkauBayangan, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
-import { INT, dekatPintuKeluar, diInterior, keluarInterior, masukInterior, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
+import { INT, dekatPintuKeluar, diInterior, keluarInterior, masukInterior, masukIstana, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
 import { sesi, teksWilayahPendek } from "./ui.js";
 import { buangGrup } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { ketukIklan } from "./iklan.js";
+import { istanaKlik } from "./istana.js";
 import { waktuLalu } from "./main.js";
 
   /* ================= KAMERA ORBIT ================= */
@@ -111,6 +112,14 @@ import { waktuLalu } from "./main.js";
     ray.setFromCamera(v2, camera);
     const kena = ray.intersectObjects(rumahKlik, true);
     if (ketukIklan(ray, kena.length ? kena[0].distance : Infinity)) return; // papan iklan lebih dekat dari rumah mana pun
+    const kenaIstana = ray.intersectObjects(istanaKlik, true);
+    if (kenaIstana.length && (!kena.length || kenaIstana[0].distance < kena[0].distance)) {
+      $("#kartu .isi").innerHTML = "<h3>" + IK.rumah + " Istana Negara</h3><p>Kantor Pak Presiden Negara Merdu. Di dalam: aula kenegaraan, ruang rapat kabinet & papan struktur pemerintahan (Presiden, Wali Kota, Camat, Lurah, Ketua RW/RT).</p>" +
+        '<button class="btn-masuk" id="btn-masuk-istana" type="button">' + IK.pintu + " Masuk Istana</button>";
+      $("#kartu").hidden = false;
+      $("#btn-masuk-istana").addEventListener("click", () => { $("#kartu").hidden = true; masukIstana(); });
+      return;
+    }
     if (!kena.length) return;
     let obj = kena[0].object;
     while (obj && !obj.userData.pemilik) obj = obj.parent;

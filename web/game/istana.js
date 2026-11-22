@@ -1,11 +1,12 @@
 /* Negara Merdu — modul game "istana" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Istana: pohon pot plaza dan kompleks Istana Negara (pusatKota) + karakter Pak Presiden. */
 import { LAMPU_TAMAN, M, MAT_JENDELA, buatTeksturProsedural, kotak, scene } from "./bersama.js";
-import { PUSAT_X, PUSAT_Z, hashInt } from "./inti.js";
+import { PLAZA_D, PLAZA_W, POS_KADES, PUSAT_X, PUSAT_Z, SKALA_ISTANA, Z_ISTANA, hashInt } from "./inti.js";
 import { bangkuTaman, teksturBenderaMerdu } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js";
 
+  export const istanaKlik = []; // grup istana — diketuk = kartu "Masuk Istana"
   export let animasiKades = null; // diisi pusatKota(): karakter Pak Presiden (dipindah dari rumah.js — di-assign di sini)
   export function pohonPot(x, z, induk) { // pohon dalam pot terakota (palet balai 0xb5533c), basis di puncak slab plaza
     const g = new THREE.Group();
@@ -38,17 +39,22 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
        (PUSAT_X, PUSAT_Z) = as persimpangan jalan tengah — istana tepat
        segaris dengan jalan utara-selatan. Koordinat di bawah tetap lokal. */
     const pusat = new THREE.Group(); pusat.position.set(PUSAT_X, 0, PUSAT_Z); scene.add(pusat);
+    /* rintangan istana ditulis dalam koordinat lama (grup di z -34, skala 1):
+       dikonversi ke grup baru (z Z_ISTANA, skala SKALA_ISTANA) */
+    const rintanganIstana = (r) => rintanganPusat({
+      minX: r.minX * SKALA_ISTANA, maxX: r.maxX * SKALA_ISTANA,
+      minZ: Z_ISTANA + (r.minZ + 34) * SKALA_ISTANA, maxZ: Z_ISTANA + (r.maxZ + 34) * SKALA_ISTANA });
     const rintanganPusat = (r) => rintangan.push({ minX: r.minX + PUSAT_X, maxX: r.maxX + PUSAT_X, minZ: r.minZ + PUSAT_Z, maxZ: r.maxZ + PUSAT_Z });
     // AUDIT Z-FIGHTING: pusat y 0,15 -> 0,17 supaya wajah bawah plaza (dulu persis y=0,
     // koplanar dengan plane tanah) kini menggantung 0,02 di atasnya; puncak 0,32.
-    const plaza = kotak(208, 0.3, 104, 0xffffff, 0, 0.17, 0); plaza.castShadow = false; pusat.add(plaza);
+    const plaza = kotak(PLAZA_W, 0.3, PLAZA_D, 0xffffff, 0, 0.17, 0); plaza.castShadow = false; pusat.add(plaza); // diperluas 208x104 -> 260x130 (istana lebih lega)
     /* Perkerasan plaza (perbaikan 3D): dulu satu bidang pasir polos 208x104
        yang dari kamera Orbit terbaca sebagai "lempeng kosong". Kini paving
        batu berpola 4x4 per ubin dengan variasi warna & nat, diulang tiap
        8 unit — skala terasa, plaza tidak lagi datar. */
     const texPlaza = buatTeksturProsedural(buatKanvasPlaza);
     texPlaza.wrapS = texPlaza.wrapT = THREE.RepeatWrapping;
-    texPlaza.repeat.set(208 / 8, 104 / 8); texPlaza.anisotropy = 4;
+    texPlaza.repeat.set(PLAZA_W / 8, PLAZA_D / 8); texPlaza.anisotropy = 4;
     plaza.material.map = texPlaza; plaza.material.needsUpdate = true;
     /* ================= ISTANA NEGARA MEWAH (?v=24) =================
        Gedung kantor Pak Presiden dibangun ulang total: badan bertingkat
@@ -318,24 +324,28 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
       const semak2 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.12, 0), M(0x4da653));
       semak2.position.set(sisi * 8.4, 3.35, 8.4); semak2.castShadow = true; g.add(semak2);
     }
-    g.position.set(0, 0, -34); pusat.add(g);
+    /* ISTANA DIPERBESAR (perbaikan "kurang luas"): seluruh kompleks
+       diskalakan SKALA_ISTANA dan digeser ke utara supaya pelataran depan
+       tetap lega. Koordinat lokal grup di atas tidak berubah; tabrakan di
+       bawah dikonversi lewat rintanganIstana(). */
+    g.scale.setScalar(SKALA_ISTANA); g.position.set(0, 0, Z_ISTANA); pusat.add(g); istanaKlik.push(g);
     /* Tapak istana mewah (?v=24): podium + badan + portico + sayap menyatu
        satu kompleks tertabrak (AABB menyatu menutup seluruh tapak podium
        x[-28.2,28.2] z lokal[-8.8,11.0]); air mancur & pagar pelataran
        ditabrak terpisah, gerbang selatan (x -4.2..4.2) terbuka. Tangga
        (z lokal 10.8..17.2) & pelataran rendah (0.34) di luar AABB —
        bisa dinaiki/diinjaki seperti teras rumah. */
-    rintanganPusat({ minX: -15.6, maxX: 15.6, minZ: -42.8, maxZ: -23 });    // badan utama + portico istana
-    rintanganPusat({ minX: -28.2, maxX: -13.8, minZ: -42.8, maxZ: -23 });   // sayap barat + podium depannya
-    rintanganPusat({ minX: 13.8, maxX: 28.2, minZ: -42.8, maxZ: -23 });     // sayap timur + podium depannya
-    rintanganPusat({ minX: -4.1, maxX: 4.1, minZ: -14.2, maxZ: -5.8 });     // air mancur
-    rintanganPusat({ minX: -28.2, maxX: -4.2, minZ: -3.7, maxZ: -3.1 });    // pagar selatan, barat gerbang
-    rintanganPusat({ minX: 4.2, maxX: 28.2, minZ: -3.7, maxZ: -3.1 });      // pagar selatan, timur gerbang
-    rintanganPusat({ minX: -28.2, maxX: -27.6, minZ: -29.4, maxZ: -3.1 });  // pagar barat
-    rintanganPusat({ minX: 27.6, maxX: 28.2, minZ: -29.4, maxZ: -3.1 });    // pagar timur
+    rintanganIstana({ minX: -15.6, maxX: 15.6, minZ: -42.8, maxZ: -23 });    // badan utama + portico istana
+    rintanganIstana({ minX: -28.2, maxX: -13.8, minZ: -42.8, maxZ: -23 });   // sayap barat + podium depannya
+    rintanganIstana({ minX: 13.8, maxX: 28.2, minZ: -42.8, maxZ: -23 });     // sayap timur + podium depannya
+    rintanganIstana({ minX: -4.1, maxX: 4.1, minZ: -14.2, maxZ: -5.8 });     // air mancur
+    rintanganIstana({ minX: -28.2, maxX: -4.2, minZ: -3.7, maxZ: -3.1 });    // pagar selatan, barat gerbang
+    rintanganIstana({ minX: 4.2, maxX: 28.2, minZ: -3.7, maxZ: -3.1 });      // pagar selatan, timur gerbang
+    rintanganIstana({ minX: -28.2, maxX: -27.6, minZ: -29.4, maxZ: -3.1 });  // pagar barat
+    rintanganIstana({ minX: 27.6, maxX: 28.2, minZ: -29.4, maxZ: -3.1 });    // pagar timur
     const kades = buatKarakter({ baju: "#6e4525", kulit: "#f1c27d", topi: "peci" });
-    kades.scale.setScalar(1.5); kades.position.set(4.6, 0.34, -16.6); pusat.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
-    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(4.6, 3.7, -16.6); pusat.add(lk);
+    kades.scale.setScalar(1.5); kades.position.set(POS_KADES.x, 0.34 * SKALA_ISTANA, POS_KADES.z); pusat.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
+    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(POS_KADES.x, 3.9, POS_KADES.z); pusat.add(lk);
     // tugu — palet diseragamkan dengan balai: badan krem 0xfdf3d8 + sabuk terakota 0xb5533c
     const tugu = new THREE.Group();
     const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.4, 5.4, 4), M(0xfdf3d8));
@@ -386,7 +396,7 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
       const b1 = bangkuTaman(bx, 28, Math.PI); b1.position.y = 0.3; pusat.add(b1); // menghadap balai (-z)
       const b2 = bangkuTaman(bx, 2, 0); b2.position.y = 0.3; pusat.add(b2);        // menghadap jalur (+z)
     }
-    for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2], [-10, -20], [10, -20]]) pohonPot(px, pz, pusat);
+    for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2]]) pohonPot(px, pz, pusat); // (±10,-20) dilepas: kini di dalam pelataran istana
   })();
 
   /* ================= DISTRIK DETAIL (WARGA TERBARU) ================= */

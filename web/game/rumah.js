@@ -1,12 +1,13 @@
 /* Negara Merdu — modul game "rumah" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
-import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PUSAT_X, PUSAT_Z, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
+import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
 import { M, TEX_ATAP, dataPembangunan, geometriAtapPelana, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { PETUNJUK, aturMode, fp, modeKamera, posisiDepanRumah } from "./kamera.js";
 import { buangGrup, kirimPosisi } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
+import { UKURAN_ISTANA_DALAM, bangunInteriorIstana } from "./istanaDalam.js";
 
   export function buatRumahDetail(dinding, atap, varian, cerobong) {
     // Ronde skill-3d (lowpoly-style + prop-artist): siluet besar tetap
@@ -389,7 +390,11 @@ import { perbaruiMinimapTampil } from "./peta.js";
   export function bangunInterior(w) {
     if (grupInterior) { scene.remove(grupInterior); buangGrup(grupInterior); grupInterior = null; }
     rintanganInterior.length = 0;
-    const aksen = parseInt((w.warna_baju || "#2e9e5b").slice(1), 16);
+    INT.sw = 8; INT.sd = 6.5; INT.tinggi = 5.4; // ukuran rumah (interior istana memakai ukuran lain)
+    /* Aksen pemilik dilembutkan (campur 40% krem): dulu warna baju jenuh
+       (oranye/magenta) dipakai mentah di karpet, gorden & selimut sehingga
+       ruangan terasa norak setelah koreksi warna sRGB. */
+    const aksen = new THREE.Color(w.warna_baju || "#2e9e5b").lerp(new THREE.Color(0xf3e8d4), 0.4).getHex();
     const aksenGelap = new THREE.Color(aksen).multiplyScalar(0.68).getHex(); // turunan aksen untuk kain lempar/batas karpet (skill-3d)
     const T = INT.tinggi;
     const g = new THREE.Group();
@@ -444,14 +449,17 @@ import { perbaruiMinimapTampil } from "./peta.js";
     const gagang = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), M(0xf2b13d, 0.4));
     gagang.position.set(0.78, 1.35, INT.sd - 0.02); g.add(gagang);
     // dinding utara: papan nama pemilik + bingkai Kartu Warga Negara + jendela bergorden aksen
-    K(6.7, 1.8, 0.1, 0x7a4a21, -3.4, 3.6, -INT.sd + 0.04);
-    const papanNama = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 1.5),
+    // papan nama dikecilkan jadi plakat kayu di atas dinding (dulu 6,4 m —
+    // mendominasi ruangan), bingkai Kartu Warga jadi pigura ukuran wajar
+    K(4.0, 1.0, 0.08, 0x7a4a21, -3.4, 4.35, -INT.sd + 0.04);
+    const papanNama = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 0.89),
       new THREE.MeshStandardMaterial({ map: teksturPapanNamaRumah(w), roughness: 0.9 }));
-    papanNama.position.set(-3.4, 3.6, -INT.sd + 0.1); g.add(papanNama);
-    K(3.2, 2.1, 0.1, 0x7a4a21, -3.4, 1.5, -INT.sd + 0.04);
-    const bingkai = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 1.8),
+    papanNama.position.set(-3.4, 4.35, -INT.sd + 0.09); g.add(papanNama);
+    K(2.1, 1.42, 0.08, 0x5a3418, -3.4, 2.55, -INT.sd + 0.04);
+    K(1.96, 1.28, 0.02, 0xf6efe0, -3.4, 2.55, -INT.sd + 0.085); // passe-partout
+    const bingkai = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.06),
       new THREE.MeshStandardMaterial({ map: teksturKartuWarga(w), roughness: 0.85 }));
-    bingkai.position.set(-3.4, 1.5, -INT.sd + 0.1); g.add(bingkai);
+    bingkai.position.set(-3.4, 2.55, -INT.sd + 0.1); g.add(bingkai);
     K(2.9, 2.1, 0.12, 0x7a4a21, 4.6, 3.1, -INT.sd + 0.04); // kusen jendela
     const kaca = new THREE.Mesh(new THREE.PlaneGeometry(2.55, 1.75),
       new THREE.MeshBasicMaterial({ map: teksturJendela() }));
@@ -680,7 +688,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
     const kap = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.5, 12),
       new THREE.MeshStandardMaterial({ color: 0xffe1a8, emissive: 0xffc978, emissiveIntensity: 0.9, roughness: 0.8 }));
     kap.position.set(0, T - 0.72, -0.5); g.add(kap);
-    const lampu = new THREE.PointLight(0xffdca8, 0.85, 30, 2);
+    const lampu = new THREE.PointLight(0xffdca8, 1.1, 30, 2);
     lampu.position.set(0, T - 1.2, -0.5); g.add(lampu);
 
     grupInterior = g;
@@ -711,9 +719,40 @@ import { perbaruiMinimapTampil } from "./peta.js";
     $("#panel-menu").hidden = true;
     $("#panel-chat").hidden = true;
     $("#tombol-keluar-rumah").hidden = false;
+    $("#tombol-keluar-rumah").lastChild.textContent = " Keluar Rumah";
     $("#petunjuk-teks").textContent = "Di dalam rumah @" + w.username + " · WASD/joystick untuk jalan · Keluar lewat pintu selatan";
     $("#petunjuk").hidden = false;
     kirimPosisi(true); // daftarkan posisi pintu ke server; karakter terlihat berdiri di depan pintu
+  }
+  /* Titik pintu istana di dunia (puncak tangga portico). */
+  export function pintuIstanaDunia() { return { x: PINTU_ISTANA.x + PUSAT_X, z: PINTU_ISTANA.z + PUSAT_Z }; }
+  export function masukIstana() {
+    if (diInterior) return;
+    const p = pintuIstanaDunia();
+    const pintu = { x: p.x, z: p.z + 3.5 }; // keluar: berdiri di tangga, menghadap istana
+    interiorKonteks = {
+      pemilik: { username: "istana" }, jenis: "istana", pintuX: pintu.x, pintuZ: pintu.z,
+      yawPintu: Math.atan2(-(PUSAT_X - pintu.x), -(Z_ISTANA + PUSAT_Z - pintu.z)),
+      modeSebelum: modeKamera,
+    };
+    if (grupInterior) { scene.remove(grupInterior); buangGrup(grupInterior); grupInterior = null; }
+    rintanganInterior.length = 0;
+    INT.sw = UKURAN_ISTANA_DALAM.sw; INT.sd = UKURAN_ISTANA_DALAM.sd; INT.tinggi = UKURAN_ISTANA_DALAM.tinggi;
+    const g = bangunInteriorIstana((minX, maxX, minZ, maxZ) =>
+      rintanganInterior.push({ minX: INT.x + minX, maxX: INT.x + maxX, minZ: INT.z + minZ, maxZ: INT.z + maxZ }));
+    g.position.set(INT.x, INT.y, INT.z);
+    grupInterior = g; scene.add(g);
+    fetch("/api/pemilu").then((r) => r.json()).then((d) => { if (grupInterior === g) g.userData.isiStruktur(d.pejabat || []); }).catch(() => {});
+    diInterior = true;
+    perbaruiMinimapTampil();
+    fp.x = INT.x; fp.z = INT.z + INT.sd - 2.1; fp.yaw = 0; fp.pitch = 0;
+    if (modeKamera !== "orang") aturMode("orang");
+    $("#kartu").hidden = true; $("#panel-menu").hidden = true; $("#panel-chat").hidden = true;
+    $("#tombol-keluar-rumah").hidden = false;
+    $("#petunjuk-teks").textContent = "Di dalam Istana Negara · WASD/joystick untuk jalan · Keluar lewat pintu selatan";
+    $("#tombol-keluar-rumah").lastChild.textContent = " Keluar Istana";
+    $("#petunjuk").hidden = false;
+    kirimPosisi(true);
   }
   export function keluarInterior() {
     if (!diInterior) return;
@@ -755,6 +794,12 @@ import { perbaruiMinimapTampil } from "./peta.js";
       if (j < jarakMin) { jarakMin = j; terbaik = r; }
     }
     rumahDekat = terbaik;
+    const pi = pintuIstanaDunia();
+    if (!terbaik && Math.hypot(fp.x - pi.x, fp.z - pi.z) < 5) { // di depan pintu istana
+      rumahDekat = "istana"; chip.hidden = false;
+      teks.textContent = "Istana Negara"; tombol.textContent = "Masuk Istana";
+      return;
+    }
     chip.hidden = !terbaik;
     if (terbaik) {
       teks.textContent = "Rumah @" + terbaik.userData.pemilik.username;
@@ -763,6 +808,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
   }
   $("#chip-aksi-tombol").addEventListener("click", () => {
     if (diInterior) keluarInterior();
+    else if (rumahDekat === "istana") masukIstana();
     else if (rumahDekat) masukInterior(rumahDekat.userData.pemilik, rumahDekat);
   });
   $("#tombol-keluar-rumah").addEventListener("click", keluarInterior);

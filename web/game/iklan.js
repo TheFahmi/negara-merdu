@@ -30,15 +30,15 @@ export const IKLAN_BAWAAN = [
 
 const ROTASI_DTK = 8;
 /* Titik papan (lokal plaza): x, z, rotasi hadap (rad, 0 = menghadap +z / selatan). */
-const TITIK_PAPAN = [
-  { x: -122, z: -62, ry: 0 },             // utara-barat, menghadap plaza
-  { x: 138, z: -62, ry: 0 },              // utara-timur, menghadap plaza
-  { x: -122, z: 72, ry: Math.PI },        // selatan-barat, menghadap plaza
-  { x: 138, z: 72, ry: Math.PI },         // selatan-timur, menghadap plaza
-  { x: -128, z: -24, ry: Math.PI / 2 },   // barat, menghadap plaza
-  { x: -128, z: 44, ry: Math.PI / 2 },
-  { x: 142, z: -24, ry: -Math.PI / 2 },   // timur, menghadap plaza
-  { x: 142, z: 44, ry: -Math.PI / 2 },
+const TITIK_PAPAN = [ // di pita rumput antara tepi plaza (260x130) dan jalan pembatas blok pusat
+  { x: -100, z: -71, ry: 0 },             // utara, menghadap plaza
+  { x: 100, z: -71, ry: 0 },
+  { x: -100, z: 71, ry: Math.PI },        // selatan, menghadap plaza
+  { x: 100, z: 71, ry: Math.PI },
+  { x: -146, z: -36, ry: Math.PI / 2 },   // barat, menghadap plaza
+  { x: -146, z: 36, ry: Math.PI / 2 },
+  { x: 146, z: -36, ry: -Math.PI / 2 },   // timur, menghadap plaza
+  { x: 146, z: 36, ry: -Math.PI / 2 },
 ];
 const PANEL_W = 16, PANEL_H = 8, KAKI = 6.2; // panel 2:1, tepi bawah panel di y = KAKI
 
