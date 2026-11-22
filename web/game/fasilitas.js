@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "fasilitas" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Fasilitas: papan nama, bendera, model fasilitas, lahan pembangunan, dan pinggiran kota. */
 import { MODEL_BARU } from "./fasilitasBaru.js";
-import { FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, TAMAN, hashInt, sudutBlok } from "./inti.js";
+import { APARTEMEN_BLOK, FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, TAMAN, hashInt, sudutBlok } from "./inti.js";
 import { LAMPU_TAMAN, M, REG_TEX, TEX_ATAP, TEX_KILAU, buatKanvasSawah, buatTeksturProsedural, dataPembangunan, gabungGeometri, geometriAtapPelana, kotak, scene, tambahKilau } from "./bersama.js";
 import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
 
@@ -616,6 +616,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
   /* Model baru fasilitas lama (fasilitasBaru.js) menimpa model lama —
      taman & toko pancing tetap memakai model di atas. */
   Object.assign(MODEL_FASILITAS, MODEL_BARU);
+  const BLOK_APT = new Set(APARTEMEN_BLOK.map((a) => a.kol + "," + a.bar)); // lahan yang dipakai apartemen
   export function bangunLahanPembangunan() {
     const grup = new THREE.Group();
     const parks = [...TAMAN].map((k) => k.split(",").map(Number));
@@ -649,14 +650,15 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       const kunci = lahanFasilitas[kol + "," + bar];
       dummy.position.set(c.x, 0.245, c.z);
       dummy.rotation.set(0, 0, 0);
-      dummy.scale.setScalar(kunci && sudahBerdiri(kunci) ? 0 : 1);
+      dummy.scale.setScalar((kunci && sudahBerdiri(kunci)) || BLOK_APT.has(kol + "," + bar) ? 0 : 1); // apartemen: pagar lahan dilipat
       dummy.updateMatrix(); imPagar.setMatrixAt(i, dummy.matrix);
     });
     imPagar.instanceMatrix.needsUpdate = true; imPagar.frustumCulled = false;
     grup.add(imPagar);
     // papan generik "LAHAN PEMBANGUNAN" untuk petak non-fasilitas (instanced:
     // tiang & panel masing-masing 1 InstancedMesh, panel bertekstur bersama)
-    const umum = parks.filter(([kol, bar]) => !lahanFasilitas[kol + "," + bar]);
+    const BLOK_APT_ = BLOK_APT;
+    const umum = parks.filter(([kol, bar]) => !lahanFasilitas[kol + "," + bar] && !BLOK_APT_.has(kol + "," + bar));
     const geoTiangPapan = gabungGeometri([
       { geo: new THREE.BoxGeometry(0.24, 3.0, 0.24), x: -4.4, y: 1.5, z: 0 },
       { geo: new THREE.BoxGeometry(0.24, 3.0, 0.24), x: 4.4, y: 1.5, z: 0 },

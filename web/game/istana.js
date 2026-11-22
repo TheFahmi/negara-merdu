@@ -234,7 +234,11 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     /* Semprotan air transparan sempat dicoba, tetapi di render malam
        terbaca sebagai kerucut padat keabuan (murahan) — ditiadakan;
        air mancur cukup kolam + tiang berundak + bola emas. */
-    am.position.set(0, 0.34, 24); g.add(am);
+    /* Perbaikan: air mancur dulu persis di as karpet merah (menutupi karpet).
+       Kini DUA air mancur (skala 0,8) mengapit karpet di x ±11; karpet
+       merah menerus tanpa putus dari gerbang sampai kaki tangga. */
+    am.scale.setScalar(0.8); am.position.set(-11, 0.34, 24); g.add(am);
+    const am2 = am.clone(); am2.position.x = 11; g.add(am2);
     // dua tiang bendera Negara Merdu MENGAPIT GERBANG utama pelataran (?v=25):
     // dipindah dari tengah pelataran (±13.5, 25.5) ke sisi gerbang (±5.8, 29.2,
     // di dalam pagar, simetris thd karpet merah; jalur gerbang |x|<4.2 tetap
@@ -318,12 +322,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     }
     for (const [lx, lz] of [[-25.2, 12.5], [25.2, 12.5], [-24.5, 21], [24.5, 21], [-6.2, 27.5], [6.2, 27.5]]) g.add(lampuTaman(lx, lz));
     // karpet merah dari gerbang ke tangga (dua segmen mengapit air mancur) + lis emas
-    g.add(kotakM(5, 0.05, 3.0, matKarpet, 0, 0.37, 18.9));
-    g.add(kotakM(5, 0.05, 2.6, matKarpet, 0, 0.37, 29.3));
-    for (const sisi of [-1, 1]) {
-      g.add(kotakM(0.16, 0.055, 3.0, matEmas, sisi * 2.55, 0.37, 18.9));
-      g.add(kotakM(0.16, 0.055, 2.6, matEmas, sisi * 2.55, 0.37, 29.3));
-    }
+    g.add(kotakM(5, 0.05, 13.4, matKarpet, 0, 0.37, 23.9)); // karpet menerus kaki tangga (17,2) -> gerbang (30,6)
+    for (const sisi of [-1, 1]) g.add(kotakM(0.16, 0.055, 13.4, matEmas, sisi * 2.55, 0.37, 23.9));
     // dua pot besar mengapit pintu utama di atas podium
     for (const sisi of [-1, 1]) {
       g.add(silM(0.78, 0.56, 0.95, 9, M(0xb5533c), sisi * 8.4, 1.68, 8.4));
@@ -344,7 +344,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     rintanganIstana({ minX: -15.6, maxX: 15.6, minZ: -42.8, maxZ: -23 });    // badan utama + portico istana
     rintanganIstana({ minX: -28.2, maxX: -13.8, minZ: -42.8, maxZ: -23 });   // sayap barat + podium depannya
     rintanganIstana({ minX: 13.8, maxX: 28.2, minZ: -42.8, maxZ: -23 });     // sayap timur + podium depannya
-    rintanganIstana({ minX: -4.1, maxX: 4.1, minZ: -14.2, maxZ: -5.8 });     // air mancur
+    rintanganIstana({ minX: -14.2, maxX: -7.8, minZ: -13.2, maxZ: -6.8 });   // air mancur barat
+    rintanganIstana({ minX: 7.8, maxX: 14.2, minZ: -13.2, maxZ: -6.8 });     // air mancur timur
     rintanganIstana({ minX: -28.2, maxX: -4.2, minZ: -3.7, maxZ: -3.1 });    // pagar selatan, barat gerbang
     rintanganIstana({ minX: 4.2, maxX: 28.2, minZ: -3.7, maxZ: -3.1 });      // pagar selatan, timur gerbang
     rintanganIstana({ minX: -28.2, maxX: -27.6, minZ: -29.4, maxZ: -3.1 });  // pagar barat

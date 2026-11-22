@@ -6,13 +6,15 @@ import { ambilData, awanGrup, camera, pantauFrame, perbaruiLaluLintas, renderer,
 import { bangunKotaMassal } from "./kota.js";
 import { bangunLahanPembangunan } from "./fasilitas.js";
 import { animasiHidup, animasiJalan } from "./karakter.js";
-import { bangunDistrik, diInterior, npcList, perbaruiAksiInterior, posisiJalur } from "./rumah.js";
+import { bangunDistrik, diInterior, npcList, perbaruiAksiInterior, posisiJalurNpc, rintanganFasilitas } from "./rumah.js";
 import { animasiKades, bangunPusatKota } from "./istana.js";
 import { dr, fp, karSaya, modeKamera, putarOrbitBilaOtomatis, target, terapkanKamera, updateDrone, updateKetiga, updateOrang } from "./kamera.js";
 import { bukaLengkapi, perbaruiChipSaya, sesi, tampilLangkah } from "./ui.js";
 import { kirimPosisi, pemainDirender, perbaruiPemainLain, sambungWS } from "./jaringan.js";
 import { gambarMinimap } from "./peta.js";
 import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
+import { bangunLaluLintas, bangunMobilParkir, perbaruiLaluLintasMobil } from "./kendaraan.js";
+import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } from "./apartemen.js";
 
   /* ================= ANIMASI ================= */
   export const jam = new THREE.Clock();
@@ -46,7 +48,7 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
         continue;
       }
       if (akt.jenis === "duduk") { animasiHidup(kar, t, true); continue; } // pose duduk statis dari bangunDistrik; kaki tidak disentuh di sini
-      const p = posisiJalur(t * 3.4 + u.fase);
+      const p = posisiJalurNpc(u, t * 3.4 + u.fase); // jalur sendiri (keliling blok) atau jalur plaza
       const jarakNpc = u._jx === undefined ? 0 : Math.hypot(p.x - u._jx, p.z - u._jz);
       u._jx = p.x; u._jz = p.z;
       const bobNpc = animasiJalan(kar, jarakNpc, dt);
@@ -65,6 +67,8 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
     terapkanWaktu(dt, false); // fase cahaya: lerp halus ke preset aktif (Paket 3 ?v=15)
     perbaruiLaluLintas(t);
     perbaruiIklan(t);
+    perbaruiLaluLintasMobil(t, dt); // mobil berjalan, patuh lampu merah
+    perbaruiLift(dt); perbaruiApartemenLuar();
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);
@@ -134,6 +138,9 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
       bangunPusatKota(); // plaza + istana (dulu IIFE evaluasi modul di istana.js — TDZ-nya mengunci loading 22 Nov 15:13; kini di dalam jaring pengaman ini)
       window.__kotaMassal = bangunKotaMassal();
       bangunDistrik();
+      bangunMobilParkir(); // 1 mobil per rumah terisi
+      bangunLaluLintas();  // mobil berjalan di jalan sekitar pusat
+      bangunApartemen(); rintanganFasilitas.push(...tapakApartemen());
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
       bangunLahanPembangunan(); // petak kosong + fasilitas terbangun (status dari ambilData)
       terapkanKualitas(); // dorong kepadatan awan & info panel sesuai pilihan tersimpan

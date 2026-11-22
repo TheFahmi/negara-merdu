@@ -832,3 +832,12 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .kk-tabel td:nth-child(2) { overflow-wrap: break-word; word-break: normal; }
 .kk-tabel td:nth-child(4), .kk-tabel td:nth-child(5) { white-space: nowrap; }
 @container (max-width: 480px) { .kk-tabel td:nth-child(1) { width: 100%; } .kk-tabel td:nth-child(2) { overflow-wrap: anywhere; } }
+
+/* Panel tombol lift apartemen (di #kartu) */
+.panel-lift { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.panel-lift button {
+  min-height: 48px; border-radius: 50%; aspect-ratio: 1; border: 2px solid #b8bcc2; cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, #fff, #dfe3e6); font-size: 16px; font-weight: 800; color: #2f3b45;
+}
+.panel-lift button:disabled { background: #ffd58a; border-color: #e0a640; color: #6b3e00; }
+.panel-lift button:active { transform: scale(.94); }

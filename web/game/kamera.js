@@ -3,12 +3,13 @@
 import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, wilayahLengkap, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
 import { OFSET_MATAHARI, aturJangkauBayangan, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
-import { INT, dekatPintuKeluar, diInterior, keluarInterior, masukInterior, masukIstana, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
+import { INT, dekatPintuKeluar, diInterior, jepitInteriorUmum, keluarInterior, masukApartemen, masukInterior, masukIstana, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
 import { sesi, teksWilayahPendek } from "./ui.js";
 import { buangGrup } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { ketukIklan } from "./iklan.js";
 import { istanaKlik } from "./istana.js";
+import { AP, apartemenKlik, pintuApartemen } from "./apartemen.js";
 import { waktuLalu } from "./main.js";
 
   /* ================= KAMERA ORBIT ================= */
@@ -90,9 +91,8 @@ import { waktuLalu } from "./main.js";
       fp.x += -Math.sin(fp.yaw) * s;
       fp.z += -Math.cos(fp.yaw) * s;
       if (diInterior) {
-        const pos = tabrakanInterior(fp.x, fp.z);
-        fp.x = Math.min(INT.x + INT.sw - 0.75, Math.max(INT.x - INT.sw + 0.75, pos.x));
-        fp.z = Math.min(INT.z + INT.sd - 0.75, Math.max(INT.z - INT.sd + 0.75, pos.z));
+        const pos = jepitInteriorUmum(tabrakanInterior(fp.x, fp.z).x, tabrakanInterior(fp.x, fp.z).z);
+        fp.x = pos.x; fp.z = pos.z;
       } else {
         const pos = tabrakan(fp.x, fp.z);
         fp.x = Math.min(BATAS_X - 2, Math.max(-BATAS_X + 2, pos.x));
@@ -112,6 +112,16 @@ import { waktuLalu } from "./main.js";
     ray.setFromCamera(v2, camera);
     const kena = ray.intersectObjects(rumahKlik, true);
     if (ketukIklan(ray, kena.length ? kena[0].distance : Infinity)) return; // papan iklan lebih dekat dari rumah mana pun
+    const kenaApt = ray.intersectObjects(apartemenKlik, true);
+    if (kenaApt.length && (!kena.length || kenaApt[0].distance < kena[0].distance)) {
+      let o = kenaApt[0].object; while (o && !o.userData.apartemen) o = o.parent;
+      const data = o.userData.apartemen, pintu = pintuApartemen.find((p) => p.data === data);
+      $("#kartu .isi").innerHTML = "<h3>" + IK.rumah + " " + data.nama + "</h3><p>Apartemen 10 lantai: lobi, lift, dan 6 unit kamar tiap lantai. Naik lift untuk berkunjung ke unit mana pun.</p>" +
+        '<button class="btn-masuk" id="btn-masuk-apt" type="button">' + IK.pintu + " Masuk Apartemen</button>";
+      $("#kartu").hidden = false;
+      $("#btn-masuk-apt").addEventListener("click", () => { $("#kartu").hidden = true; masukApartemen(pintu); });
+      return;
+    }
     const kenaIstana = ray.intersectObjects(istanaKlik, true);
     if (kenaIstana.length && (!kena.length || kenaIstana[0].distance < kena[0].distance)) {
       $("#kartu .isi").innerHTML = "<h3>" + IK.rumah + " Istana Negara</h3><p>Kantor Pak Presiden Negara Merdu. Di dalam: aula kenegaraan, ruang rapat kabinet & papan struktur pemerintahan (Presiden, Wali Kota, Camat, Lurah, Ketua RW/RT).</p>" +
@@ -274,9 +284,8 @@ import { waktuLalu } from "./main.js";
     const nx = fp.x + (fx * g.mz + rx * g.mx) * cepat * dt;
     const nz = fp.z + (fz * g.mz + rz * g.mx) * cepat * dt;
     if (diInterior) { // di dalam rumah: tabrakan perabot + jepit di dalam dinding ruangan
-      const pos = tabrakanInterior(nx, nz);
-      fp.x = jepit(pos.x, INT.x - INT.sw + 0.75, INT.x + INT.sw - 0.75);
-      fp.z = jepit(pos.z, INT.z - INT.sd + 0.75, INT.z + INT.sd - 0.75);
+      const t = tabrakanInterior(nx, nz), pos = jepitInteriorUmum(t.x, t.z); // + kabin lift apartemen
+      fp.x = pos.x; fp.z = pos.z;
     } else {
       const pos = tabrakan(nx, nz);
       fp.x = jepit(pos.x, -BATAS_X + 2, BATAS_X - 2);
@@ -286,7 +295,7 @@ import { waktuLalu } from "./main.js";
   }
   export function updateOrang(dt) {
     langkahPemain(dt, fp.yaw);
-    if (diInterior) camera.position.set(fp.x, INT.y + 1.6, fp.z); // mata 1,6 di atas lantai interior
+    if (diInterior) camera.position.set(fp.x, INT.y + 1.6 + (AP.goyang || 0), fp.z); // mata 1,6 di atas lantai interior (+ getar kabin lift)
     else camera.position.set(fp.x, 1.6, fp.z); // setinggi mata karakter (±1,6 satuan)
     camera.rotation.set(fp.pitch, fp.yaw, 0);
     ikutiMatahari(fp.x, fp.z);

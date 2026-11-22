@@ -3,6 +3,7 @@
 import { $, IK, posisiKavling, teksRTRW, wilayahLengkap } from "./inti.js";
 import { ambilData, perbaruiInfoWaktu, renderer, scene, setPilihanKualitas, setPilihanWaktu } from "./bersama.js";
 import { bangunKotaMassal } from "./kota.js";
+import { bangunMobilParkir } from "./kendaraan.js";
 import { buatKarakter } from "./karakter.js";
 import { bangunDistrik, diInterior, keluarInterior, masukInterior } from "./rumah.js";
 import { fokusKe, fp, modeKamera, posisiDepanRumah, putarOtomatis, segarkanKarakterSaya, setPetunjukDitutup, setPutarOtomatis, target, tp } from "./kamera.js";
@@ -142,6 +143,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     if (window.__kotaMassal) scene.remove(window.__kotaMassal.grup);
     window.__kotaMassal = bangunKotaMassal();
     bangunDistrik();
+    bangunMobilParkir(); // rumah baru = mobil baru
   }
   $("#daftar-kirim").addEventListener("click", async () => {
     if (form.gender !== "L" && form.gender !== "P") { $("#salah-rupa").textContent = "Pilih jenis kelamin dulu."; return; }

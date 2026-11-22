@@ -77,6 +77,11 @@
       nama_kecamatan: NAMA_KECAMATAN[kecamatan - 1], kota: 1, nama_kota: NAMA_KOTA };
   }
   export function teksRTRW(wl) { return String(wl.rt).padStart(3, "0") + "/" + String(wl.rw).padStart(2, "0"); }
+  /* Apartemen (lahan generik dekat pusat — bukan fasilitas server). */
+  export const APARTEMEN_BLOK = [
+    { kol: 36, bar: 20, nama: "Merdu Residence" }, { kol: 44, bar: 20, nama: "Taman Sari Tower" },
+    { kol: 28, bar: 20, nama: "Griya Kencana" }, { kol: 52, bar: 28, nama: "Puri Harmoni" },
+  ];
   export function sudutBlok(kol, bar) { return { x: (kol - BLOK_KOLOM / 2) * PITCH, z: (bar - BLOK_BARIS / 2) * PITCH }; }
   export function posisiKavling(blokNomor, kavlingNomor) {
     const bi = blokNomor - 1, bar = Math.floor(bi / BLOK_KOLOM), kol = bi % BLOK_KOLOM;

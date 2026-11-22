@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "rumah" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
 import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
-import { M, TEX_ATAP, dataPembangunan, geometriAtapPelana, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
+import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { PETUNJUK, aturMode, fp, modeKamera, posisiDepanRumah } from "./kamera.js";
@@ -9,6 +9,7 @@ import { buangGrup, kirimPosisi } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { UKURAN_ISTANA_DALAM, bangunInteriorIstana } from "./istanaDalam.js";
 import { TAPAK_BARU } from "./fasilitasBaru.js";
+import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, resetApartemen, setKaitApartemen } from "./apartemen.js";
 
   export function buatRumahDetail(dinding, atap, varian, cerobong) {
     // Ronde skill-3d (lowpoly-style + prop-artist): siluet besar tetap
@@ -173,6 +174,32 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
     SEGMEN.push({ a, b, len, mulai: PANJANG_JALUR }); PANJANG_JALUR += len;
   }
+  /* Jalur keliling blok (perbaikan "kota hidup"): NPC pejalan kini tidak
+     semua berputar di plaza — sebagian besar berjalan di TROTOAR keliling
+     blok perumahan yang berpenghuni di seluruh kota (arah bergantian),
+     sisanya tetap meramaikan plaza. */
+  export function buatJalurBlok(blok, balik) {
+    const bi = blok - 1, kol = bi % BLOK_KOLOM, bar = Math.floor(bi / BLOK_KOLOM);
+    const x0 = (kol - BLOK_KOLOM / 2) * 84, z0 = (bar - 50 / 2) * 84; // = sudutBlok (PITCH 84, BLOK_BARIS 50)
+    const n = 15.3, f = 82.7; // as trotoar sisi dalam (dekat jalan) tiap tepi blok
+    let titik = [[x0 + n, z0 + n], [x0 + f, z0 + n], [x0 + f, z0 + f], [x0 + n, z0 + f]];
+    if (balik) titik = titik.reverse();
+    const segmen = []; let panjang = 0;
+    for (let i = 0; i < titik.length; i++) {
+      const a = titik[i], b = titik[(i + 1) % titik.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      segmen.push({ a, b, len, mulai: panjang }); panjang += len;
+    }
+    return { segmen, panjang };
+  }
+  export function posisiJalurNpc(u, s) {
+    const J = u.jalur; if (!J) return posisiJalur(s);
+    s = ((s % J.panjang) + J.panjang) % J.panjang;
+    for (const sg of J.segmen) if (s <= sg.mulai + sg.len) {
+      const t = sg.len ? (s - sg.mulai) / sg.len : 0;
+      return { x: sg.a[0] + (sg.b[0] - sg.a[0]) * t, z: sg.a[1] + (sg.b[1] - sg.a[1]) * t, dx: sg.b[0] - sg.a[0], dz: sg.b[1] - sg.a[1] };
+    }
+    return posisiJalur(s);
+  }
   export function posisiJalur(s) {
     s = ((s % PANJANG_JALUR) + PANJANG_JALUR) % PANJANG_JALUR;
     for (const sg of SEGMEN) if (s <= sg.mulai + sg.len) {
@@ -190,6 +217,7 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
     if (dinamis) scene.remove(dinamis);
     dinamis = new THREE.Group(); scene.add(dinamis);
     rumahKlik.length = 0; npcList.length = 0; rintanganDetail.length = 0;
+    const blokBerpenghuni = [...new Set(daftarRumah.map((r) => r.blok))]; // blok yang ada rumah warganya
     /* Penempatan ?v=18 (keputusan Fahmi: "1 blok beda nomor rumah aja"):
        rumah detail berdiri di posisiKavling ASLI pemiliknya, rotasi 0 —
        menghadap +z (selatan), teras di sisi yang sama seperti rumah
@@ -234,6 +262,11 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
          bangku 0,89 - pivot 0,52 = 0,37). */
       const akt = aktivitasUntukNpc(i);
       kar.userData.aktivitas = akt;
+      if (akt.jenis !== "ngobrol" && akt.jenis !== "duduk" && i % 4 !== 0 && blokBerpenghuni.length) { // 3/4 pejalan keliling kota
+        const blokJalan = blokBerpenghuni[Math.floor(hashInt(i * 53 + 7) * blokBerpenghuni.length)];
+        kar.userData.jalur = buatJalurBlok(blokJalan, i % 2 === 1);
+        kar.userData.fase = hashInt(i * 19 + 2) * kar.userData.jalur.panjang;
+      }
       if (akt.jenis === "pembawa") {
         let alat;
         if (akt.alat === "karung") {
@@ -756,10 +789,46 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
     $("#petunjuk").hidden = false;
     kirimPosisi(true);
   }
+  /* ===== APARTEMEN (lihat apartemen.js): kait penyusun ruang ===== */
+  setKaitApartemen({
+    pasang(r) {
+      if (grupInterior) { scene.remove(grupInterior); buangGrup(grupInterior); grupInterior = null; }
+      rintanganInterior.length = 0;
+      INT.sw = r.sw; INT.sd = r.sd; INT.tinggi = r.T;
+      for (const [a, b, c, d] of r.halang.daftar) rintanganInterior.push({ minX: INT.x + a, maxX: INT.x + b, minZ: INT.z + c, maxZ: INT.z + d });
+      r.g.position.set(INT.x, INT.y, INT.z); grupInterior = r.g; scene.add(r.g);
+    },
+    get fp() { return fp; }, INT, // getter: fp milik kamera.js bisa belum terinisialisasi saat modul ini dievaluasi
+    keluarKeJalan() { keluarInterior(); },
+    petunjuk(t) { $("#petunjuk-teks").textContent = t; $("#petunjuk").hidden = false; },
+  });
+  export function masukApartemen(p) { // p = {x, z, data} titik pintu lobi di dunia
+    if (diInterior) return;
+    interiorKonteks = { pemilik: { username: p.data.nama }, jenis: "apartemen", pintuX: p.x, pintuZ: p.z + 2,
+      yawPintu: 0, modeSebelum: modeKamera };
+    masukApartemenLobi(p.data);
+    diInterior = true;
+    perbaruiMinimapTampil();
+    fp.x = INT.x; fp.z = INT.z + INT.sd - 2.1; fp.yaw = 0; fp.pitch = 0;
+    if (modeKamera !== "orang") aturMode("orang");
+    $("#kartu").hidden = true; $("#panel-menu").hidden = true; $("#panel-chat").hidden = true;
+    $("#tombol-keluar-rumah").hidden = false;
+    $("#tombol-keluar-rumah").lastChild.textContent = " Keluar Gedung";
+    kirimPosisi(true);
+  }
+  /* Jepit gerak di interior: apartemen punya kabin lift di balik dinding utara. */
+  export function jepitInteriorUmum(x, z) {
+    if (interiorKonteks && interiorKonteks.jenis === "apartemen") {
+      const p = jepitRuang(x - INT.x, z - INT.z); return { x: INT.x + p.x, z: INT.z + p.z };
+    }
+    return { x: Math.min(INT.x + INT.sw - 0.75, Math.max(INT.x - INT.sw + 0.75, x)), z: Math.min(INT.z + INT.sd - 0.75, Math.max(INT.z - INT.sd + 0.75, z)) };
+  }
+  let aksiAptAktif = null;
   export function keluarInterior() {
     if (!diInterior) return;
     const k = interiorKonteks;
     diInterior = false;
+    if (k.jenis === "apartemen") resetApartemen();
     fp.x = k.pintuX; fp.z = k.pintuZ; fp.yaw = k.yawPintu; fp.pitch = 0; // kembali ke jalan tepat di depan rumah itu
     if (grupInterior) grupInterior.visible = false;
     $("#tombol-keluar-rumah").hidden = true;
@@ -775,6 +844,7 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
     }
   }
   export function dekatPintuKeluar() {
+    if (interiorKonteks && interiorKonteks.jenis === "apartemen") return false; // apartemen: keluar lewat chip lobi
     return diInterior && fp.z > INT.z + INT.sd - 1.5 && Math.abs(fp.x - INT.x) < 1.8;
   }
   /* Chip aksi kontekstual (kecil, di atas bar bawah): "Masuk Rumah" saat berdiri
@@ -782,6 +852,14 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
      keluar interior. Tidak pernah tampil permanen. */
   export function perbaruiAksiInterior() {
     const chip = $("#chip-aksi"), teks = $("#chip-aksi-teks"), tombol = $("#chip-aksi-tombol");
+    if (diInterior && interiorKonteks && interiorKonteks.jenis === "apartemen") {
+      const a = aksiApartemen(fp.x - INT.x, fp.z - INT.z);
+      aksiAptAktif = a && a.aksi ? a.aksi : null;
+      chip.hidden = !a;
+      if (a) { teks.textContent = a.teks; tombol.textContent = a.tombol || "…"; tombol.hidden = !a.tombol; }
+      return;
+    }
+    tombol.hidden = false;
     if (diInterior) {
       const tampil = dekatPintuKeluar();
       chip.hidden = !tampil;
@@ -796,6 +874,11 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
       if (j < jarakMin) { jarakMin = j; terbaik = r; }
     }
     rumahDekat = terbaik;
+    for (const pa of pintuApartemen) if (!terbaik && Math.hypot(fp.x - pa.x, fp.z - pa.z) < 5) {
+      rumahDekat = { apartemen: true, ...pa }; chip.hidden = false;
+      teks.textContent = pa.data.nama; tombol.textContent = "Masuk Apartemen";
+      return;
+    }
     const pi = pintuIstanaDunia();
     if (!terbaik && Math.hypot(fp.x - pi.x, fp.z - pi.z) < 5) { // di depan pintu istana
       rumahDekat = "istana"; chip.hidden = false;
@@ -809,8 +892,10 @@ import { TAPAK_BARU } from "./fasilitasBaru.js";
     }
   }
   $("#chip-aksi-tombol").addEventListener("click", () => {
-    if (diInterior) keluarInterior();
+    if (diInterior && aksiAptAktif) aksiAptAktif();
+    else if (diInterior) keluarInterior();
     else if (rumahDekat === "istana") masukIstana();
+    else if (rumahDekat && rumahDekat.apartemen) masukApartemen(rumahDekat);
     else if (rumahDekat) masukInterior(rumahDekat.userData.pemilik, rumahDekat);
   });
   $("#tombol-keluar-rumah").addEventListener("click", keluarInterior);
