@@ -1701,3 +1701,34 @@ Backup compose: `/opt/pinarak/bak-nextmigrasi/docker-compose.yml.pre` (pra-web) 
 
 ### Harness
 Diperbarui ke susunan modul baru (SRC = gabungan web/game/*.js urutan muat; cek ?v=37 diganti cek kabel Next.js di page.js): uji_satublok **3.423/0**, uji_istana **432/0**, uji_skill3d **192/0**. uji_distrik resmi PENSIUN: target ekstraknya (blok LOGIKA DISTRIK) sudah dihapus sejak ?v=18 sehingga harness itu memang tidak bisa jalan jauh sebelum migrasi ini; file-nya kini menegaskan invarian pensiun pada modul baru (5/0) dan menunjuk uji_satublok sebagai pengganti.
+
+## Kambuh Nyangkut Loading — TDZ Antar-Modul (22 Nov 2026, web next6)
+
+Laporan Fahmi 15:13 WIB: "Stuck di loading lagi" di HP. Server sehat (merdu.id 200, /api/statistik 36 warga) — bug sisi klien, BUKAN kambuhnya bug ?v=33 (mesh atap instanced kosong); jaring pengaman ?v=33 di main.js terbukti masih utuh.
+
+### Reproduksi & akar masalah
+Rig Chrome asli di X99 via CDP (tab baru, cache dibersihkan, viewport HP, throttle CPU 4x, jalur publik): #muat TIDAK PERNAH hilang dalam 200 detik. Exception tertangkap persis:
+
+```
+ReferenceError: Cannot access 'nC' before initialization
+    at nz (https://merdu.id/_next/static/chunks/351.94020357707b0994.js:1:140475)
+    at https://merdu.id/_next/static/chunks/351.94020357707b0994.js:1:90760
+    at 3351 (https://merdu.id/_next/static/chunks/351.94020357707b0994.js:1:96035)
+    at r (webpack-...)
+```
+
+`nz` = `teksturBenderaMerdu()` dan `nC` = cache-nya `_texBenderaMerdu` di web/game/fasilitas.js. Mekanisme: (1) web/game/istana.js membangun seluruh plaza+istana lewat IIFE `(function pusatKota(){...})()` yang berjalan SAAT EVALUASI MODUL, dan di dalamnya memanggil teksturBenderaMerdu(); (2) cache itu `export let` — berada di TDZ sampai badan fasilitas.js dievaluasi; (3) urutan badan modul dalam chunk hasil concatenation webpack mengikuti graf impor, dan graf itu berubah oleh patch-patch WhatsApp (9530f25 menambah modul iklan.js; 35ac0c1 menambah istanaDalam.js + tepi impor rumah->istanaDalam->fasilitas). Di build next5 urutan berbalik: badan istana.js jalan sebelum inisialisasi `let _texBenderaMerdu` -> ReferenceError saat chunk dimuat -> main.js tidak pernah tereksekusi -> mulai() (dan try/catch ?v=33 di dalamnya) tidak pernah tercapai -> #muat terkunci di semua perangkat.
+
+### Perbaikan (di sumber web/game/, perilaku & visual tidak berubah)
+1. istana.js: IIFE evaluasi-modul diubah menjadi `export function bangunPusatKota()` (isi identik) — tidak ada lagi pembangunan saat evaluasi modul.
+2. main.js: `bangunPusatKota()` dipanggil sebagai langkah PERTAMA di dalam try/catch boot mulai() (jaring pengaman ?v=33) — exception bangun kota jenis apa pun kini tidak bisa lagi mengunci loading.
+3. fasilitas.js: cache tekstur bendera dipindah dari `let` modul ke properti fungsi (`teksturBenderaMerdu._tex`) — deklarasi fungsi terinisialisasi sejak fase instansiasi modul, jadi slot ini kebal TDZ untuk pemanggil kapan pun.
+
+### Lintasan deploy (bertabrakan dengan Patch 4 — selesai tanpa kehilangan)
+Perbaikan ini ter-commit MENJADI SATU dengan Patch 4 di commit eb0c1c5 (15:24 WIB; sesi Patch 4 meng-commit pohon kerja bersama yang sudah memuat perbaikan ini — terverifikasi dari diff commit-nya). Image gabungan dibangun di X99 sebagai negara-merdu-web:next6 digest sha256:86fbe40808f5bf241501dbcd8ce8c74b353ca9e4f46d4d0802797e5f09a5aca2 (Patch 4 + perbaikan TDZ), ter-push ke registry (tag next6 ditegaskan ulang ke digest ini) dan LIVE di Hostinger (container pinarak-web-1 menjalankan digest itu; backend Go tidak disentuh). Image next6 digest da6cb2fb yang sempat dibangun sesi ini dari pohon pra-Patch-4 tergantikan di semua tempat (registry, X99, Hostinger) oleh image gabungan. Backup compose pra-swap: /opt/pinarak/docker-compose.yml.bak-next6.
+
+### Verifikasi jalur publik sesudah deploy (rig yang sama persis)
+Tab baru + cache bersih + viewport HP + throttle 4x: **#muat hilang pada 34,0 detik** (sebelum fix: tidak pernah hilang/200 dtk), HUD tampil, gerbang tamu tampil, kotaMassal terbangun, **0 exception JS** (satu-satunya event = LOG peringatan SwiftShader bawaan Chrome headless). Bukti screenshot: ~/workspace/wsdiag/bukti-loading/muat_fix_next6.jpg (gerbang "Selamat datang di Negara Merdu" di atas kota 3D yang ter-render). Rig: /root/diag_muat2.py di X99, log /root/diag_run3.log.
+
+### Harness (catatan jujur)
+uji_satublok 3.421 lulus/2 gagal, uji_skill3d 189/3, uji_istana 358 gagal — dan angka-angka itu IDENTIK pada pohon TANPA perbaikan ini (dibuktikan via git stash dua arah): seluruh kegagalan adalah drift harness terhadap Patch 1–4 (ekstraksi AABB istana pra-skala, geometri kolam ?v=36/37, anggaran segitiga karakter Patch 3), BUKAN regresi perbaikan ini (0 kegagalan baru). Harness perlu diperbarui menyusul patch-patch tersebut di sesi terpisah.
