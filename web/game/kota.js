@@ -32,7 +32,10 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
     const syDari = (d) => 0.9 + d.h * 0.3;
     const warnaAtap = (d) => {
       const milik = warnaPemilik.get(d.kunciPos);
-      if (milik) return warna.set(milik); // identitas pemilik: atap = warna bajunya
+      if (milik) { // identitas pemilik: atap = warna bajunya, DILEMBUTKAN (saturasi & terang dijepit) supaya tetap seperti genteng cat, bukan neon
+        warna.set(milik); const hsl = { h: 0, s: 0, l: 0 }; warna.getHSL(hsl);
+        return warna.setHSL(hsl.h, Math.min(hsl.s, 0.5) * 0.85, Math.min(0.56, Math.max(0.34, hsl.l)));
+      }
       const hsl = warnaAtapZonaHSL(d.zona, d.h, hashInt(d.nomor * 3 + 7));
       return warna.setHSL(hsl[0], hsl[1], hsl[2]);
     };
@@ -241,22 +244,27 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
        hadap (hx,hz) diputar ry -> -x lokal selalu mengarah ke lajur). */
     const ABU = 0x7b8086, HITAM = 0x1d2124, KUNING_LIS = 0xf2c230;
     const silinder = (r, h, seg) => new THREE.CylinderGeometry(r, r, h, seg || 8);
-    const LENGAN = 4.9, KX = -4.35, KY = 4.62; // ujung lengan & pusat kepala lampu
+    // Lajur kiri: lengan menjulur ke +x LOKAL (lihat tiangLaluLintas di inti.js)
+    const LENGAN = 4.9, KX = 4.35, KY = 4.62; // ujung lengan & pusat kepala lampu
+    const PX = -0.2, PY = 2.75, PZ = 0.16;    // kepala lampu PENYEBERANG di tiang (sisi luar, setinggi mata)
     const bagianLL = [
       { geo: silinder(0.36, 0.3, 8), x: 0, y: 0.15, z: 0, warna: 0x5f646a },        // alas beton
       { geo: silinder(0.13, 5.6, 8), x: 0, y: 3.0, z: 0, warna: ABU },               // tiang
       { geo: silinder(0.16, 0.12, 8), x: 0, y: 5.86, z: 0, warna: ABU },             // tutup pucuk
-      { geo: new THREE.BoxGeometry(LENGAN, 0.16, 0.16), x: -LENGAN / 2, y: 5.62, z: 0, warna: ABU }, // lengan
-      { geo: new THREE.BoxGeometry(1.9, 0.08, 0.08), x: -0.95, y: 5.05, z: 0, rz: -0.55, warna: ABU }, // penyangga miring
+      { geo: new THREE.BoxGeometry(LENGAN, 0.16, 0.16), x: LENGAN / 2, y: 5.62, z: 0, warna: ABU }, // lengan
+      { geo: new THREE.BoxGeometry(1.9, 0.08, 0.08), x: 0.95, y: 5.05, z: 0, rz: 0.55, warna: ABU }, // penyangga miring
       { geo: new THREE.BoxGeometry(0.08, 0.45, 0.08), x: KX, y: 5.36, z: 0.05, warna: HITAM },   // penggantung
-      { geo: new THREE.BoxGeometry(1.02, 2.02, 0.02), x: KX, y: KY, z: 0.05, warna: KUNING_LIS }, // lis backplate (hanya terlihat dari depan)
       { geo: new THREE.BoxGeometry(1.06, 2.06, 0.08), x: KX, y: KY, z: 0.0, warna: HITAM },       // backplate
+      { geo: new THREE.BoxGeometry(1.02, 2.02, 0.02), x: KX, y: KY, z: 0.05, warna: KUNING_LIS }, // lis backplate (hanya terlihat dari depan)
       { geo: new THREE.BoxGeometry(0.9, 1.9, 0.02), x: KX, y: KY, z: 0.065, warna: HITAM },      // muka backplate di dalam lis
       { geo: new THREE.BoxGeometry(0.6, 1.66, 0.44), x: KX, y: KY, z: 0.26, warna: HITAM },      // rumah lampu
-      { geo: new THREE.BoxGeometry(0.42, 0.34, 0.2), x: 0.22, y: 2.6, z: 0.2, warna: 0xe8e4d8 }, // kotak tombol penyeberang
+      { geo: new THREE.BoxGeometry(0.5, 0.9, 0.26), x: PX, y: PY, z: PZ, warna: HITAM },         // rumah lampu penyeberang
+      { geo: new THREE.BoxGeometry(0.3, 0.36, 0.2), x: 0.2, y: 1.25, z: 0.12, warna: 0xf2c230 }, // tombol penyeberang
     ];
     for (const dy of [0.5, 0, -0.5]) // topi/visor tiap lampu
       bagianLL.push({ geo: new THREE.BoxGeometry(0.5, 0.05, 0.32), x: KX, y: KY + dy + 0.24, z: 0.62, rx: 0.18, warna: HITAM });
+    for (const dy of [0.21, -0.21]) // visor lampu penyeberang
+      bagianLL.push({ geo: new THREE.BoxGeometry(0.4, 0.04, 0.18), x: PX, y: PY + dy + 0.17, z: PZ + 0.2, warna: HITAM });
     const geoTiangLL = gabungBerwarna(bagianLL);
     const imTiangLL = new THREE.InstancedMesh(geoTiangLL,
       new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.15, flatShading: true }), Math.max(1, tiangLL.length));
@@ -277,6 +285,33 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
         imCakramPeta[sumbu + w] = im; grup.add(im);
       }
     }
+    /* Lampu penyeberang: 2 panel (orang merah di atas / orang hijau di
+       bawah) per tiang, material bersama per sumbu — fasenya diatur
+       perbaruiLaluLintas (hijau hanya saat arus sumbu tiang itu HIJAU:
+       pejalan yang melihat tiang ini menyeberangi jalan sumbu lain). */
+    const geoPanelPed = new THREE.PlaneGeometry(0.3, 0.3);
+    const texOrang = (jalan) => { // piktogram orang berdiri / berjalan
+      const cv = document.createElement("canvas"); cv.width = cv.height = 64;
+      const c = cv.getContext("2d"); c.fillStyle = "#111"; c.fillRect(0, 0, 64, 64);
+      c.fillStyle = "#fff"; c.beginPath(); c.arc(32, 12, 7, 0, 7); c.fill();
+      c.lineWidth = 8; c.lineCap = "round"; c.strokeStyle = "#fff"; c.beginPath();
+      if (jalan) { c.moveTo(32, 22); c.lineTo(30, 40); c.lineTo(20, 56); c.moveTo(30, 40); c.lineTo(42, 56); c.moveTo(31, 27); c.lineTo(44, 36); c.moveTo(31, 27); c.lineTo(20, 36); }
+      else { c.moveTo(32, 22); c.lineTo(32, 42); c.lineTo(26, 58); c.moveTo(32, 42); c.lineTo(38, 58); c.moveTo(32, 26); c.lineTo(22, 40); c.moveTo(32, 26); c.lineTo(42, 40); }
+      c.stroke(); return new THREE.CanvasTexture(cv);
+    };
+    const TEX_ORANG = { merah: texOrang(false), hijau: texOrang(true) };
+    const matPed = {}, imPedPeta = {};
+    for (const sumbu of ["us", "tb"]) {
+      matPed[sumbu] = {};
+      const nSumbu = tiangLL.filter((t) => t.sumbu === sumbu).length;
+      for (const w of ["merah", "hijau"]) {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x222222, map: TEX_ORANG[w], emissive: WARNA_LAMPU_LL[w].nyala, emissiveMap: TEX_ORANG[w], emissiveIntensity: 0, roughness: 0.4 });
+        matPed[sumbu][w] = mat;
+        const im = new THREE.InstancedMesh(geoPanelPed, mat, Math.max(1, nSumbu));
+        im.frustumCulled = false; imPedPeta[sumbu + w] = im; grup.add(im);
+      }
+    }
+    const DY_PED = { merah: 0.21, hijau: -0.21 };
     const DY_CAKRAM_LL = { merah: 0.5, kuning: 0, hijau: -0.5 };
     const hitungCakram = { us: 0, tb: 0 }, _lok = new THREE.Vector3();
     tiangLL.forEach((s, i) => {
@@ -289,10 +324,16 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
         dummy.position.set(s.x + _lok.x, _lok.y, s.z + _lok.z);
         dummy.updateMatrix(); imCakramPeta[s.sumbu + w].setMatrixAt(j, dummy.matrix);
       }
+      for (const w of ["merah", "hijau"]) { // panel penyeberang menghadap arah hadap tiang
+        _lok.set(PX, PY + DY_PED[w], PZ + 0.135).applyAxisAngle(THREE.Object3D.DefaultUp, ry);
+        dummy.position.set(s.x + _lok.x, _lok.y, s.z + _lok.z);
+        dummy.updateMatrix(); imPedPeta[s.sumbu + w].setMatrixAt(j, dummy.matrix);
+        imPedPeta[s.sumbu + w].instanceMatrix.needsUpdate = true;
+      }
     });
     imTiangLL.frustumCulled = false; imTiangLL.instanceMatrix.needsUpdate = true;
     grup.add(imTiangLL);
-    LL_AKTIF.mat = matLLBaru; LL_AKTIF.kunci = ""; // grup baru: fase diterapkan ulang di frame berikut
+    LL_AKTIF.mat = matLLBaru; LL_AKTIF.ped = matPed; LL_AKTIF.kunci = ""; // grup baru: fase diterapkan ulang di frame berikut
     /* Marka: kotak tipis 0,06 di atas aspal (y 0,03) + polygonOffset -2 —
        mengikuti preseden anti z-fighting bidang di atas tanah. Tutup
        sewarna aspal digambar lebih dulu (urutan instans tidak menentukan

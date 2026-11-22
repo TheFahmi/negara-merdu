@@ -650,6 +650,11 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
       m.emissiveIntensity = nyala ? 2.4 : 0;
       m.color.setHex(nyala ? WARNA_LAMPU_LL[w].nyala : WARNA_LAMPU_LL[w].mati);
     }
+    if (LL_AKTIF.ped) for (const sumbu of ["us", "tb"]) { // penyeberang: hijau hanya saat arus sumbu tiang HIJAU
+      const jalan = f[sumbu] === "hijau";
+      LL_AKTIF.ped[sumbu].hijau.emissiveIntensity = jalan ? 2.2 : 0;
+      LL_AKTIF.ped[sumbu].merah.emissiveIntensity = jalan ? 0 : 2.2;
+    }
   }
 
 

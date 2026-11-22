@@ -34,7 +34,13 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     }
     return cv;
   }
-  (function pusatKota() {
+  /* DULU IIFE yang jalan saat evaluasi modul — BERBAHAYA: ia memanggil
+     teksturBenderaMerdu() (fasilitas.js) sebelum modul itu sempat dievaluasi
+     tuntas, dan urutan evaluasi modul hasil bundel berubah tiap graf impor
+     berubah (patch iklan/istanaDalam) -> ReferenceError TDZ saat chunk dimuat,
+     main.js tidak pernah jalan, loading terkunci (insiden 22 Nov 15:13).
+     Kini fungsi biasa: dipanggil main.js dari dalam try/catch boot mulai(). */
+  export function bangunPusatKota() {
     /* Seluruh kompleks plaza + istana dibangun di grup yang berpusat di
        (PUSAT_X, PUSAT_Z) = as persimpangan jalan tengah — istana tepat
        segaris dengan jalan utara-selatan. Koordinat di bawah tetap lokal. */
@@ -397,6 +403,6 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
       const b2 = bangkuTaman(bx, 2, 0); b2.position.y = 0.3; pusat.add(b2);        // menghadap jalur (+z)
     }
     for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2]]) pohonPot(px, pz, pusat); // (±10,-20) dilepas: kini di dalam pelataran istana
-  })();
+  }
 
   /* ================= DISTRIK DETAIL (WARGA TERBARU) ================= */

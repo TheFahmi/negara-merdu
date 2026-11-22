@@ -1,5 +1,6 @@
 /* Negara Merdu — modul game "fasilitas" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Fasilitas: papan nama, bendera, model fasilitas, lahan pembangunan, dan pinggiran kota. */
+import { MODEL_BARU } from "./fasilitasBaru.js";
 import { FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, TAMAN, hashInt, sudutBlok } from "./inti.js";
 import { LAMPU_TAMAN, M, REG_TEX, TEX_ATAP, TEX_KILAU, buatKanvasSawah, buatTeksturProsedural, dataPembangunan, gabungGeometri, geometriAtapPelana, kotak, scene, tambahKilau } from "./bersama.js";
 import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
@@ -65,9 +66,12 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
     c.fillText("TOKO PANCING", 172, 84, 322);
     return new THREE.CanvasTexture(cv);
   }
-  export let _texBenderaMerdu = null;
+  /* Cache tekstur disimpan di properti fungsi, BUKAN `let` modul: deklarasi
+     fungsi terinisialisasi sejak fase instansiasi modul, jadi slot cache ini
+     tidak pernah kena TDZ walau fungsi dipanggil sebelum badan modul ini
+     dievaluasi (akar insiden loading 22 Nov 15:13). */
   export function teksturBenderaMerdu() { // bendera Negara Merdu (?v=25): hijau tua + matahari emas 8 sinar + lis emas, rasio 3:2
-    if (_texBenderaMerdu) return _texBenderaMerdu;
+    if (teksturBenderaMerdu._tex) return teksturBenderaMerdu._tex;
     const cv = document.createElement("canvas"); cv.width = 192; cv.height = 128;
     const c = cv.getContext("2d");
     c.fillStyle = "#2e5d43"; c.fillRect(0, 0, 192, 128);
@@ -83,8 +87,8 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       c.closePath(); c.fill();
     }
     c.beginPath(); c.arc(cx, cy, 24, 0, Math.PI * 2); c.fill();
-    _texBenderaMerdu = new THREE.CanvasTexture(cv);
-    return _texBenderaMerdu;
+    teksturBenderaMerdu._tex = new THREE.CanvasTexture(cv);
+    return teksturBenderaMerdu._tex;
   }
   export function buatPapanNama(besar, kecil) { // grup papan: 2 tiang + panel bertekstur, basis y=0
     const g = new THREE.Group();
@@ -609,6 +613,9 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       }
     },
   };
+  /* Model baru fasilitas lama (fasilitasBaru.js) menimpa model lama —
+     taman & toko pancing tetap memakai model di atas. */
+  Object.assign(MODEL_FASILITAS, MODEL_BARU);
   export function bangunLahanPembangunan() {
     const grup = new THREE.Group();
     const parks = [...TAMAN].map((k) => k.split(",").map(Number));

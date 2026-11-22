@@ -7,7 +7,7 @@ import { bangunKotaMassal } from "./kota.js";
 import { bangunLahanPembangunan } from "./fasilitas.js";
 import { animasiHidup, animasiJalan } from "./karakter.js";
 import { bangunDistrik, diInterior, npcList, perbaruiAksiInterior, posisiJalur } from "./rumah.js";
-import { animasiKades } from "./istana.js";
+import { animasiKades, bangunPusatKota } from "./istana.js";
 import { dr, fp, karSaya, modeKamera, putarOrbitBilaOtomatis, target, terapkanKamera, updateDrone, updateKetiga, updateOrang } from "./kamera.js";
 import { bukaLengkapi, perbaruiChipSaya, sesi, tampilLangkah } from "./ui.js";
 import { kirimPosisi, pemainDirender, perbaruiPemainLain, sambungWS } from "./jaringan.js";
@@ -131,6 +131,7 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
        dipakai). Insiden pemicu: TypeError render dari mesh atap instanced
        berdaftar kosong membunuh mulai() sebelum baris sembunyi #muat. */
     try {
+      bangunPusatKota(); // plaza + istana (dulu IIFE evaluasi modul di istana.js — TDZ-nya mengunci loading 22 Nov 15:13; kini di dalam jaring pengaman ini)
       window.__kotaMassal = bangunKotaMassal();
       bangunDistrik();
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)

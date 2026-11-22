@@ -205,7 +205,7 @@
      (kol 39..41, bar 25). Persimpangan di sekeliling plaza, di tepi blok
      RESERVASI & di tepi lahan pembangunan tetap dilayani — jalan di
      tepinya utuh (tekstur tanah seragam di semua blok). */
-  export const PLAZA_TAPAK = { minX: -104, maxX: 104, minZ: -52, maxZ: 52 }; // = kotak(208, ., 104) di (0,0) pada pusatKota()
+  export const PLAZA_TAPAK = { minX: PUSAT_X - PLAZA_W / 2, maxX: PUSAT_X + PLAZA_W / 2, minZ: PUSAT_Z - PLAZA_D / 2, maxZ: PUSAT_Z + PLAZA_D / 2 }; // = tapak plaza pusatKota() (dunia)
   export function persimpanganKota() { // x0,z0 = sudut barat-laut kotak jalan; cx,cz = tengahnya
     const hasil = [];
     for (let kol = 0; kol < BLOK_KOLOM; kol++) for (let bar = 0; bar < BLOK_BARIS; bar++) {
@@ -216,34 +216,47 @@
     }
     return hasil;
   }
-  /* Satu tiang per sudut trotoar, menghadap arah datangnya kendaraan yang
-     diatur (penempatan sisi jauh-kanan dari arah pandang pengemudi):
-     sudut tenggara -> arus timur-barat datang dari barat (hadap -x);
-     sudut barat-laut -> arus timur-barat datang dari timur (hadap +x);
-     sudut timur-laut -> arus utara-selatan datang dari selatan (hadap +z);
-     sudut barat-daya -> arus utara-selatan datang dari utara (hadap -z).
+  /* LAJUR KIRI (aturan Indonesia — perbaikan 22 Nov 2026; dulu model
+     lajur kanan). Arah x = timur, z = selatan; jalan utara-selatan di
+     x0..x0+14, jalan barat-timur di z0..z0+14, lajur selebar 7:
+       ke selatan (datang dari utara)  -> lajur TIMUR  (x0+7..14)
+       ke utara   (datang dari selatan) -> lajur BARAT  (x0..7)
+       ke timur   (datang dari barat)   -> lajur UTARA  (z0..7)
+       ke barat   (datang dari timur)   -> lajur SELATAN (z0+7..14)
+     Lampu dipasang di SISI JAUH persimpangan, di sudut yang segaris dengan
+     lajur datang, menghadap pengemudi; lengan menjulur ke atas lajurnya
+     (lengan = sumbu +x lokal tiang, lihat kota.js).
      sumbu "us" = utara-selatan, "tb" = timur-barat (kelompok fase). */
   export function tiangLaluLintas() {
     const DALAM = 15.2, LUAR = 1.15, tiang = [];
     for (const p of persimpanganKota()) {
-      tiang.push({ x: p.x0 + DALAM, z: p.z0 + DALAM, sumbu: "tb", hx: -1, hz: 0 }); // tenggara: selalu di dalam grid
-      if (p.bar > 0) tiang.push({ x: p.x0 + DALAM, z: p.z0 - LUAR, sumbu: "us", hx: 0, hz: 1 }); // timur-laut
-      if (p.kol > 0) tiang.push({ x: p.x0 - LUAR, z: p.z0 + DALAM, sumbu: "us", hx: 0, hz: -1 }); // barat-daya
-      if (p.kol > 0 && p.bar > 0) tiang.push({ x: p.x0 - LUAR, z: p.z0 - LUAR, sumbu: "tb", hx: 1, hz: 0 }); // barat-laut
+      // dari utara (lajur timur): tiang di sudut tenggara, hadap utara (-z)
+      if (p.bar > 0) tiang.push({ x: p.x0 + DALAM, z: p.z0 + DALAM, sumbu: "us", hx: 0, hz: -1 });
+      // dari selatan (lajur barat): tiang di sudut barat-laut, hadap selatan (+z)
+      if (p.kol > 0 && p.bar > 0) tiang.push({ x: p.x0 - LUAR, z: p.z0 - LUAR, sumbu: "us", hx: 0, hz: 1 });
+      // dari barat (lajur utara): tiang di sudut timur-laut, hadap barat (-x)
+      if (p.kol > 0 && p.bar > 0) tiang.push({ x: p.x0 + DALAM, z: p.z0 - LUAR, sumbu: "tb", hx: -1, hz: 0 });
+      // dari timur (lajur selatan): tiang di sudut barat-daya, hadap timur (+x)
+      if (p.kol > 0) tiang.push({ x: p.x0 - LUAR, z: p.z0 + DALAM, sumbu: "tb", hx: 1, hz: 0 });
     }
     return tiang;
   }
-  /* Mesin fase: siklus 16 detik, dua sumbu berlawanan diselingi kuning.
-     [0,7) us hijau · [7,8) us kuning · [8,15) tb hijau · [15,16) tb kuning.
-     Sumbu yang tidak jalan selalu merah — dua sumbu hijau bersamaan
-     tidak mungkin terjadi menurut konstruksi ini. */
-  export const SIKLUS_LL = 16;
+  /* Mesin fase (22 detik), seperti lampu sungguhan:
+     [0,7) us hijau · [7,10) us kuning · [10,11) SEMUA MERAH ·
+     [11,18) tb hijau · [18,21) tb kuning · [21,22) SEMUA MERAH.
+     Dua sumbu tidak pernah hijau/kuning bersamaan; jeda semua-merah
+     memberi waktu persimpangan kosong sebelum arah lain jalan.
+     Lampu penyeberang mengikuti: pejalan yang menyeberangi jalan sumbu X
+     hanya "jalan" (hijau) saat arus sumbu itu merah penuh. */
+  export const SIKLUS_LL = 22;
   export function faseLaluLintas(t) {
     const s = ((t % SIKLUS_LL) + SIKLUS_LL) % SIKLUS_LL;
     if (s < 7) return { us: "hijau", tb: "merah" };
-    if (s < 8) return { us: "kuning", tb: "merah" };
-    if (s < 15) return { us: "merah", tb: "hijau" };
-    return { us: "merah", tb: "kuning" };
+    if (s < 10) return { us: "kuning", tb: "merah" };
+    if (s < 11) return { us: "merah", tb: "merah" };
+    if (s < 18) return { us: "merah", tb: "hijau" };
+    if (s < 21) return { us: "merah", tb: "kuning" };
+    return { us: "merah", tb: "merah" };
   }
   export const WARNA_LAMPU_LL = { // nyala = warna jenuh terang; mati = rona gelap warna sama
     merah: { nyala: 0xff3524, mati: 0x571a10 },
@@ -253,7 +266,7 @@
   /* Marka persimpangan: {x, z, w, d} berpusat di titik tengah persegi.
      zebra = 5 palang per sisi (palang memanjang searah arus jalan yang
      diseberangi, tala 2,75); henti = garis tipis selebar lajur arah datang
-     (lalu lintas kanan: lajur datang selalu separuh kanan dari arah
+     (lalu lintas KIRI: lajur datang selalu separuh kiri dari arah
      pandang pengemudi), sebelum zebra; tutup = persegi sewarna aspal
      (#b39d72) menutup garis tengah putus-putus di kawasan persimpangan
      (garis tengah berhenti di tepi persimpangan). Sisi yang jalan
@@ -270,10 +283,11 @@
         if (p.kol > 0) zebra.push({ x: x0 - 2.5, z: gz, w: 3.6, d: 1.4 }); // barat: menyeberangi jalan tb
         zebra.push({ x: x0 + JALAN + 2.5, z: gz, w: 3.6, d: 1.4 }); // timur
       }
-      if (p.bar > 0) henti.push({ x: x0 + 3.65, z: z0 - 5.25, w: 6.1, d: 0.7 }); // datang dari utara (lajur barat)
-      henti.push({ x: x0 + JALAN - 3.65, z: z0 + JALAN + 5.25, w: 6.1, d: 0.7 }); // datang dari selatan (lajur timur)
-      if (p.kol > 0) henti.push({ x: x0 - 5.25, z: z0 + JALAN - 3.65, w: 0.7, d: 6.1 }); // datang dari barat (lajur selatan)
-      henti.push({ x: x0 + JALAN + 5.25, z: z0 + 3.65, w: 0.7, d: 6.1 }); // datang dari timur (lajur utara)
+      // lajur kiri: garis henti di lajur DATANG (lihat tiangLaluLintas)
+      if (p.bar > 0) henti.push({ x: x0 + JALAN - 3.65, z: z0 - 5.25, w: 6.1, d: 0.7 }); // datang dari utara (lajur timur)
+      henti.push({ x: x0 + 3.65, z: z0 + JALAN + 5.25, w: 6.1, d: 0.7 }); // datang dari selatan (lajur barat)
+      if (p.kol > 0) henti.push({ x: x0 - 5.25, z: z0 + 3.65, w: 0.7, d: 6.1 }); // datang dari barat (lajur utara)
+      henti.push({ x: x0 + JALAN + 5.25, z: z0 + JALAN - 3.65, w: 0.7, d: 6.1 }); // datang dari timur (lajur selatan)
       const zA = p.bar > 0 ? z0 - 5.8 : z0, zB = z0 + JALAN + 5.8; // tutup garis tengah jalan us
       tutup.push({ x: cx, z: (zA + zB) / 2, w: 3.4, d: zB - zA });
       const xA = p.kol > 0 ? x0 - 5.8 : x0; // tutup garis tengah jalan tb (dua ruas, menghindari tumpang tindih dengan tutup us)

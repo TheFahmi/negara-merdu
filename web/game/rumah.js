@@ -8,6 +8,7 @@ import { PETUNJUK, aturMode, fp, modeKamera, posisiDepanRumah } from "./kamera.j
 import { buangGrup, kirimPosisi } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { UKURAN_ISTANA_DALAM, bangunInteriorIstana } from "./istanaDalam.js";
+import { TAPAK_BARU } from "./fasilitasBaru.js";
 
   export function buatRumahDetail(dinding, atap, varian, cerobong) {
     // Ronde skill-3d (lowpoly-style + prop-artist): siluet besar tetap
@@ -160,6 +161,7 @@ import { UKURAN_ISTANA_DALAM, bangunInteriorIstana } from "./istanaDalam.js";
                    [17.2, 1.7, 32.4, 10.6],                 // kolam pancing: air di selatan koridor dermaga
                    [23.2, -1.7, 32.4, 1.7]],                // kolam pancing: air di timur ujung dermaga (koridor z -1,7..1,7 di atas dermaga bebas dilewati)
   };
+  Object.assign(TAPAK_FASILITAS, TAPAK_BARU); // tapak model baru fasilitas lama (fasilitasBaru.js)
   export let dinamis = null;
   export const rumahKlik = [];
   export const npcList = [];
