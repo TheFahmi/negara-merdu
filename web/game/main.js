@@ -85,7 +85,7 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     // perbaruiLaluLintasMobil(t, dt); // mobil berjalan kendaraan.js
     perbaruiLift(dt); perbaruiApartemenLuar();
     if (diInterior) perbaruiMall(dt); // anak tangga eskalator mall
-    perbaruiTransportasi(dt); // kereta & bus
+    perbaruiTransportasi(t, dt); // kereta & bus (t untuk fase lampu lalu lintas)
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);

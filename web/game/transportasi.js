@@ -13,7 +13,7 @@
    - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri)
      + detur ke pusat kota lewat jalan kol 40 & bar 25, berhenti 3 detik
      di tiap halte (8 halte, termasuk Halte Istana Negara & Halte Plaza). */
-import { JALAN, PITCH, sudutBlok } from "./inti.js";
+import { JALAN, PITCH, PLAZA_TAPAK, faseLaluLintas, sudutBlok } from "./inti.js";
 import { M, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 
@@ -178,6 +178,31 @@ function posRute(R, s) {
   return { x: 0, z: 0, hx: 1, hz: 0 };
 }
 let RUTE = null; const HALTE = [];
+/* Titik henti lampu lalu lintas di sepanjang rute: satu per persimpangan
+   ber-lampu (kotak jalan di luar plaza — sama seperti persimpanganKota di
+   inti.js). s = posisi pusat bus berhenti (moncong di belakang garis
+   henti); sumbu "tb" untuk gerak timur-barat, "us" untuk utara-selatan. */
+const TITIK_HENTI = [];
+function bangunTitikHenti() {
+  TITIK_HENTI.length = 0;
+  const HENTI = 13.5; // jarak pusat bus ke pusat persimpangan saat berhenti
+  for (const g of RUTE.seg) {
+    const dx = g.b[0] - g.a[0], dz = g.b[1] - g.a[1];
+    if (Math.abs(dx) > 0 && Math.abs(dz) > 0) continue; // segmen diagonal = sedang di dalam persimpangan
+    const sumbu = dx !== 0 ? "tb" : "us";
+    for (let k = 0; k < 80; k++) for (let b = 0; b < 50; b++) {
+      const cx = sudutBlok(k, 0).x + JALAN / 2, cz = sudutBlok(0, b).z + JALAN / 2;
+      const x0 = cx - JALAN / 2, z0 = cz - JALAN / 2;
+      if (x0 >= PLAZA_TAPAK.minX && x0 + JALAN <= PLAZA_TAPAK.maxX && z0 >= PLAZA_TAPAK.minZ && z0 + JALAN <= PLAZA_TAPAK.maxZ) continue; // tertutup plaza: tanpa lampu
+      const dC = sumbu === "tb" ? (cx - g.a[0]) * Math.sign(dx) : (cz - g.a[1]) * Math.sign(dz);
+      if (dC < HENTI + 2 || dC > g.len + JALAN) continue; // di belakang segmen / persimpangan segmen sebelumnya
+      const tegak = sumbu === "tb" ? Math.abs(cz - g.a[1]) : Math.abs(cx - g.a[0]);
+      if (tegak > JALAN) continue; // bukan persimpangan yang dilalui segmen ini
+      TITIK_HENTI.push({ s: g.mulai + dC - HENTI, sumbu });
+    }
+  }
+  TITIK_HENTI.sort((a, b) => a.s - b.s);
+}
 
 function tambahHalte(grup, s) { // halte berkanopi di trotoar kiri lajur bus
   const p = posRute(RUTE, s);
@@ -210,6 +235,7 @@ export function bangunTransportasi() {
     kereta.push({ g: k, x: k.position.x, arah: j ? -1 : 1, v: 0, berhenti: 0, sudah: new Set() });
   }
   RUTE = ruteBus();
+  bangunTitikHenti();
   for (let i = 0; i < 6; i++) tambahHalte(grup, RUTE.total * (i + 0.5) / 6); // halte merata di rute
   // halte pusat kota: depan Istana Negara (jalan bar 25) + simpang plaza/warga (jalan kol 40 x bar 23)
   const cxI = sudutBlok(40, 0).x + JALAN / 2, czI = sudutBlok(0, 25).z + JALAN / 2, czW = sudutBlok(0, 23).z + JALAN / 2;
@@ -222,7 +248,8 @@ export function bangunTransportasi() {
   scene.add(grup);
   return grup;
 }
-export function perbaruiTransportasi(dt) {
+export function perbaruiTransportasi(t, dt) {
+  const fase = faseLaluLintas(t); // fase lampu kota yang sama dengan tiang & mobil
   for (const k of kereta) { // kereta bolak-balik, berhenti 8 dtk di setiap stasiun
     if (k.berhenti > 0) { k.berhenti -= dt; continue; }
     const kepala = k.x + k.arah * 8;
@@ -256,7 +283,19 @@ export function perbaruiTransportasi(dt) {
       b.tunggu -= dt;
       if (b.tunggu <= 0 && b.gap < TARGET * 0.85) b.tunggu = 0.5; // tahan berangkat: jaga headway
     } else {
-      const v = Math.max(5, Math.min(12.5, 9 * b.gap / TARGET));
+      let v = b.gap < 60 ? Math.max(0, (b.gap - 14) * 0.3) : Math.max(5, Math.min(12.5, 9 * b.gap / TARGET)); // jarak dekat: ikut bus depan (antre), jangan menabrak
+      /* Lampu lalu lintas: melambat ke garis henti persimpangan berikutnya
+         bila fase sumbu gerak bus bukan hijau (merah/kuning = berhenti,
+         sama seperti mobil kota); bus yang sudah melewati garis henti
+         lanjut menyeberang. */
+      let dHenti = Infinity, sumbuHenti = null;
+      for (const th of TITIK_HENTI) {
+        const d = ((th.s - b.s) % RUTE.total + RUTE.total) % RUTE.total;
+        if (d > 0.01 && d < dHenti) { dHenti = d; sumbuHenti = th.sumbu; }
+      }
+      if (sumbuHenti && (sumbuHenti === "tb" ? fase.tb : fase.us) !== "hijau" && dHenti < 34) {
+        v = Math.min(v, dHenti < 0.5 ? 0 : Math.max(0.9, dHenti * 0.55));
+      }
       b.s = (b.s + v * dt) % RUTE.total;
       HALTE.forEach((hs, i) => { if (i !== b.halteTerakhir && Math.abs(((b.s - hs) % RUTE.total + RUTE.total) % RUTE.total) < 0.6) { b.tunggu = 3; b.halteTerakhir = i; } });
     }
