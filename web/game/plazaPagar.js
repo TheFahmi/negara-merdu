@@ -16,12 +16,22 @@
    (utara/selatan: x -84, 0, 84; barat/timur: z 0) — bukaan tengah selatan
    bergapura "PLAZA NEGARA MERDU". */
 import { M, kotak } from "./bersama.js";
-import { PLAZA_D, PLAZA_TAPAK, PLAZA_W, PUSAT_X, PUSAT_Z } from "./inti.js";
+import { JALAN as JALAN_LEBAR, PLAZA_D, PLAZA_TAPAK, PLAZA_W, PUSAT_X, PUSAT_Z } from "./inti.js";
 
 export const BUSWAY_Z = 54;                       // as busway (lokal plaza)
 export const BUSWAY_Z_DUNIA = PUSAT_Z + BUSWAY_Z; // 61
 const HW = PLAZA_W / 2, HD = PLAZA_D / 2, BW = 7; // setengah lebar busway
-const BUKA_US = [[-91, -77], [-7, 7], [77, 91]];  // bukaan pagar utara & selatan (x)
+/* Jalan masuk plaza DIKURANGI (Diah 24 Nov): dari 8 ujung jalan tinggal 3 —
+   selatan-tengah (sumbu istana), barat & timur (as z 0). 5 ruas pendek lain
+   (3 dari utara, 2 dari selatan kiri-kanan) ditutup jadi taman rumput. */
+const BUKA_UTARA = [], BUKA_SELATAN = [[-7, 7]];
+/* ruas jalan yang ditutup: x0 dunia ruas (kol 39/40/41) + z dunia [jalan, plaza] */
+const RUAS_TUTUP = [
+  { x0: -84, z: [-70, -58] }, { x0: 0, z: [-70, -58] }, { x0: 84, z: [-70, -58] },  // utara (jalan bar 24 -> plaza)
+  { x0: -84, z: [72, 84] }, { x0: 84, z: [72, 84] },                                // selatan kiri-kanan (plaza -> jalan bar 26)
+];
+/* persimpangan T di mulut ruas yang ditutup: kini jalan lurus tanpa lampu & zebra */
+export const PERSIMPANGAN_DITUTUP = new Set(["39,24", "40,24", "41,24", "39,26", "41,26"]);
 const BUKA_BT = [[-7, 7]];                        // bukaan pejalan pagar barat & timur (z)
 
 /* gerbang bus: { x (lokal), palang: [{pivot, arah}], lampu, buka 0..1 } */
@@ -67,10 +77,10 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
   const tex = teksturBusway(); tex.repeat.set(PLAZA_W / 24, 1);
   const jalan = new THREE.Mesh(new THREE.BoxGeometry(PLAZA_W, 0.04, BW * 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
   jalan.position.set(0, Y0 + 0.02, BUSWAY_Z); jalan.receiveShadow = true; g.add(jalan);
-  for (const s of [-1, 1]) for (const [x0, x1] of [[-HW, -88.5], [-79.5, -4.5], [4.5, 79.5], [88.5, HW]]) { // kerb (terputus di 3 penyeberangan)
+  for (const s of [-1, 1]) for (const [x0, x1] of [[-HW, -4.5], [4.5, HW]]) { // kerb (terputus di penyeberangan tengah)
     const k = kotak(x1 - x0, 0.18, 0.35, 0xd8d2c4, (x0 + x1) / 2, Y0 + 0.09, BUSWAY_Z + s * (BW + 0.17)); k.castShadow = false; g.add(k);
   }
-  for (const xc of [-84, 0, 84]) for (let i = 0; i < 6; i++) g.add(kotak(1.2, 0.03, BW * 2 - 1, 0xf4f1e6, xc - 3.5 + i * 1.4, Y0 + 0.05, BUSWAY_Z)); // zebra cross segaris 3 jalan dari selatan
+  for (const xc of [0]) for (let i = 0; i < 6; i++) g.add(kotak(1.2, 0.03, BW * 2 - 1, 0xf4f1e6, xc - 3.5 + i * 1.4, Y0 + 0.05, BUSWAY_Z)); // zebra cross segaris jalan masuk selatan
   /* ---------- busway di luar plaza + ramp ---------- */
   const matAspal = new THREE.MeshStandardMaterial({ map: tex.clone(), roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   matAspal.map.repeat.set(1, 1); matAspal.map.needsUpdate = true;
@@ -88,7 +98,7 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
   const matBata = M(0xa2523c, 0.9), matKrem = M(0xfdf3d8, 0.8);
   const jeruji = [], pilar = [];
   const sisi = [ // [arah, posisi tetap, bukaan]
-    ["x", -HD, BUKA_US], ["x", HD, BUKA_US],
+    ["x", -HD, BUKA_UTARA], ["x", HD, BUKA_SELATAN],
     ["z", -HW, BUKA_BT.concat([[BUSWAY_Z - BW - 0.5, BUSWAY_Z + BW + 0.5]])],
     ["z", HW, BUKA_BT.concat([[BUSWAY_Z - BW - 0.5, BUSWAY_Z + BW + 0.5]])],
   ];
@@ -128,8 +138,7 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
      8 jalan berujung di tepi plaza: 3 dari utara, 3 dari selatan (as x
      -84, 0, 84) dan 1 dari barat & timur (as z 0). Tiap ujung jalan diberi
      gapura bata berpapan nama; gapura selatan-tengah (sumbu istana) paling
-     besar. Lubang pagar = lebar jalan (14), jadi warga masuk dari jalan
-     mana pun. */
+     besar. (Kini tinggal 3 jalan masuk — lihat BUKA_SELATAN/BUKA_BT.) */
   const papanUtama = teksturPapan("PLAZA NEGARA MERDU", "Selamat Datang", "#7a1f1f", "#fdf3d8");
   const papanKecil = teksturPapan("PLAZA NEGARA MERDU", "Kawasan Pejalan Kaki", "#7a1f1f", "#fdf3d8");
   const gapura = (cx, cz, sumbuX, utama) => { // sumbuX: bukaan membentang di sumbu x (pagar utara/selatan)
@@ -146,7 +155,21 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
       papan.position.set(0, T + 0.9, s * 0.42); if (s < 0) papan.rotation.y = Math.PI; gg.add(papan);
     }
   };
-  for (const zSisi of [-HD, HD]) for (const [a, b] of BUKA_US) gapura((a + b) / 2, zSisi, true, zSisi > 0 && a === -7);
+  for (const [a, b] of BUKA_SELATAN) gapura((a + b) / 2, HD, true, true);
+  /* ruas tertutup: trotoar menyambung di mulut ruas + rumput & pagar tanaman sampai tepi plaza */
+  const matRumput = new THREE.MeshStandardMaterial({ color: 0x6aa652, roughness: 1, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  const matTrotoar = new THREE.MeshStandardMaterial({ color: 0xd9d3c4, roughness: 1, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
+  const bidang = (mat, x0, x1, z0, z1, y) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), mat); p.rotation.x = -Math.PI / 2;
+    p.position.set((x0 + x1) / 2 - PUSAT_X, y, (z0 + z1) / 2 - PUSAT_Z); p.receiveShadow = true; g.add(p); };
+  for (const r of RUAS_TUTUP) {
+    const xa = r.x0 - 2.6, xb = r.x0 + JALAN_LEBAR + 2.6, utara = r.z[0] < 0;
+    const zJalan = utara ? r.z[0] : r.z[1], zTro = utara ? zJalan + 2.6 : zJalan - 2.6;
+    bidang(matTrotoar, xa, xb, Math.min(zJalan, zTro), Math.max(zJalan, zTro), 0.07);
+    bidang(matRumput, xa, xb, utara ? zTro : r.z[0], utara ? r.z[1] : zTro, 0.06);
+    const zm = (utara ? zTro + r.z[1] : r.z[0] + zTro) / 2 - PUSAT_Z;
+    for (const dx of [-5, 0, 5]) { const semak = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3, 0), M(0x4f9a42)); semak.scale.y = 0.8; semak.position.set(r.x0 + 7 + dx - PUSAT_X, 0.9, zm); semak.castShadow = true; g.add(semak); }
+    for (const dx of [-8, 22]) { const pk = new THREE.Group(); pk.add(kotak(0.4, 2.6, 0.4, 0x8a5a30, 0, 1.3, 0)); const dn = new THREE.Mesh(new THREE.IcosahedronGeometry(2.2, 0), M(0x5aa64a)); dn.position.y = 3.9; dn.castShadow = true; pk.add(dn); pk.position.set(r.x0 + dx * 0.5 + 2 - PUSAT_X, 0, zm); g.add(pk); }
+  }
   for (const xSisi of [-HW, HW]) for (const [a, b] of BUKA_BT) gapura(xSisi, (a + b) / 2, false, false);
   /* ---------- gerbang bus otomatis (barat & timur) ---------- */
   matMerah = new THREE.MeshStandardMaterial({ color: 0x3a0a0a, emissive: 0xff2a2a, emissiveIntensity: 1 });
