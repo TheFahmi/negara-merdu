@@ -2,15 +2,17 @@
    - Rel layang (elevated) membentang barat-timur hampir selebar kota di
      atas jalan utara baris blok 36 (as z 931), bertiang di tengah ruas
      jalan (tidak pernah di dalam persimpangan), dua jalur rel.
-   - STASIUN MERDU di Blok 2925 (kol 44, bar 36, tepat di timur Merdu
-     Mall): peron layang berkanopi di atas jalan + gedung concourse
-     dengan tangga & eskalator, papan nama, jam.
-   - TERMINAL BUS MERDU di blok yang sama (bagian selatan): jalur bus
-     berkanopi, bus parkir, ruang tunggu.
+   - 4 STASIUN KRL di sepanjang rel (bar 36): Merdu Barat (kol 8),
+     Merdu Tengah (kol 24), STASIUN MERDU (kol 44, timur Merdu Mall),
+     Merdu Timur (kol 62): peron layang berkanopi di atas jalan +
+     gedung concourse dengan tangga & eskalator, papan nama, jam.
+   - TERMINAL BUS MERDU di blok Stasiun Merdu (bagian selatan):
+     jalur bus berkanopi, bus parkir, ruang tunggu.
    - 2 KERETA (4 gerbong) bolak-balik di kedua jalur, melambat & berhenti
-     di stasiun 8 detik, lalu berangkat lagi.
-   - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri),
-     berhenti 3 detik di tiap halte (halte berkanopi di trotoar). */
+     8 detik di SETIAP stasiun, lalu berangkat lagi.
+   - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri)
+     + detur ke pusat kota lewat jalan kol 40 & bar 25, berhenti 3 detik
+     di tiap halte (8 halte, termasuk Halte Istana Negara & Halte Plaza). */
 import { JALAN, PITCH, sudutBlok } from "./inti.js";
 import { M, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
@@ -20,8 +22,16 @@ const RZ = sudutBlok(0, 36).z + JALAN / 2;        // as jalan di bawah rel (z 93
 const X0 = sudutBlok(2, 0).x, X1 = sudutBlok(78, 0).x; // ujung rel
 const YD = 8.6;                                    // tinggi dek rel
 const JALUR = [RZ - 2.2, RZ + 2.2];
-const sSt = sudutBlok(BLOK_STASIUN.kol, BLOK_STASIUN.bar);
-const XST = sSt.x + JALAN + (PITCH - JALAN) / 2;   // pusat stasiun (x)
+/* Semua stasiun KRL di bar 36; x = pusat peron/concourse stasiun itu. */
+const STASIUN = [
+  { kol: 8, nama: "STASIUN MERDU BARAT", sub: "KRL · Barat" },
+  { kol: 24, nama: "STASIUN MERDU TENGAH", sub: "KRL · Tengah" },
+  { kol: 44, nama: "STASIUN MERDU", sub: "KRL · Terminal Bus", terminal: true },
+  { kol: 62, nama: "STASIUN MERDU TIMUR", sub: "KRL · Timur" },
+].map((s) => {
+  const sBlok = sudutBlok(s.kol, 36);
+  return { ...s, sBlok, x: sBlok.x + JALAN + (PITCH - JALAN) / 2 };
+});
 const kereta = [], bus = [];
 export const rintanganTransportasi = [];
 
@@ -68,8 +78,8 @@ function bangunRel(grup) {
 }
 
 /* ---------- stasiun + terminal ---------- */
-function bangunStasiun(grup) {
-  const zb = sSt.z + JALAN; // tepi utara kavling blok stasiun (938)
+function bangunStasiun(grup, st) {
+  const XST = st.x, zb = st.sBlok.z + JALAN; // tepi utara kavling blok stasiun
   // peron layang di kedua sisi jalur + kanopi atap lengkung
   for (const s of [-1, 1]) {
     grup.add(kotak(66, 0.5, 3.2, 0xe6dcc6, XST, YD + 0.95, RZ + s * 6.3));
@@ -83,14 +93,15 @@ function bangunStasiun(grup) {
   grup.add(kotak(60, YD + 1.2, 16, 0xf3efe6, XST, (YD + 1.2) / 2, zb + 9));
   for (let i = 0; i < 9; i++) grup.add(kotak(4.2, 3.2, 0.2, 0x2e5a73, XST - 26 + i * 6.5, YD - 1.8, zb + 17.05));
   grup.add(kotak(60.6, 0.6, 16.6, 0x1d5a8f, XST, YD + 1.4, zb + 9));
-  const papan = new THREE.Mesh(new THREE.BoxGeometry(24, 2.4, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama("STASIUN MERDU", "KRL · Terminal Bus"), roughness: 0.8 }));
+  const papan = new THREE.Mesh(new THREE.BoxGeometry(24, 2.4, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(st.nama, st.sub), roughness: 0.8 }));
   papan.position.set(XST, YD + 3.0, zb + 17.2); grup.add(papan);
   const jam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.2, 24), M(0xffffff)); jam.rotation.x = Math.PI / 2; jam.position.set(XST + 16, YD + 3, zb + 17.3); grup.add(jam);
   for (let t = 0; t < 14; t++) grup.add(kotak(4, 0.4, 0.9, 0xd8d2c6, XST - 6, 0.2 + t * 0.6, zb + 30 - t * 0.85)); // tangga
   const esk = kotak(1.6, 0.3, 14, 0x8a8f94, XST + 6, YD / 2, zb + 24); esk.rotation.x = -Math.atan2(YD, 12); grup.add(esk); // eskalator
   grup.add(kotak(4.4, 3.6, 3.2, 0x2e5a73, XST, 1.8, zb + 18.6)); // pintu masuk bawah
   rintanganTransportasi.push({ minX: XST - 30, maxX: XST + 30, minZ: zb + 1, maxZ: zb + 17 });
-  // terminal bus (selatan blok)
+  if (!st.terminal) return;
+  // terminal bus (selatan blok, hanya Stasiun Merdu)
   const zt = zb + 48;
   grup.add(kotak(66, 0.12, 30, 0x5c6066, XST, 0.31, zt));
   for (let i = 0; i < 4; i++) {
@@ -131,14 +142,22 @@ function buatBus(warna) {
   }
   return g; // hadap +z
 }
-/* rute bus: persegi jalan (kol 32/48, bar 18/36), searah jarum jam pandangan atas, lajur kiri */
+/* rute bus: persegi jalan (kol 32/48, bar 18/36), searah jarum jam pandangan
+   atas, lajur kiri + DETUR pusat kota: dari jalan utara (bar 18) turun ke
+   selatan lewat jalan kol 40, ke barat lewat jalan bar 25 (depan Istana
+   Negara/plaza), naik lagi lewat jalan kol 39, lalu kembali ke jalan utara. */
 function ruteBus() {
   const cx = (k) => sudutBlok(k, 0).x + JALAN / 2, cz = (b) => sudutBlok(0, b).z + JALAN / 2;
   const xa = cx(32), xb = cx(48), za = cz(18), zb = cz(36);
   const L = 3.5;
-  // urutan: utara (ke timur, -x? ) — gerak ke timur di jalan za -> lajur utara (z - L)
+  const xd = cx(40) + L, xw = cx(39) - L, zp = cz(25) + L; // lajur detur istana
   const titik = [
-    [xa + L, za - L], [xb - L, za - L],       // ke timur di jalan utara
+    [xa + L, za - L], [xd, za - L],           // ke timur di jalan utara s/d mulut detur
+    [xd, zp],                                 // detur: ke selatan di jalan kol 40 (lajur timur)
+    [xw, zp],                                 // detur: ke barat di jalan bar 25 (depan Istana Negara)
+    [xw, za + L],                             // detur: ke utara di jalan kol 39 (lajur barat)
+    [xd, za - L],                             // diagonal kembali ke lajur timur jalan utara
+    [xb - L, za - L],                         // lanjut ke timur di jalan utara
     [xb + L, za + L], [xb + L, zb - L],       // ke selatan di jalan timur (lajur timur)
     [xb - L, zb + L], [xa + L, zb + L],       // ke barat di jalan selatan (lajur selatan)
     [xa - L, zb - L], [xa - L, za + L],       // ke utara di jalan barat (lajur barat)
@@ -160,25 +179,42 @@ function posRute(R, s) {
 }
 let RUTE = null; const HALTE = [];
 
+function tambahHalte(grup, s) { // halte berkanopi di trotoar kiri lajur bus
+  const p = posRute(RUTE, s);
+  const nx = -p.hz / Math.hypot(p.hx, p.hz), nz = p.hx / Math.hypot(p.hx, p.hz); // normal kiri arah gerak
+  const h = new THREE.Group();
+  h.add(kotak(5, 0.2, 2, 0x1d5a8f, 0, 2.8, 0)); h.add(kotak(5, 2.4, 0.1, 0x9fc9d8, 0, 1.4, -0.9));
+  for (const sx of [-2.3, 2.3]) h.add(kotak(0.12, 2.8, 0.12, 0xb8bcc2, sx, 1.4, -0.9));
+  h.add(kotak(4, 0.12, 0.6, 0xa9743f, 0, 0.6, -0.5));
+  h.position.set(p.x - nx * 4.6, 0, p.z - nz * 4.6);
+  h.rotation.y = Math.atan2(p.hx, p.hz) + Math.PI / 2;
+  grup.add(h); HALTE.push(s);
+}
+function cariS(R, x, z) { // posisi s di rute untuk titik (x,z) di atas segmen rute
+  for (const g of R.seg) {
+    const dx = g.b[0] - g.a[0], dz = g.b[1] - g.a[1], L2 = dx * dx + dz * dz;
+    const f = L2 ? Math.max(0, Math.min(1, ((x - g.a[0]) * dx + (z - g.a[1]) * dz) / L2)) : 0;
+    const px = g.a[0] + dx * f, pz = g.a[1] + dz * f;
+    if (Math.hypot(x - px, z - pz) < 1) return g.mulai + g.len * f;
+  }
+  return 0;
+}
+
 export function bangunTransportasi() {
   const grup = new THREE.Group();
-  bangunRel(grup); bangunStasiun(grup);
+  bangunRel(grup);
+  for (const st of STASIUN) bangunStasiun(grup, st);
   for (let j = 0; j < 2; j++) {
     const k = buatKereta(); k.position.set(j ? X1 - 400 : X0 + 400, YD + 0.2, JALUR[j]); if (j) k.rotation.y = Math.PI;
     grup.add(k);
-    kereta.push({ g: k, x: k.position.x, arah: j ? -1 : 1, v: 0, berhenti: 0, sudahBerhenti: false });
+    kereta.push({ g: k, x: k.position.x, arah: j ? -1 : 1, v: 0, berhenti: 0, sudah: new Set() });
   }
   RUTE = ruteBus();
-  for (let i = 0; i < 6; i++) { // halte di sisi kiri jalan
-    const s = RUTE.total * (i + 0.5) / 6, p = posRute(RUTE, s);
-    const nx = -p.hz / Math.hypot(p.hx, p.hz), nz = p.hx / Math.hypot(p.hx, p.hz); // normal kiri arah gerak
-    const h = new THREE.Group();
-    h.add(kotak(5, 0.2, 2, 0x1d5a8f, 0, 2.8, 0)); h.add(kotak(5, 2.4, 0.1, 0x9fc9d8, 0, 1.4, -0.9));
-    for (const sx of [-2.3, 2.3]) h.add(kotak(0.12, 2.8, 0.12, 0xb8bcc2, sx, 1.4, -0.9));
-    h.add(kotak(4, 0.12, 0.6, 0xa9743f, 0, 0.6, -0.5));
-    h.position.set(p.x - nx * 4.6, 0, p.z - nz * 4.6); // di trotoar kiri lajur bus h.rotation.y = Math.atan2(p.hx, p.hz) + Math.PI / 2;
-    grup.add(h); HALTE.push(s);
-  }
+  for (let i = 0; i < 6; i++) tambahHalte(grup, RUTE.total * (i + 0.5) / 6); // halte merata di rute
+  // halte pusat kota: depan Istana Negara (jalan bar 25) + simpang plaza/warga (jalan kol 40 x bar 23)
+  const cxI = sudutBlok(40, 0).x + JALAN / 2, czI = sudutBlok(0, 25).z + JALAN / 2, czW = sudutBlok(0, 23).z + JALAN / 2;
+  tambahHalte(grup, cariS(RUTE, cxI - 40, czI + 3.5));   // Halte Istana Negara
+  tambahHalte(grup, cariS(RUTE, cxI + 3.5, czW));       // Halte Plaza (dekat Blok 1880/1881)
   for (let i = 0; i < 5; i++) {
     const b = buatBus(["#2e9e5b", "#1d5a8f", "#e8943a", "#c8102e", "#7b2ff7"][i]); grup.add(b);
     bus.push({ g: b, s: RUTE.total * i / 5, tunggu: 0, halteTerakhir: -1 });
@@ -187,16 +223,21 @@ export function bangunTransportasi() {
   return grup;
 }
 export function perbaruiTransportasi(dt) {
-  for (const k of kereta) { // kereta bolak-balik, berhenti di stasiun
-    if (k.berhenti > 0) { k.berhenti -= dt; if (k.berhenti <= 0) k.sudahBerhenti = true; continue; }
-    const kepala = k.x + k.arah * 8, keStasiun = (XST - kepala) * k.arah + 26;
+  for (const k of kereta) { // kereta bolak-balik, berhenti 8 dtk di setiap stasiun
+    if (k.berhenti > 0) { k.berhenti -= dt; continue; }
+    const kepala = k.x + k.arah * 8;
+    let target = -1, dMin = Infinity;
+    STASIUN.forEach((st, i) => {
+      const d = (st.x - kepala) * k.arah + 26;
+      if (d < -80 && k.sudah.has(i)) k.sudah.delete(i); // sudah jauh lewat: boleh berhenti lagi arah sebaliknya
+      if (!k.sudah.has(i) && d > -5 && d < dMin) { dMin = d; target = i; }
+    });
     let vMaks = 38;
-    if (!k.sudahBerhenti && keStasiun > 0 && keStasiun < 140) vMaks = Math.max(3, Math.sqrt(2 * 5 * keStasiun));
+    if (target >= 0 && dMin > 0 && dMin < 140) vMaks = Math.max(3, Math.sqrt(2 * 5 * dMin));
     k.v += Math.sign(vMaks - k.v) * Math.min(Math.abs(vMaks - k.v), 6 * dt);
     k.x += k.arah * k.v * dt;
-    if (!k.sudahBerhenti && keStasiun <= 0.5 && keStasiun > -5) { k.v = 0; k.berhenti = 8; }
-    if (k.x > X1 - 60 || k.x < X0 + 60) { k.arah *= -1; k.x = Math.min(X1 - 60, Math.max(X0 + 60, k.x)); k.sudahBerhenti = false; k.g.rotation.y = k.arah > 0 ? 0 : Math.PI; k.v = 0; }
-    if (keStasiun < -80) k.sudahBerhenti = false;
+    if (target >= 0 && dMin <= 0.5 && dMin > -5) { k.v = 0; k.berhenti = 8; k.sudah.add(target); }
+    if (k.x > X1 - 60 || k.x < X0 + 60) { k.arah *= -1; k.x = Math.min(X1 - 60, Math.max(X0 + 60, k.x)); k.sudah.clear(); k.g.rotation.y = k.arah > 0 ? 0 : Math.PI; k.v = 0; }
     k.g.position.x = k.x;
   }
   if (!RUTE) return;
