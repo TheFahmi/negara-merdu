@@ -241,9 +241,23 @@ export function perbaruiTransportasi(dt) {
     k.g.position.x = k.x;
   }
   if (!RUTE) return;
+  /* HEADWAY: jarak target antarbus = keliling rute / jumlah bus. Kecepatan
+     tiap bus diatur mengikuti jarak ke bus di depannya (kejar bila jauh,
+     pelan bila dekat), dan bus ditahan di halte bila bus depan masih
+     terlalu dekat — supaya bus tidak menumpuk/beriringan. */
+  const TARGET = RUTE.total / bus.length;
   for (const b of bus) {
-    if (b.tunggu > 0) { b.tunggu -= dt; } else {
-      b.s = (b.s + 9 * dt) % RUTE.total;
+    let gap = Infinity;
+    for (const o of bus) { if (o === b) continue; const d = ((o.s - b.s) % RUTE.total + RUTE.total) % RUTE.total; if (d > 0.01 && d < gap) gap = d; }
+    b.gap = gap;
+  }
+  for (const b of bus) {
+    if (b.tunggu > 0) {
+      b.tunggu -= dt;
+      if (b.tunggu <= 0 && b.gap < TARGET * 0.85) b.tunggu = 0.5; // tahan berangkat: jaga headway
+    } else {
+      const v = Math.max(5, Math.min(12.5, 9 * b.gap / TARGET));
+      b.s = (b.s + v * dt) % RUTE.total;
       HALTE.forEach((hs, i) => { if (i !== b.halteTerakhir && Math.abs(((b.s - hs) % RUTE.total + RUTE.total) % RUTE.total) < 0.6) { b.tunggu = 3; b.halteTerakhir = i; } });
     }
     const p = posRute(RUTE, b.s);
