@@ -3,6 +3,7 @@
 import { LAMPU_TAMAN, M, MAT_JENDELA, buatTeksturProsedural, kotak, scene } from "./bersama.js";
 import { PLAZA_D, PLAZA_W, POS_KADES, PUSAT_X, PUSAT_Z, SKALA_ISTANA, Z_ISTANA, hashInt } from "./inti.js";
 import { bangkuTaman, teksturBenderaMerdu } from "./fasilitas.js";
+import { bangunPagarPlaza } from "./plazaPagar.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js";
 
@@ -418,7 +419,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
       const b1 = bangkuTaman(bx, 28, Math.PI); b1.position.y = 0.3; pusat.add(b1); // menghadap balai (-z)
       const b2 = bangkuTaman(bx, 2, 0); b2.position.y = 0.3; pusat.add(b2);        // menghadap jalur (+z)
     }
-    for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2]]) pohonPot(px, pz, pusat); // (±10,-20) dilepas: kini di dalam pelataran istana
+    for (const [px, pz] of [[-52, 28], [52, 28], [-52, 2], [52, 2]]) pohonPot(px, pz, pusat);
+    bangunPagarPlaza(pusat, rintanganPusat); // pagar keliling + busway merah + gerbang bus otomatis (plazaPagar.js) // (±10,-20) dilepas: kini di dalam pelataran istana
   }
 
   /* ================= DISTRIK DETAIL (WARGA TERBARU) ================= */

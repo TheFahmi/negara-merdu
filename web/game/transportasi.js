@@ -15,9 +15,10 @@
    - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri)
      + detur ke pusat kota lewat jalan kol 40 & bar 25, berhenti 3 detik
      di tiap halte (8 halte, termasuk Halte Istana Negara & Halte Plaza). */
-import { JALAN, PITCH, PLAZA_TAPAK, faseLaluLintas, sudutBlok } from "./inti.js";
+import { JALAN, PITCH, PLAZA_TAPAK, PUSAT_X, faseLaluLintas, sudutBlok } from "./inti.js";
 import { M, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
+import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 
 export const BLOK_STASIUN = { kol: 44, bar: 36 };
 const RZ = sudutBlok(0, 36).z + JALAN / 2;        // as jalan di bawah rel (z 931)
@@ -238,16 +239,14 @@ function posRute(R, s) {
   }
   return { x: 0, z: 0, hx: 1, hz: 0 };
 }
-let RUTE = null; const HALTE = [], HALTE_POS = [];
-/* Titik henti lampu lalu lintas di sepanjang rute: satu per persimpangan
-   ber-lampu (kotak jalan di luar plaza — sama seperti persimpanganKota di
-   inti.js). s = posisi pusat bus berhenti (moncong di belakang garis
-   henti); sumbu "tb" untuk gerak timur-barat, "us" untuk utara-selatan. */
-const TITIK_HENTI = [];
-function bangunTitikHenti() {
-  TITIK_HENTI.length = 0;
-  const HENTI = 13.5; // jarak pusat bus ke pusat persimpangan saat berhenti
-  for (const g of RUTE.seg) {
+const RUTE = []; // [{R, halte:[{s, pos}], henti:[{s, sumbu}]}] — 0: koridor keliling kota, 1/2: koridor plaza (busway)
+/* Titik henti lampu lalu lintas di sepanjang satu rute: satu per
+   persimpangan ber-lampu (kotak jalan di luar plaza — sama seperti
+   persimpanganKota di inti.js). s = posisi pusat bus berhenti (moncong
+   di belakang garis henti); sumbu "tb" gerak timur-barat, "us" utara-selatan. */
+function bangunTitikHenti(R) {
+  const TITIK = [], HENTI = 13.5; // jarak pusat bus ke pusat persimpangan saat berhenti
+  for (const g of R.seg) {
     const dx = g.b[0] - g.a[0], dz = g.b[1] - g.a[1];
     if (Math.abs(dx) > 0 && Math.abs(dz) > 0) continue; // segmen diagonal = sedang di dalam persimpangan
     const sumbu = dx !== 0 ? "tb" : "us";
@@ -259,31 +258,35 @@ function bangunTitikHenti() {
       if (dC < HENTI + 2 || dC > g.len + JALAN) continue; // di belakang segmen / persimpangan segmen sebelumnya
       const tegak = sumbu === "tb" ? Math.abs(cz - g.a[1]) : Math.abs(cx - g.a[0]);
       if (tegak > JALAN) continue; // bukan persimpangan yang dilalui segmen ini
-      TITIK_HENTI.push({ s: g.mulai + dC - HENTI, sumbu });
+      TITIK.push({ s: g.mulai + dC - HENTI, sumbu });
     }
   }
-  TITIK_HENTI.sort((a, b) => a.s - b.s);
+  TITIK.sort((p, q) => p.s - q.s);
+  return TITIK;
 }
-
-function tambahHalte(grup, s) { // halte berkanopi di trotoar kiri lajur bus
-  const p = posRute(RUTE, s);
-  const nx = -p.hz / Math.hypot(p.hx, p.hz), nz = p.hx / Math.hypot(p.hx, p.hz); // normal kiri arah gerak
-  const h = new THREE.Group();
-  h.add(kotak(5, 0.2, 2, 0x1d5a8f, 0, 2.8, 0)); h.add(kotak(5, 2.4, 0.1, 0x9fc9d8, 0, 1.4, -0.9));
-  for (const sx of [-2.3, 2.3]) h.add(kotak(0.12, 2.8, 0.12, 0xb8bcc2, sx, 1.4, -0.9));
-  h.add(kotak(4, 0.12, 0.6, 0xa9743f, 0, 0.6, -0.5));
-  h.position.set(p.x - nx * 4.6, 0, p.z - nz * 4.6);
-  h.rotation.y = Math.atan2(p.hx, p.hz) - Math.PI / 2; // dinding belakang menjauhi jalan
-  grup.add(h); HALTE.push(s); HALTE_POS.push({ x: p.x - nx * 3.3, z: p.z - nz * 3.3, yaw: Math.atan2(-p.hx, -p.hz) }); // titik turun: tepi trotoar depan halte
-}
-function cariS(R, x, z) { // posisi s di rute untuk titik (x,z) di atas segmen rute
-  for (const g of R.seg) {
-    const dx = g.b[0] - g.a[0], dz = g.b[1] - g.a[1], L2 = dx * dx + dz * dz;
-    const f = L2 ? Math.max(0, Math.min(1, ((x - g.a[0]) * dx + (z - g.a[1]) * dz) / L2)) : 0;
-    const px = g.a[0] + dx * f, pz = g.a[1] + dz * f;
-    if (Math.hypot(x - px, z - pz) < 1) return g.mulai + g.len * f;
+/* Rute dari poligon as jalan (berurutan, tertutup): lajur kiri 3,5 dari as,
+   sudut dipotong serong 5 m supaya bus berbelok, tidak memutar di tempat. */
+function ruteDariPoligon(pts) {
+  const L = 3.5, R = 5, n = pts.length, titik = [];
+  const arah = (p, q) => { const hx = q[0] - p[0], hz = q[1] - p[1], l = Math.hypot(hx, hz); return [hx / l, hz / l]; };
+  for (let i = 0; i < n; i++) {
+    const a = pts[(i - 1 + n) % n], c = pts[i], b = pts[(i + 1) % n];
+    const d1 = arah(a, c), d2 = arah(c, b);
+    const sx = c[0] + L * (d1[1] + d2[1]), sz = c[1] + L * (-d1[0] - d2[0]); // kiri(d) = (dz, -dx)
+    titik.push([sx - d1[0] * R, sz - d1[1] * R], [sx + d2[0] * R, sz + d2[1] * R]);
   }
-  return 0;
+  const seg = []; let total = 0;
+  for (let i = 0; i < titik.length; i++) {
+    const a = titik[i], b = titik[(i + 1) % titik.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    seg.push({ a, b, len, mulai: total }); total += len;
+  }
+  return { seg, total };
+}
+/* s terdekat ke titik (x,z) di rute (sampel 0,25 m). */
+function sTerdekat(R, x, z) {
+  let terbaik = 0, dMin = Infinity;
+  for (let s = 0; s < R.total; s += 0.25) { const p = posRute(R, s), d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < dMin) { dMin = d; terbaik = s; } }
+  return terbaik;
 }
 
 export function bangunTransportasi() {
@@ -295,16 +298,43 @@ export function bangunTransportasi() {
     grup.add(k);
     kereta.push({ g: k, x: k.position.x, arah: j ? -1 : 1, v: 0, berhenti: 0, sudah: new Set() });
   }
-  RUTE = ruteBus();
-  bangunTitikHenti();
-  for (let i = 0; i < 6; i++) tambahHalte(grup, RUTE.total * (i + 0.5) / 6); // halte merata di rute
-  // halte pusat kota: depan Istana Negara (jalan bar 25) + simpang plaza/warga (jalan kol 40 x bar 23)
+  /* Koridor 1 (keliling kota + detur pusat kota, 8 halte, 5 bus) + Koridor 2
+     Plaza: busway merah menembus plaza lewat gerbang otomatis, berbalik
+     lewat jalan kol 38 / 42 & bar 24 — dua arah (2A ke barat di plaza,
+     2B ke timur), 2 bus tiap arah. */
+  const xK38 = sudutBlok(38, 0).x + JALAN / 2, xK42 = sudutBlok(42, 0).x + JALAN / 2, zB24 = sudutBlok(0, 24).z + JALAN / 2;
+  const R1 = ruteBus();
+  const R2A = ruteDariPoligon([[xK42, BUSWAY_Z_DUNIA], [xK38, BUSWAY_Z_DUNIA], [xK38, zB24], [xK42, zB24]]);
+  const R2B = ruteDariPoligon([[xK38, BUSWAY_Z_DUNIA], [xK42, BUSWAY_Z_DUNIA], [xK42, zB24], [xK38, zB24]]);
+  RUTE.push({ R: R1, halte: [], henti: bangunTitikHenti(R1) }, { R: R2A, halte: [], henti: bangunTitikHenti(R2A) }, { R: R2B, halte: [], henti: bangunTitikHenti(R2B) });
+  const pasangHalte = (r, sh, nama) => {
+    const p = posRute(r.R, sh), l = Math.hypot(p.hx, p.hz);
+    const nx = -p.hz / l, nz = p.hx / l; // normal kiri arah gerak
+    const h = new THREE.Group();
+    h.add(kotak(5, 0.2, 2, 0x1d5a8f, 0, 2.8, 0)); h.add(kotak(5, 2.4, 0.1, 0x9fc9d8, 0, 1.4, -0.9));
+    for (const sx of [-2.3, 2.3]) h.add(kotak(0.12, 2.8, 0.12, 0xb8bcc2, sx, 1.4, -0.9));
+    h.add(kotak(4, 0.12, 0.6, 0xa9743f, 0, 0.6, -0.5));
+    if (nama) { const pp = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.5), new THREE.MeshBasicMaterial({ map: teksturPapanNama(nama, "Trans Merdu") })); pp.position.set(0, 3.15, 0.95); h.add(pp); }
+    const hx = p.x - nx * 4.6, hz = p.z - nz * 4.6;
+    h.position.set(hx, tinggiBus(hx, hz) - 0.02, hz);
+    h.rotation.y = Math.atan2(p.hx, p.hz) - Math.PI / 2; // dinding belakang menjauhi jalan
+    grup.add(h);
+    r.halte.push({ s: sh, pos: { x: p.x - nx * 3.3, z: p.z - nz * 3.3, yaw: Math.atan2(-p.hx, -p.hz) } }); // titik turun di depan halte
+  };
+  for (let i = 0; i < 6; i++) pasangHalte(RUTE[0], R1.total * (i + 0.5) / 6, null);
+  // halte pusat kota koridor 1: depan Istana Negara (jalan bar 25) + simpang plaza/warga (jalan kol 40 x bar 23)
   const cxI = sudutBlok(40, 0).x + JALAN / 2, czI = sudutBlok(0, 25).z + JALAN / 2, czW = sudutBlok(0, 23).z + JALAN / 2;
-  tambahHalte(grup, cariS(RUTE, cxI - 40, czI + 3.5));   // Halte Istana Negara
-  tambahHalte(grup, cariS(RUTE, cxI + 3.5, czW));       // Halte Plaza (dekat Blok 1880/1881)
-  for (let i = 0; i < 5; i++) {
-    const b = buatBus(["#2e9e5b", "#1d5a8f", "#e8943a", "#c8102e", "#7b2ff7"][i]); grup.add(b);
-    bus.push({ g: b, s: RUTE.total * i / 5, tunggu: 0, halteTerakhir: -1, halteKini: -1 });
+  pasangHalte(RUTE[0], sTerdekat(R1, cxI - 40, czI + 3.5), "Halte Istana Negara");
+  pasangHalte(RUTE[0], sTerdekat(R1, cxI + 3.5, czW), "Halte Plaza");
+  const xHalte2A = PUSAT_X - 30, xHalte2B = PUSAT_X + 30, xBelakang = PUSAT_X + 42; // halte istana di sisi selatan jalan bar 24 (lahan cadangan, bukan kavling warga)
+  pasangHalte(RUTE[1], sTerdekat(R2A, xHalte2A, BUSWAY_Z_DUNIA + 3.5), "Halte Plaza");
+  pasangHalte(RUTE[2], sTerdekat(R2B, xHalte2B, BUSWAY_Z_DUNIA - 3.5), "Halte Plaza");
+  pasangHalte(RUTE[2], sTerdekat(R2B, xBelakang, zB24 + 3.5), "Halte Istana");
+  const WARNA = ["#2e9e5b", "#1d5a8f", "#e8943a", "#c8102e", "#7b2ff7"];
+  for (let i = 0; i < 5; i++) { const b = buatBus(WARNA[i]); grup.add(b); bus.push({ g: b, r: 0, s: R1.total * i / 5, tunggu: 0, halteTerakhir: -1, halteKini: null }); }
+  for (const r of [1, 2]) for (let i = 0; i < 2; i++) {
+    const b = buatBus(r === 1 ? "#c8102e" : "#e8943a"); grup.add(b);
+    bus.push({ g: b, r, s: RUTE[r].R.total * (i / 2 + 0.1), tunggu: 0, halteTerakhir: -1, halteKini: null });
   }
   scene.add(grup);
   return grup;
@@ -328,44 +358,52 @@ export function perbaruiTransportasi(t, dt) {
     if (k.x > X1 - 60 || k.x < X0 + 60) { k.arah *= -1; k.x = Math.min(X1 - 60, Math.max(X0 + 60, k.x)); k.sudah.clear(); k.g.rotation.y = k.arah > 0 ? 0 : Math.PI; k.v = 0; }
     k.g.position.x = k.x;
   }
-  if (!RUTE) return;
-  /* HEADWAY: jarak target antarbus = keliling rute / jumlah bus. Kecepatan
-     tiap bus diatur mengikuti jarak ke bus di depannya (kejar bila jauh,
-     pelan bila dekat), dan bus ditahan di halte bila bus depan masih
-     terlalu dekat — supaya bus tidak menumpuk/beriringan. */
-  const TARGET = RUTE.total / bus.length;
-  for (const b of bus) {
-    let gap = Infinity;
-    for (const o of bus) { if (o === b) continue; const d = ((o.s - b.s) % RUTE.total + RUTE.total) % RUTE.total; if (d > 0.01 && d < gap) gap = d; }
-    b.gap = gap;
-  }
-  for (const b of bus) {
-    if (b.tunggu > 0) {
-      b.tunggu -= dt;
-      if (b.tunggu <= 0) {
-        if (b.gap < TARGET * 0.85) b.tunggu = 0.5; // tahan berangkat: jaga headway
-        else b.halteKini = -1; // benar-benar berangkat: halte dilepas
-      }
-    } else {
-      let v = b.gap < 60 ? Math.max(0, (b.gap - 14) * 0.3) : Math.max(5, Math.min(12.5, 9 * b.gap / TARGET)); // jarak dekat: ikut bus depan (antre), jangan menabrak
-      /* Lampu lalu lintas: melambat ke garis henti persimpangan berikutnya
-         bila fase sumbu gerak bus bukan hijau (merah/kuning = berhenti,
-         sama seperti mobil kota); bus yang sudah melewati garis henti
-         lanjut menyeberang. */
-      let dHenti = Infinity, sumbuHenti = null;
-      for (const th of TITIK_HENTI) {
-        const d = ((th.s - b.s) % RUTE.total + RUTE.total) % RUTE.total;
-        if (d > 0.01 && d < dHenti) { dHenti = d; sumbuHenti = th.sumbu; }
-      }
-      if (sumbuHenti && (sumbuHenti === "tb" ? fase.tb : fase.us) !== "hijau" && dHenti < 34) {
-        v = Math.min(v, dHenti < 0.5 ? 0 : Math.max(0.9, dHenti * 0.55));
-      }
-      b.s = (b.s + v * dt) % RUTE.total;
-      HALTE.forEach((hs, i) => { if (i !== b.halteTerakhir && Math.abs(((b.s - hs) % RUTE.total + RUTE.total) % RUTE.total) < 0.6) { b.tunggu = 6; b.halteTerakhir = i; b.halteKini = i; } });
+  if (!RUTE.length) return;
+  /* HEADWAY per koridor: jarak target antarbus = keliling rute koridor /
+     jumlah busnya. Kecepatan tiap bus diatur mengikuti jarak ke bus di
+     depannya (kejar bila jauh, pelan bila dekat), dan bus ditahan di
+     halte bila bus depan masih terlalu dekat — supaya bus tidak
+     menumpuk/beriringan. Bus juga patuh lampu lalu lintas koridornya. */
+  RUTE.forEach((kor, ri) => {
+    const daftar = bus.filter((x) => x.r === ri);
+    if (!daftar.length) return;
+    const TARGET = kor.R.total / daftar.length;
+    for (const b of daftar) {
+      let gap = Infinity;
+      for (const o of daftar) { if (o === b) continue; const d = ((o.s - b.s) % kor.R.total + kor.R.total) % kor.R.total; if (d > 0.01 && d < gap) gap = d; }
+      b.gap = daftar.length > 1 ? gap : TARGET;
     }
-    const p = posRute(RUTE, b.s);
-    b.g.position.set(p.x, 0.02, p.z); b.g.rotation.y = Math.atan2(p.hx, p.hz);
-  }
+    for (const b of daftar) {
+      if (b.tunggu > 0) {
+        b.tunggu -= dt;
+        if (b.tunggu <= 0) {
+          if (daftar.length > 1 && b.gap < TARGET * 0.85) b.tunggu = 0.5; // tahan berangkat: jaga headway
+          else b.halteKini = null; // benar-benar berangkat: halte dilepas
+        }
+      } else {
+        let v = daftar.length > 1
+          ? (b.gap < 60 ? Math.max(0, (b.gap - 14) * 0.3) : Math.max(5, Math.min(12.5, 9 * b.gap / TARGET))) // jarak dekat: ikut bus depan (antre), jangan menabrak
+          : 9;
+        /* Lampu lalu lintas: melambat ke garis henti persimpangan
+           berikutnya bila fase sumbu gerak bus bukan hijau (merah/kuning
+           = berhenti, sama seperti mobil kota); bus yang sudah melewati
+           garis henti lanjut menyeberang. */
+        let dHenti = Infinity, sumbuHenti = null;
+        for (const th of kor.henti) {
+          const d = ((th.s - b.s) % kor.R.total + kor.R.total) % kor.R.total;
+          if (d > 0.01 && d < dHenti) { dHenti = d; sumbuHenti = th.sumbu; }
+        }
+        if (sumbuHenti && (sumbuHenti === "tb" ? fase.tb : fase.us) !== "hijau" && dHenti < 34) {
+          v = Math.min(v, dHenti < 0.5 ? 0 : Math.max(0.9, dHenti * 0.55));
+        }
+        b.s = (b.s + v * dt) % kor.R.total;
+        kor.halte.forEach((h, i) => { if (i !== b.halteTerakhir && Math.abs(((b.s - h.s) % kor.R.total + kor.R.total) % kor.R.total) < 0.6) { b.tunggu = 6; b.halteTerakhir = i; b.halteKini = h.pos; } });
+      }
+      const p = posRute(kor.R, b.s);
+      b.g.position.set(p.x, tinggiBus(p.x, p.z), p.z); b.g.rotation.y = Math.atan2(p.hx, p.hz);
+    }
+  });
+  perbaruiGerbangBus(dt, bus.map((b) => b.g.position));
 }
 
 /* ================= NAIK BUS / KRL =================
@@ -388,7 +426,7 @@ export function aksiTransportasi(fp) {
   if (NAIK.aktif) {
     const o = NAIK.obj;
     if (NAIK.jenis === "bus") {
-      if (o.tunggu > 0 && o.halteKini >= 0) return { teks: "Bus berhenti di halte", tombol: "Turun", aksi: turun };
+      if (o.tunggu > 0 && o.halteKini) return { teks: "Bus berhenti di halte", tombol: "Turun", aksi: turun };
       return { teks: "Di dalam bus Trans Merdu", tombol: null };
     }
     if (o.berhenti > 0) return { teks: "KRL berhenti di " + namaStasiun(stasiunDekat(o)), tombol: "Turun", aksi: turun };
@@ -422,7 +460,7 @@ function naik(jenis, obj) {
 }
 function turun() {
   const fp = kaitNaik.fp, o = NAIK.obj;
-  if (NAIK.jenis === "bus") { const h = HALTE_POS[o.halteKini] || duniaDari(o.g, 4, 0, 3.4); fp.x = h.x; fp.z = h.z; if (h.yaw !== undefined) fp.yaw = h.yaw; fp.pitch = 0; }
+  if (NAIK.jenis === "bus") { const h = o.halteKini || duniaDari(o.g, 4, 0, 3.4); fp.x = h.x; fp.z = h.z; if (h.yaw !== undefined) fp.yaw = h.yaw; fp.pitch = 0; }
   else { const p = pintuStasiun(stasiunDekat(o)); fp.x = p.x; fp.z = p.z; fp.yaw = 0; }
   Object.assign(NAIK, { aktif: false, jenis: null, obj: null });
   kaitNaik.selesai();
