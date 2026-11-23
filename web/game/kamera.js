@@ -10,6 +10,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
 import { ketukIklan } from "./iklan.js";
 import { istanaKlik } from "./istana.js";
 import { MALL_KLIK } from "./fasilitasBaru.js";
+import { sedangNaik, updateNaik } from "./transportasi.js";
 import { AP, apartemenKlik, pintuApartemen } from "./apartemen.js";
 import { waktuLalu } from "./main.js";
 
@@ -303,6 +304,7 @@ import { waktuLalu } from "./main.js";
     return Math.hypot(fp.x - ox, fp.z - oz);
   }
   export function updateOrang(dt) {
+    if (sedangNaik()) { updateNaik(dt, camera, fp, vektorGerak()); ikutiMatahari(fp.x, fp.z); return; } // menumpang bus / KRL
     langkahPemain(dt, fp.yaw);
     if (diInterior) camera.position.set(fp.x, INT.y + 1.6 + (AP.goyang || 0), fp.z); // mata 1,6 di atas lantai interior (+ getar kabin lift)
     else camera.position.set(fp.x, 1.6, fp.z); // setinggi mata karakter (±1,6 satuan)
@@ -414,6 +416,7 @@ import { waktuLalu } from "./main.js";
   export function aturMode(m) {
     if (m === modeKamera) return;
     if (diInterior && m !== "orang") return; // di dalam rumah mode terkunci 1st Person; keluar dulu untuk ganti mode
+    if (sedangNaik() && m !== "orang") return; // menumpang bus/KRL: terkunci 1st Person sampai turun
     const lama = modeKamera;
     modeKamera = m;
     /* near/far per mode (anti z-fighting): Orbit & Drone melihat jauh -> near besar;

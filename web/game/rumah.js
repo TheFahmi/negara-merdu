@@ -10,6 +10,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
 import { UKURAN_ISTANA_DALAM, bangunInteriorIstana } from "./istanaDalam.js";
 import { PINTU_MALL, TAPAK_BARU } from "./fasilitasBaru.js";
 import { UKURAN_MALL_DALAM, bangunInteriorMall } from "./mallDalam.js";
+import { aksiTransportasi, setKaitNaik } from "./transportasi.js";
 import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, resetApartemen, setKaitApartemen } from "./apartemen.js";
 
   export function buatRumahDetail(dinding, atap, varian, cerobong) {
@@ -946,7 +947,8 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
     }
     return { x: Math.min(INT.x + INT.sw - 0.75, Math.max(INT.x - INT.sw + 0.75, x)), z: Math.min(INT.z + INT.sd - 0.75, Math.max(INT.z - INT.sd + 0.75, z)) };
   }
-  let aksiAptAktif = null;
+  let aksiAptAktif = null, aksiTransAktif = null;
+  setKaitNaik({ get fp() { return fp; }, petunjuk(t) { $("#petunjuk-teks").textContent = t; $("#petunjuk").hidden = false; }, selesai() { $("#petunjuk-teks").textContent = PETUNJUK[modeKamera]; kirimPosisi(true); } });
   export function keluarInterior() {
     if (!diInterior) return;
     const k = interiorKonteks;
@@ -989,6 +991,12 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       if (tampil) { teks.textContent = "Pintu keluar"; tombol.textContent = "Keluar"; }
       return;
     }
+    if (!diInterior && (modeKamera === "orang" || modeKamera === "ketiga")) { // naik/turun bus & KRL
+      const at = aksiTransportasi(fp);
+      aksiTransAktif = at && at.aksi ? at.aksi : null;
+      if (at) { chip.hidden = false; teks.textContent = at.teks; tombol.textContent = at.tombol || "…"; tombol.hidden = !at.tombol; rumahDekat = null; return; }
+    } else aksiTransAktif = null;
+    tombol.hidden = false;
     if (modeKamera !== "orang" && modeKamera !== "ketiga") { chip.hidden = true; rumahDekat = null; return; }
     let terbaik = null, jarakMin = 3.4;
     for (const r of rumahKlik) {
@@ -1019,7 +1027,8 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
     }
   }
   $("#chip-aksi-tombol").addEventListener("click", () => {
-    if (diInterior && aksiAptAktif) aksiAptAktif();
+    if (!diInterior && aksiTransAktif) { if (modeKamera !== "orang") aturMode("orang"); aksiTransAktif(); }
+    else if (diInterior && aksiAptAktif) aksiAptAktif();
     else if (diInterior) keluarInterior();
     else if (rumahDekat === "istana") masukIstana();
     else if (rumahDekat === "mall") masukMall();

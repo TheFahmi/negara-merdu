@@ -29,6 +29,7 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     pantauFrame(kiniMs); // tangga kualitas otomatis (frameTerakhirMs milik bersama.js)
     const t = jam.getElapsedTime();
     const dt = Math.min(0.05, Math.max(0, t - waktuLalu)); waktuLalu = t;
+    perbaruiTransportasi(t, dt); // kereta & bus — SEBELUM kamera: penumpang menempel tanpa tertinggal 1 frame (t untuk fase lampu)
     if (modeKamera === "orbit") {
       putarOrbitBilaOtomatis(); // theta & keadaan interaksi milik kamera.js
       terapkanKamera();
@@ -86,7 +87,6 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     // perbaruiLaluLintasMobil(t, dt); // mobil berjalan kendaraan.js
     perbaruiLift(dt); perbaruiApartemenLuar();
     if (diInterior) perbaruiMall(dt); // anak tangga eskalator mall
-    perbaruiTransportasi(t, dt); // kereta & bus (t untuk fase lampu lalu lintas)
     perbaruiPasar(dt, t); // pedagang & pembeli Pasar Desa
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
