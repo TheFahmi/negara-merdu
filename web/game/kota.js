@@ -1,6 +1,7 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
+import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
   export function bangunKotaMassal() {
@@ -18,7 +19,7 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
           z: s.z + JALAN + KAV_PITCH / 2 + Math.floor(k / SISI) * KAV_PITCH,
           nomor, blok: blokNomor, zona: zonaDariKolBar(kol, bar),
           kunciPos: blokNomor + "," + (k + 1), // kunci data warga (blok,kavling) — alokasi server tidak lagi urut per nomor
-          kx: k % SISI, kz: Math.floor(k / SISI), h: hashInt(nomor),
+          kx: k % SISI, kz: Math.floor(k / SISI), h: hashInt(nomor), kunciBlok: kunci,
         });
       }
     }
@@ -28,6 +29,11 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
        petak. */
     const daftarIsi = daftar.filter((d) => rumahTerisi.has(d.kunciPos) && !rumahDetailSet.has(d.kunciPos));
     const grup = new THREE.Group();
+    /* Bentang lahan pedesaan di blok kosong jauh dari garis tumbuh (ragam.js):
+       blok itu tidak memakai dekorasi petak kavling & persimpangan di antara
+       blok-blok desa tidak berlampu lalu lintas (kecuali jalan arteri/bus). */
+    const ragam = bangunRagamLahan(grup);
+    const persimpanganKota_ = saringPersimpangan(ragam);
     const dummy = new THREE.Object3D(); const warna = new THREE.Color();
     const syDari = (d) => 0.9 + d.h * 0.3;
     const warnaAtap = (d) => {
@@ -150,6 +156,7 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
        kota, bukan menghapus satu wilayah utuh. */
     const kandPagar = [], kandSemak = [], kandPohon = [];
     daftar.forEach((d) => {
+      if (ragam.has(d.kunciBlok)) return; // blok bentang desa: tanpa pagar/semak petak
       const pola = polaKavling(d.kx, d.kz, d.blok);
       if (pola.pagar) kandPagar.push({ d, h: hashInt(d.nomor * 19 + 7) });
       if (pola.semak) kandSemak.push({ d, h: hashInt(d.nomor * 23 + 11) });
@@ -245,7 +252,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
        1 InstancedMesh berwarna per instans. Elemen kota inti: TIDAK ikut
        kepadatan kualitas (tidak masuk IM_LINGKUNGAN) dan tidak ditabrak
        (tiang di trotoar, sama seperti lampu jalan). */
-    const tiangLL = tiangLaluLintas();
+    const tiangLL = tiangLaluLintas(persimpanganKota_);
     /* Desain lampu lalu lintas (perbaikan): dulu tiang hitam pendek dengan
        kotak lampu di pucuknya — dari kamera Orbit terbaca sebagai "tongkat".
        Kini tiang galvanis model LENGAN (mast arm) seperti persimpangan
@@ -350,7 +357,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
        mengikuti preseden anti z-fighting bidang di atas tanah. Tutup
        sewarna aspal digambar lebih dulu (urutan instans tidak menentukan
        z, tapi warna per instans yang membedakan). */
-    const marka = markaPersimpangan();
+    const marka = markaPersimpangan(persimpanganKota_);
     const semuaMarka = [];
     // marka.tutup tidak dipakai lagi: tekstur aspal sudah bersih di persimpangan (lihat buatKanvasTanah)
     for (const r of marka.zebra) semuaMarka.push({ x: r.x, z: r.z, w: r.w, d: r.d, warna: 0xf4f1e6 });

@@ -243,9 +243,10 @@
      lajur datang, menghadap pengemudi; lengan menjulur ke atas lajurnya
      (lengan = sumbu +x lokal tiang, lihat kota.js).
      sumbu "us" = utara-selatan, "tb" = timur-barat (kelompok fase). */
-  export function tiangLaluLintas() {
+  export function tiangLaluLintas(saring) { // saring(p) opsional: false = persimpangan tanpa lampu (jalan desa)
     const DALAM = 15.2, LUAR = 1.15, tiang = [];
     for (const p of persimpanganKota()) {
+      if (saring && !saring(p)) continue;
       // dari utara (lajur timur): tiang di sudut tenggara, hadap utara (-z)
       if (p.bar > 0) tiang.push({ x: p.x0 + DALAM, z: p.z0 + DALAM, sumbu: "us", hx: 0, hz: -1 });
       // dari selatan (lajur barat): tiang di sudut barat-laut, hadap selatan (+z)
@@ -288,9 +289,10 @@
      (garis tengah berhenti di tepi persimpangan). Sisi yang jalan
      pendekatannya di luar grid kota (barat untuk kolom 0, utara untuk
      baris 0) tidak diberi zebra/henti — jalannya memang tidak ada. */
-  export function markaPersimpangan() {
+  export function markaPersimpangan(saring) {
     const zebra = [], henti = [], tutup = [];
     for (const p of persimpanganKota()) {
+      if (saring && !saring(p)) continue;
       const { x0, z0, cx, cz } = p;
       for (let i = 0; i < 5; i++) {
         const gx = x0 + 1.5 + i * 2.75, gz = z0 + 1.5 + i * 2.75;

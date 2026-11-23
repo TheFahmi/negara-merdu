@@ -18,6 +18,7 @@ import { bangunLaluLintas, bangunMobilPajangan, bangunMobilParkir, perbaruiLaluL
 import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } from "./apartemen.js";
 import { perbaruiMall } from "./mallDalam.js";
 import { perbaruiPasar } from "./fasilitasBaru.js";
+import { bangunPegunungan } from "./ragam.js";
 import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
 
   /* ================= ANIMASI ================= */
@@ -154,6 +155,7 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
        dipakai). Insiden pemicu: TypeError render dari mesh atap instanced
        berdaftar kosong membunuh mulai() sebelum baris sembunyi #muat. */
     try {
+      bangunPegunungan(scene); // cakrawala pegunungan (ragam.js)
       bangunPusatKota(); // plaza + istana (dulu IIFE evaluasi modul di istana.js — TDZ-nya mengunci loading 22 Nov 15:13; kini di dalam jaring pengaman ini)
       window.__kotaMassal = bangunKotaMassal();
       bangunLaluLintasMobil(); // 64 mobil arteri kota (instanced, lajur kiri)
