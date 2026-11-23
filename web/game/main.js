@@ -17,6 +17,7 @@ import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
 import { bangunLaluLintas, bangunMobilPajangan, bangunMobilParkir, perbaruiLaluLintasMobil } from "./kendaraan.js";
 import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } from "./apartemen.js";
 import { perbaruiMall } from "./mallDalam.js";
+import { perbaruiPasar } from "./fasilitasBaru.js";
 import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
 
   /* ================= ANIMASI ================= */
@@ -86,6 +87,7 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     perbaruiLift(dt); perbaruiApartemenLuar();
     if (diInterior) perbaruiMall(dt); // anak tangga eskalator mall
     perbaruiTransportasi(t, dt); // kereta & bus (t untuk fase lampu lalu lintas)
+    perbaruiPasar(dt, t); // pedagang & pembeli Pasar Desa
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);

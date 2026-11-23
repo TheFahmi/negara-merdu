@@ -8,11 +8,13 @@
    Depan bangunan menghadap +z (selatan). Grup: y=0 = muka alas blok.
    TAPAK_BARU = AABB tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok. */
 import { LAMPU_TAMAN, M, geometriAtapPelana, kotak } from "./bersama.js";
+import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { bangkuTaman, matAtapWarna, pagarSemak, pohonKecil, teksturBenderaMerdu, teksturPapanNama } from "./fasilitas.js";
 
 const KREM = 0xf6efdf, PUTIH = 0xfbfaf5, KAYU = 0x7a4a21, KAYU_M = 0xa9743f, BATU = 0xcfc6b0, ASPAL = 0x5c6066;
 /* Titik pintu & grup Merdu Mall (diisi saat modelnya dibangun) — dipakai rumah.js/kamera.js. */
 export const PINTU_MALL = [], MALL_KLIK = [];
+export const PASAR_ORANG = []; // pedagang (diam) & pembeli (berjalan) Pasar Desa — dianimasikan perbaruiPasar()
 const KACA = 0x9fd3e6, KUSEN = 0x5a3a20, EMAS = 0xd9a441, HIJAU_T = 0x2f7a63;
 
 /* ---------- helper umum ---------- */
@@ -289,38 +291,105 @@ export const MODEL_BARU = {
   },
 
   /* ===== PASAR DESA: los beratap panjang + lapak tenda + parkir ===== */
+  /* ===== PASAR DESA MERDU (dibangun ulang, perintah "buatkan pasar"):
+     pasar tradisional hidup — gapura bernama, LOS UTAMA beratap susun
+     (ventilasi) dengan 4 lorong lapak: sayur, buah, ikan (di atas es),
+     daging, bumbu, beras, telur, kelontong; tiap lapak berpapan nama &
+     berpedagang; PEMBELI berjalan menyusuri lorong; lampu gantung; lapak
+     tenda jajanan di halaman, gerobak bakso, becak, parkir motor & mobil.
+     Pasar terbuka — pemain bisa langsung berjalan masuk. ===== */
   pasar(g) {
-    lingkungan(g, { jalanSampai: 12, lebarJalan: 7, pohon: false });
-    g.add(kotak(56, 0.12, 40, 0xbdb6a6, 0, 0.06, -6)); // pelataran pasar
-    // los utama: rangka kolom + atap pelana panjang + kios di bawahnya
-    for (const z of [-20, -12]) {
-      for (let x = -24; x <= 24; x += 6) { g.add(kotak(0.4, 5, 0.4, 0x6e7378, x, 2.5, z - 3.2)); g.add(kotak(0.4, 5, 0.4, 0x6e7378, x, 2.5, z + 3.2)); }
-      const ap = new THREE.Mesh(geometriAtapPelana(7.6, 2.2, 52), matAtapWarna(0x2f6f8f)); ap.rotation.y = Math.PI / 2; ap.position.set(0, 5, z); ap.castShadow = true; g.add(ap);
-      for (let x = -21; x <= 21; x += 6) { // meja dagangan + barang
-        g.add(kotak(4.6, 0.9, 1.8, KAYU_M, x, 0.45, z));
-        for (let i = 0; i < 5; i++) {
-          const w = [0xe14b2f, 0xf2c230, 0x6aa84f, 0xe8943a, 0x8e5ea2][(i + Math.abs(x)) % 5];
-          const b = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), M(w)); b.position.set(x - 1.8 + i * 0.9, 1.15, z); b.scale.y = 0.75; g.add(b);
+    lingkungan(g, { jalanSampai: 18, lebarJalan: 8, pohon: false });
+    g.add(kotak(60, 0.12, 50, 0xbdb6a6, 0, 0.06, -6)); // pelataran pasar
+    // gapura depan
+    for (const s of [-1, 1]) { g.add(kotak(1.2, 6, 1.2, 0xc8102e, s * 5.5, 3, 31)); g.add(kotak(1.6, 0.5, 1.6, 0xd9a441, s * 5.5, 6.2, 31)); }
+    const gp = new THREE.Mesh(new THREE.BoxGeometry(12.6, 1.8, 0.4), new THREE.MeshStandardMaterial({ map: teksturPapanNama("PASAR DESA MERDU", "Segar · Murah · Merdu"), roughness: 0.8 }));
+    gp.position.set(0, 6.6, 31); g.add(gp);
+    // LOS UTAMA: 48 x 26, kolom baja, atap susun (bawah + ventilasi atas)
+    const LZ = -12, LW = 48, LD = 26;
+    for (let x = -LW / 2; x <= LW / 2; x += 6) for (const z of [LZ - LD / 2, LZ, LZ + LD / 2]) g.add(kotak(0.45, 6, 0.45, 0x6e7378, x, 3, z));
+    const atap1 = new THREE.Mesh(geometriAtapPelana(LD + 3, 3.2, LW + 3), matAtapWarna(0x2f6f8f)); atap1.rotation.y = Math.PI / 2; atap1.position.set(0, 6, LZ); atap1.castShadow = true; g.add(atap1);
+    const atap2 = new THREE.Mesh(geometriAtapPelana(8, 1.6, LW + 1), matAtapWarna(0x245a75)); atap2.rotation.y = Math.PI / 2; atap2.position.set(0, 9.6, LZ); g.add(atap2);
+    for (const x of [-LW / 2, LW / 2]) g.add(kotak(0.3, 1.4, 8, 0x6e7378, x, 9.0, LZ)); // dinding ventilasi
+    g.add(kotak(LW + 1, 0.15, LD + 1, 0xd8d2c6, 0, 0.14, LZ)); // lantai los
+    const papanLos = new THREE.Mesh(new THREE.BoxGeometry(14, 1.4, 0.25), new THREE.MeshStandardMaterial({ map: teksturPapanNama("LOS UTAMA", "Sayur · Buah · Ikan · Daging · Sembako"), roughness: 0.8 }));
+    papanLos.position.set(0, 6.6, LZ + LD / 2 + 0.3); g.add(papanLos);
+    // komoditas
+    const bola = (w, r, x, y, z, sy) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), M(w)); m.position.set(x, y, z); if (sy) m.scale.y = sy; g.add(m); };
+    const KOMODITAS = {
+      sayur(x, z) { for (let i = 0; i < 4; i++) bola(0x6aa84f, 0.32, x - 1.5 + i, 1.2, z, 0.85); for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.5, 6), M(0xe8742a)); c.rotation.z = Math.PI / 2; c.position.set(x - 1.4 + i * 0.5, 1.05, z + 0.5); g.add(c); } for (let i = 0; i < 8; i++) bola(0xd9201a, 0.07, x - 1 + i * 0.28, 1.05, z - 0.5); },
+      buah(x, z) { for (let i = 0; i < 5; i++) bola(0xf2a33a, 0.22, x - 1.6 + i * 0.4, 1.1, z - 0.3); bola(0x2e7d32, 0.45, x + 1.3, 1.3, z + 0.2); for (let i = 0; i < 3; i++) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8), M(0xf2d13d)); p.rotation.z = 1.2; p.position.set(x - 1 + i * 0.25, 1.15, z + 0.45); g.add(p); } },
+      ikan(x, z) { g.add(kotak(3.6, 0.12, 1.4, 0xeaf6fb, x, 0.98, z)); for (let i = 0; i < 6; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 6), M([0x9aa7b4, 0xc0c8d0][i % 2])); f.scale.set(0.5, 0.45, 1.6); f.position.set(x - 1.4 + i * 0.55, 1.12, z); f.rotation.y = 0.3; g.add(f); } },
+      daging(x, z) { for (let i = 0; i < 4; i++) g.add(kotak(0.6, 0.25, 0.45, 0xb0302c, x - 1.2 + i * 0.8, 1.05, z)); g.add(kotak(3.8, 0.08, 0.08, 0x8a8f94, x, 2.6, z - 0.4)); for (let i = 0; i < 3; i++) g.add(kotak(0.35, 0.8, 0.25, 0xc04a3c, x - 1 + i, 2.1, z - 0.4)); },
+      bumbu(x, z) { const W = [0xd9201a, 0xf2c230, 0x8a4b2f, 0xe8742a, 0x6aa84f, 0xf6f0e0]; for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.35, 10), M(W[i])); m.position.set(x - 1.5 + i * 0.6, 1.08, z); g.add(m); } },
+      beras(x, z) { for (let i = 0; i < 6; i++) { const k = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.7, 10), M(0xf4efe2)); k.position.set(x - 1.5 + (i % 3) * 1.2, 1.25 + Math.floor(i / 3) * 0.6, z - 0.2 + Math.floor(i / 3) * 0.3); g.add(k); } },
+      telur(x, z) { for (let t = 0; t < 3; t++) { g.add(kotak(1.0, 0.08, 1.0, 0xc9a26b, x - 1.2 + t * 1.2, 0.98, z)); for (let i = 0; i < 9; i++) bola(0xf3e3c4, 0.08, x - 1.5 + t * 1.2 + (i % 3) * 0.3, 1.08, z - 0.3 + Math.floor(i / 3) * 0.3, 1.25); } },
+      kelontong(x, z) { const W = [0xe14b2f, 0x3f6fb5, 0xf2c230, 0x2e9e5b]; for (let i = 0; i < 8; i++) g.add(kotak(0.4, 0.5, 0.35, W[i % 4], x - 1.5 + (i % 4) * 1.0, 1.15 + Math.floor(i / 4) * 0.5, z)); },
+    };
+    const JENIS = ["sayur", "buah", "ikan", "daging", "bumbu", "beras", "telur", "kelontong"];
+    const PEDAGANG = ["Bu Siti", "Pak Darto", "Bu Ani", "Mas Joko", "Bu Tini", "Pak Udin", "Mbak Rini", "Pak Slamet"];
+    const BAJU = ["#e74c3c", "#3498db", "#f1c40f", "#2e9e5b", "#9b59b6", "#e67e22", "#1abc9c", "#795548"];
+    let n = 0;
+    for (const z of [LZ - 8.5, LZ - 2.5, LZ + 3.5, LZ + 9]) { // 4 deret lapak (lorong di antaranya)
+      const hadap = z < LZ ? 1 : -1; // pedagang di belakang meja, menghadap lorong
+      for (let x = -18; x <= 18; x += 7.2) {
+        const jenis = JENIS[n % JENIS.length];
+        g.add(kotak(4.4, 0.9, 1.8, 0xa9743f, x, 0.45, z));
+        KOMODITAS[jenis](x, z);
+        const papan = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.6, 0.08), new THREE.MeshStandardMaterial({ map: teksturPapanNama(jenis.toUpperCase(), PEDAGANG[n % PEDAGANG.length]), roughness: 0.85 }));
+        papan.position.set(x, 3.0, z); papan.rotation.y = hadap > 0 ? 0 : Math.PI; g.add(papan);
+        g.add(kotak(0.05, 1.0, 0.05, 0x333333, x, 4.0, z));
+        const lampu = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), new THREE.MeshStandardMaterial({ color: 0xfff3d6, emissive: 0xffd889, emissiveIntensity: 0.8 })); lampu.position.set(x, 3.45, z + hadap * 0.4); g.add(lampu);
+        if (n % 3 !== 2) { // pedagang
+          const p = buatKarakter({ baju: BAJU[n % BAJU.length], kulit: ["#c68642", "#e0ac69", "#8d5524"][n % 3], topi: n % 4 === 0 ? "hijab" : n % 4 === 1 ? "peci" : "tanpa" });
+          p.scale.setScalar(1.3); p.position.set(x + 1.4, 0.15, z - hadap * 1.6); p.rotation.y = hadap > 0 ? 0 : Math.PI; g.add(p);
+          PASAR_ORANG.push({ kar: p, diam: true });
         }
+        n++;
       }
     }
-    // lapak tenda warna-warni di depan
+    // pembeli menyusuri lorong (jalur keliling antar deret)
+    const lorong = [[LZ - 5.5, -22, 22], [LZ + 0.5, 22, -22], [LZ + 6.3, -22, 22]];
+    for (let i = 0; i < 9; i++) {
+      const [lz, x0, x1] = lorong[i % 3];
+      const k = buatKarakter({ baju: BAJU[(i + 3) % BAJU.length], kulit: ["#f1c27d", "#c68642", "#e0ac69"][i % 3], topi: i % 3 === 0 ? "hijab" : "tanpa" });
+      k.scale.setScalar(1.3); g.add(k);
+      if (i % 2 === 0) { const kantong = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.45, 0.25), M(0xe14b2f)); kantong.position.set(0.5, 0.75, 0.1); k.add(kantong); }
+      PASAR_ORANG.push({ kar: k, lz, x0, x1, s: (i * 7.3) % Math.abs(x1 - x0), v: 1.8 + (i % 3) * 0.35, arah: 1 });
+    }
+    // halaman: lapak tenda jajanan
     const WARNA_TENDA = [0xe14b2f, 0xf2c230, 0x2e9e5b, 0x3f6fb5, 0xe86a9e, 0xe8943a];
     for (let i = 0; i < 6; i++) {
-      const x = -22.5 + i * 9, z = 4;
+      const x = -24 + i * 9.6, z = 8 + (i % 2) * 0.5;
       for (const [px, pz] of [[-1.8, -1.6], [1.8, -1.6], [-1.8, 1.6], [1.8, 1.6]]) g.add(kotak(0.15, 2.6, 0.15, 0x6e7378, x + px, 1.3, z + pz));
       const atap = new THREE.Mesh(geometriAtapPelana(4.2, 0.9, 3.8), M(WARNA_TENDA[i])); atap.position.set(x, 2.6, z); atap.castShadow = true; g.add(atap);
       g.add(kotak(3.4, 0.8, 1.4, KAYU_M, x, 0.4, z + 0.6));
-      for (let k = 0; k < 3; k++) g.add(kotak(0.8, 0.5, 0.6, 0xc9a26b, x - 1 + k, 1.05, z + 0.6)); // peti buah
+      for (let k = 0; k < 3; k++) g.add(kotak(0.8, 0.5, 0.6, 0xc9a26b, x - 1 + k, 1.05, z + 0.6));
     }
-    // gerobak + parkir motor/mobil
-    const gerobak = new THREE.Group(); gerobak.add(kotak(2.2, 1, 1.2, 0xe8c268, 0, 1.1, 0)); gerobak.add(kotak(2.4, 0.15, 1.4, KAYU, 0, 2.6, 0));
-    for (const s of [-1, 1]) { gerobak.add(kotak(0.1, 1.5, 0.1, KAYU, s * 1.1, 1.9, 0.6)); const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.15, 12), M(0x333333)); r.rotation.x = Math.PI / 2; r.position.set(s * 0.8, 0.45, 0.65); gerobak.add(r); }
-    gerobak.position.set(14, 0, 14); g.add(gerobak);
-    parkir(g, -18, 22, 5, false); mobil(g, -21.2, 22, 0, 0x3f6fb5); mobil(g, -14.8, 22, 0, 0xd9462e);
-    for (const [x, z] of [[-31, -30], [31, -30], [-31, 30], [31, 30], [-31, 0], [31, 0]]) g.add(pohonKecil(x, z, 1.0));
-    papanDepan(g, "PASAR DESA", "Segar · Murah · Merdu", 12, 28, 0.6);
+    // gerobak bakso + becak
+    const gerobak = new THREE.Group(); gerobak.add(kotak(2.2, 1.2, 1.1, 0xf2f2ee, 0, 1.2, 0)); gerobak.add(kotak(2.4, 0.12, 1.3, 0xc8102e, 0, 2.5, 0));
+    for (const s of [-1, 1]) { gerobak.add(kotak(0.08, 1.3, 0.08, 0x8a8f94, s * 1.1, 1.85, 0.5)); const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.15, 12), M(0x333333)); r.rotation.x = Math.PI / 2; r.position.set(s * 0.8, 0.45, 0.6); gerobak.add(r); }
+    const pg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.6), new THREE.MeshStandardMaterial({ map: teksturPapanNama("BAKSO", "Pak Kumis") })); pg.position.set(0, 1.3, 0.56); gerobak.add(pg);
+    gerobak.position.set(14, 0, 16); g.add(gerobak);
+    const becak = new THREE.Group();
+    becak.add(kotak(1.4, 0.9, 1.0, 0x2e7d46, 0, 1.0, 0.8)); becak.add(kotak(1.4, 1.0, 0.15, 0x2e7d46, 0, 1.6, 1.3));
+    const kap = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0xc8102e)); kap.scale.set(0.9, 0.9, 0.7); kap.position.set(0, 1.9, 0.9); becak.add(kap);
+    for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 16), M(0x222222)); r.rotation.y = Math.PI / 2; r.position.set(s * 0.75, 0.4, 0.8); becak.add(r); }
+    const rb = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 16), M(0x222222)); rb.rotation.y = Math.PI / 2; rb.position.set(0, 0.4, -0.9); becak.add(rb);
+    becak.add(kotak(0.1, 0.1, 1.8, 0x333333, 0, 0.7, -0.1)); becak.add(kotak(0.5, 0.1, 0.4, 0x333333, 0, 1.3, -0.8));
+    becak.position.set(-12, 0, 18); becak.rotation.y = 0.6; g.add(becak);
+    // parkir motor (deret) + mobil
+    for (let i = 0; i < 10; i++) {
+      const m = new THREE.Group(), w = [0xc8102e, 0x1d1d1f, 0x3f6fb5, 0xf2f2ee][i % 4];
+      m.add(kotak(0.35, 0.5, 1.5, w, 0, 0.75, 0)); m.add(kotak(0.3, 0.15, 0.7, 0x1d1d1f, 0, 1.05, -0.2));
+      for (const z of [-0.65, 0.65]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.09, 6, 14), M(0x222222)); r.rotation.y = Math.PI / 2; r.position.set(0, 0.33, z); m.add(r); }
+      m.add(kotak(0.7, 0.06, 0.06, 0x8a8f94, 0, 1.2, 0.6));
+      m.position.set(20 + (i % 5) * 1.2, 0.1, 20 + Math.floor(i / 5) * 2.6); g.add(m);
+    }
+    parkir(g, -20, 24, 4, false); mobil(g, -23, 24, 0, 0x3f6fb5); mobil(g, -16.6, 24, 0, 0xe8c268);
+    for (const [x, z] of [[-31, -30], [31, -30], [-31, 30], [31, 30]]) g.add(pohonKecil(x, z, 1.0));
   },
+
 
   /* ===== MASJID: kubah besar, 4 kubah kecil, 2 menara, serambi, tempat wudhu, kolam ===== */
   masjid(g) {
@@ -764,7 +833,7 @@ export const TAPAK_BARU = {
   balai_warga: [[-27.6, 9.4, -16.4, 18.6]],                                            // kantor (pendopo terbuka bisa dimasuki)
   sekolah: [[-20.6, -27.1, 20.6, -16.9], [-27.1, -17.6, -16.9, 7.6], [16.9, -17.6, 27.1, 7.6]],
   puskesmas: [[-15.6, -17.6, 15.6, -2.4]],
-  pasar: [],                                                                           // los & lapak terbuka
+  pasar: [[-20.2, -21.4, 20.2, -19.6], [-20.2, -15.4, 20.2, -13.6], [-20.2, -9.4, 20.2, -7.6], [-20.2, -3.9, 20.2, -2.1]], // deret meja lapak (lorong & ujung terbuka)
   masjid: [[-12, -19, 12, -1.5], [-17.4, 2.2, -13.6, 5.8], [13.6, 2.2, 17.4, 5.8], [-14.8, 9.2, -7.2, 16.8], [7.2, 9.2, 14.8, 16.8], [-23, -14, -19, -2]],
 };
 
@@ -813,5 +882,23 @@ export function perbaruiApartemen(dt, t) {
   // Animasi halus riak air infinity pool rooftop
   if (st.airKolam) {
     st.airKolam.position.y = 33.7 + 0.92 + Math.sin(t * 2.2) * 0.025;
+  }
+}
+
+/* Animasi orang di Pasar Desa: pedagang bernapas/berkedip, pembeli
+   berjalan bolak-balik menyusuri lorong los dengan langkah halus. */
+export function perbaruiPasar(dt, t) {
+  for (const o of PASAR_ORANG) {
+    if (o.diam) { animasiHidup(o.kar, t, true); continue; }
+    const pj = Math.abs(o.x1 - o.x0);
+    o.s += o.v * dt * o.arah;
+    if (o.s > pj) { o.s = pj; o.arah = -1; } else if (o.s < 0) { o.s = 0; o.arah = 1; }
+    const dir = Math.sign(o.x1 - o.x0) * o.arah, x = o.x0 + Math.sign(o.x1 - o.x0) * o.s;
+    const bob = animasiJalan(o.kar, o.v * dt, dt);
+    animasiHidup(o.kar, t, false);
+    o.kar.position.set(x, 0.15 + bob * 0.06, o.lz);
+    const sasaran = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    let d = sasaran - o.kar.rotation.y; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+    o.kar.rotation.y += d * (1 - Math.exp(-dt * 8));
   }
 }
