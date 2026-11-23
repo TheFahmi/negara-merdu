@@ -79,10 +79,11 @@ type Warga struct {
 	Peran      *string
 	Gender     *string // 'L'/'P'; nil = belum diisi
 	CreatedAt  string
+	Rupa       string // JSON kustom karakter (rambut, warna rambut/celana, kacamata); "" = bawaan
 }
 
 const kolomWarga = "id, username, pin_hash, salt, warna_baju, warna_kulit, " +
-	"topi, nomor_rumah, blok, kavling, nik, keluarga_id, peran, created_at, gender"
+	"topi, nomor_rumah, blok, kavling, nik, keluarga_id, peran, created_at, gender, rupa"
 
 // ScanWarga membaca satu baris dengan urutan kolomWarga.
 func ScanWarga(row pgx.Row) (*Warga, error) {
@@ -90,7 +91,7 @@ func ScanWarga(row pgx.Row) (*Warga, error) {
 	var created *string
 	err := row.Scan(&w.ID, &w.Username, &w.PinHash, &w.Salt, &w.WarnaBaju,
 		&w.WarnaKulit, &w.Topi, &w.NomorRumah, &w.Blok, &w.Kavling,
-		&w.NIK, &w.KeluargaID, &w.Peran, &created, &w.Gender)
+		&w.NIK, &w.KeluargaID, &w.Peran, &created, &w.Gender, &w.Rupa)
 	if err != nil {
 		return nil, err
 	}

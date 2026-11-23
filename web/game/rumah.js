@@ -8,7 +8,8 @@ import { PETUNJUK, aturMode, fp, modeKamera, posisiDepanRumah } from "./kamera.j
 import { buangGrup, kirimPosisi } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { UKURAN_ISTANA_DALAM, bangunInteriorIstana } from "./istanaDalam.js";
-import { TAPAK_BARU } from "./fasilitasBaru.js";
+import { PINTU_MALL, TAPAK_BARU } from "./fasilitasBaru.js";
+import { UKURAN_MALL_DALAM, bangunInteriorMall } from "./mallDalam.js";
 import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, resetApartemen, setKaitApartemen } from "./apartemen.js";
 
   export function buatRumahDetail(dinding, atap, varian, cerobong) {
@@ -207,7 +208,7 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
      Digambar ulang tiap bangunDistrik — pola yang sama seperti
      gambarPapan() — jadi statusnya segar sesudah data termuat.
      ?v=34: baris ke-9 = Toko Pancing (bangunan voting warga). */
-  export const URUTAN_PAPAN_RENCANA = ["taman", "lapangan", "perpustakaan", "balai_warga", "sekolah", "puskesmas", "pasar", "masjid", "toko_pancing"];
+  export const URUTAN_PAPAN_RENCANA = ["taman", "lapangan", "perpustakaan", "balai_warga", "sekolah", "puskesmas", "pasar", "koperasi", "dapur_mbg", "masjid", "apartemen", "mall", "toko_pancing"];
   export const rencanaCv = document.createElement("canvas"); rencanaCv.width = 1152; rencanaCv.height = 640;
   export const rencanaTex = new THREE.CanvasTexture(rencanaCv);
   export function gambarPapanRencana() {
@@ -349,7 +350,7 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       label.position.set(0, 7.4, 0); rumah.add(label);
       dinamis.add(rumah); rumahKlik.push(rumah);
       rintanganDetail.push({ minX: pos.x - 4.6, maxX: pos.x + 4.6, minZ: pos.z - 4.2, maxZ: pos.z + 4.2 }); // tapak detail — cakupan tabrakan kavling ini
-      const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi });
+      const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi, rupa: w.rupa });
       kar.scale.setScalar(1.35);
       kar.userData.username = w.username; // dipakai multiplayer: NPC disembunyikan saat orangnya online
       const lb = buatLabel("@" + w.username, 4.2, w.jabatan || null); lb.position.y = 2.5; kar.add(lb);
@@ -860,6 +861,29 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
   }
   /* Titik pintu istana di dunia (puncak tangga portico). */
   export function pintuIstanaDunia() { return { x: PINTU_ISTANA.x + PUSAT_X, z: PINTU_ISTANA.z + PUSAT_Z }; }
+  /* Merdu Mall: pola sama dengan istana — aula interior di lokasi INT. */
+  export function masukMall() {
+    if (diInterior || !PINTU_MALL.length) return;
+    const p = PINTU_MALL[0];
+    interiorKonteks = { pemilik: { username: "mall" }, jenis: "mall", pintuX: p.x, pintuZ: p.z + 1.5, yawPintu: 0, modeSebelum: modeKamera };
+    if (grupInterior) { scene.remove(grupInterior); buangGrup(grupInterior); grupInterior = null; }
+    rintanganInterior.length = 0;
+    INT.sw = UKURAN_MALL_DALAM.sw; INT.sd = UKURAN_MALL_DALAM.sd; INT.tinggi = UKURAN_MALL_DALAM.tinggi;
+    const g = bangunInteriorMall((minX, maxX, minZ, maxZ) =>
+      rintanganInterior.push({ minX: INT.x + minX, maxX: INT.x + maxX, minZ: INT.z + minZ, maxZ: INT.z + maxZ }));
+    g.position.set(INT.x, INT.y, INT.z);
+    grupInterior = g; scene.add(g);
+    diInterior = true;
+    perbaruiMinimapTampil();
+    fp.x = INT.x; fp.z = INT.z + INT.sd - 2.1; fp.yaw = 0; fp.pitch = 0;
+    if (modeKamera !== "orang") aturMode("orang");
+    $("#kartu").hidden = true; $("#panel-menu").hidden = true; $("#panel-chat").hidden = true;
+    $("#tombol-keluar-rumah").hidden = false;
+    $("#petunjuk-teks").textContent = "Di dalam Merdu Mall · WASD/joystick untuk jalan · Keluar lewat pintu kaca selatan";
+    $("#tombol-keluar-rumah").lastChild.textContent = " Keluar Mall";
+    $("#petunjuk").hidden = false;
+    kirimPosisi(true);
+  }
   export function masukIstana() {
     if (diInterior) return;
     const p = pintuIstanaDunia();
@@ -978,6 +1002,10 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       teks.textContent = pa.data.nama; tombol.textContent = "Masuk Apartemen";
       return;
     }
+    if (!terbaik && PINTU_MALL.length && Math.hypot(fp.x - PINTU_MALL[0].x, fp.z - PINTU_MALL[0].z) < 6) { // depan pintu Merdu Mall
+      rumahDekat = "mall"; chip.hidden = false; teks.textContent = "Merdu Mall"; tombol.textContent = "Masuk Mall";
+      return;
+    }
     const pi = pintuIstanaDunia();
     if (!terbaik && Math.hypot(fp.x - pi.x, fp.z - pi.z) < 5) { // di depan pintu istana
       rumahDekat = "istana"; chip.hidden = false;
@@ -994,6 +1022,7 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
     if (diInterior && aksiAptAktif) aksiAptAktif();
     else if (diInterior) keluarInterior();
     else if (rumahDekat === "istana") masukIstana();
+    else if (rumahDekat === "mall") masukMall();
     else if (rumahDekat && rumahDekat.apartemen) masukApartemen(rumahDekat);
     else if (rumahDekat) masukInterior(rumahDekat.userData.pemilik, rumahDekat);
   });

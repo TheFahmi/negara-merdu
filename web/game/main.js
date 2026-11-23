@@ -16,6 +16,8 @@ import { gambarMinimap } from "./peta.js";
 import { bangunPapanIklan, perbaruiIklan } from "./iklan.js";
 import { bangunLaluLintas, bangunMobilPajangan, bangunMobilParkir, perbaruiLaluLintasMobil } from "./kendaraan.js";
 import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } from "./apartemen.js";
+import { perbaruiMall } from "./mallDalam.js";
+import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
 
   /* ================= ANIMASI ================= */
   export const jam = new THREE.Clock();
@@ -58,7 +60,13 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
         u.lenganK.rotation.x = -0.82; u.lenganR.rotation.x = -0.82;
       }
       kar.position.set(p.x, 0.3 + bobNpc * 0.06, p.z);
-      kar.rotation.y = Math.atan2(p.dx, p.dz);
+      { // hadap berputar HALUS di tikungan (dulu langsung patah 90°)
+        const sasaran = Math.atan2(p.dx, p.dz);
+        if (u.yawHalus === undefined) u.yawHalus = sasaran;
+        let d = sasaran - u.yawHalus; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+        u.yawHalus += d * (1 - Math.exp(-dt * 6));
+        kar.rotation.y = u.yawHalus;
+      }
     }
     kirimPosisi(false);
     perbaruiPemainLain(dt, t);
@@ -76,6 +84,8 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
     // mengembalikan baris ini + pemanggilan bangunLaluLintas() di mulai().
     // perbaruiLaluLintasMobil(t, dt); // mobil berjalan kendaraan.js
     perbaruiLift(dt); perbaruiApartemenLuar();
+    if (diInterior) perbaruiMall(dt); // anak tangga eskalator mall
+    perbaruiTransportasi(dt); // kereta & bus
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);
@@ -150,6 +160,7 @@ import { bangunApartemen, perbaruiApartemenLuar, perbaruiLift, tapakApartemen } 
       // bangunLaluLintas(); // DIMATIKAN 22 Nov (keputusan Fahmi): mobil berjalan kendaraan.js ±320 mati; arteri kota.js 64 yang dipakai. Lihat catatan di loop animasi.
       bangunMobilPajangan(); // 8 mobil detail parkir tepi jalan (plaza & fasilitas)
       bangunApartemen(); rintanganFasilitas.push(...tapakApartemen());
+      bangunTransportasi(); rintanganFasilitas.push(...rintanganTransportasi); // stasiun, kereta, bus
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
       bangunLahanPembangunan(); // petak kosong + fasilitas terbangun (status dari ambilData)
       terapkanKualitas(); // dorong kepadatan awan & info panel sesuai pilihan tersimpan

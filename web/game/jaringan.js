@@ -68,9 +68,9 @@ import { sesi } from "./ui.js";
     if (!d || !d.u) return;
     if (sesi.saya && d.u === sesi.saya.username) return; // diri sendiri tidak di-render
     const lama = pemainOnline.get(d.u);
-    if (lama) { lama.baju = d.baju; lama.kulit = d.kulit; lama.topi = d.topi; lama.jabatan = d.jabatan || null; return; }
+    if (lama) { lama.baju = d.baju; lama.kulit = d.kulit; lama.topi = d.topi; lama.rupa = d.rupa || null; lama.jabatan = d.jabatan || null; return; }
     pemainOnline.set(d.u, {
-      baju: d.baju, kulit: d.kulit, topi: d.topi, jabatan: d.jabatan || null,
+      baju: d.baju, kulit: d.kulit, topi: d.topi, rupa: d.rupa || null, jabatan: d.jabatan || null,
       x: d.x || 0, z: d.z || 0, yaw: d.yaw || 0,
       tx: d.x || 0, tz: d.z || 0, tyaw: d.yaw || 0,
       grup: null, gelembung: null, gelembungSampai: 0,
@@ -103,7 +103,7 @@ import { sesi } from "./ui.js";
     }
     for (const [u, p] of urut) {
       if (!p.grup) {
-        const g = buatKarakter({ baju: p.baju, kulit: p.kulit, topi: p.topi });
+        const g = buatKarakter({ baju: p.baju, kulit: p.kulit, topi: p.topi, rupa: p.rupa });
         g.scale.setScalar(1.35);
         const lb = buatLabel("@" + u, 4.2, p.jabatan || null); lb.position.y = 2.5; g.add(lb);
         g.position.set(p.x, 0.32, p.z);
@@ -120,7 +120,13 @@ import { sesi } from "./ui.js";
     const k = 1 - Math.exp(-dt * 9);
     for (const p of pemainOnline.values()) {
       if (!p.grup) continue;
-      const dx = p.tx - p.x, dz = p.tz - p.z;
+      /* Gerak pemain lain HALUS: dulu dikejar eksponensial ke posisi paket
+         terakhir (cepat-lambat-cepat tiap 120 ms = tersendat). Kini sasaran
+         diprediksi maju dengan kecepatan paket terakhir (maks 0,3 dtk) lalu
+         dikejar lembut -> laju konstan. */
+      const umur = p.tTerima ? Math.min(0.3, (performance.now() - p.tTerima) / 1000) : 0;
+      const sx = p.tx + (p.vx || 0) * umur, sz = p.tz + (p.vz || 0) * umur;
+      const dx = sx - p.x, dz = sz - p.z;
       const px0 = p.x, pz0 = p.z;
       p.x += dx * k; p.z += dz * k;
       let dy = p.tyaw - p.yaw;
@@ -255,7 +261,12 @@ import { sesi } from "./ui.js";
     } else if (m.jenis === "posisi") {
       let p = pemainOnline.get(m.u);
       if (!p) { tambahPemain({ u: m.u, baju: "#2e9e5b", kulit: "#f1c27d", topi: "tanpa", x: m.x, z: m.z, yaw: m.yaw }); p = pemainOnline.get(m.u); segarkanRenderPemain(); }
-      if (p) { p.tx = m.x; p.tz = m.z; p.tyaw = m.yaw; }
+      if (p) { // simpan kecepatan antar paket untuk prediksi gerak (dead reckoning)
+        const kini = performance.now(), dtp = p.tTerima ? Math.max(0.05, (kini - p.tTerima) / 1000) : 0;
+        p.vx = dtp ? (m.x - p.tx) / dtp : 0; p.vz = dtp ? (m.z - p.tz) / dtp : 0;
+        if (Math.hypot(p.vx, p.vz) > 80) { p.vx = 0; p.vz = 0; } // teleport (masuk rumah dll.) — jangan diprediksi
+        p.tx = m.x; p.tz = m.z; p.tyaw = m.yaw; p.tTerima = kini;
+      }
     } else if (m.jenis === "chat") {
       tambahBarisChat(m, true);
       tampilGelembung(m.u, m.isi);

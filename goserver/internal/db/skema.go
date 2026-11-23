@@ -39,6 +39,7 @@ func BuatSkema(ctx context.Context, s *Store) error {
 		`ALTER TABLE warga ADD COLUMN IF NOT EXISTS peran TEXT`,
 		// Gender: 'L'/'P', NULL = belum diisi (warga lama & pra-daftar admin).
 		`ALTER TABLE warga ADD COLUMN IF NOT EXISTS gender TEXT`,
+		`ALTER TABLE warga ADD COLUMN IF NOT EXISTS rupa TEXT NOT NULL DEFAULT ''`, // kustom karakter (JSON)
 		`CREATE INDEX IF NOT EXISTS idx_warga_keluarga ON warga(keluarga_id)`,
 		`CREATE TABLE IF NOT EXISTS sesi(
 			token TEXT PRIMARY KEY,

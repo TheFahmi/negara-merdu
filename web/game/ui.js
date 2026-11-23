@@ -80,7 +80,8 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
 
   /* ================= SESI + GERBANG ================= */
   export const sesi = { token: localStorage.getItem("pinarak_token") || null, saya: null, pinDefault: false, genderKosong: false };
-  export const form = { username: "", pin: "", gender: "", baju: "#2e9e5b", kulit: "#f1c27d", topi: "peci" };
+  export const form = { username: "", pin: "", gender: "", baju: "#2e9e5b", kulit: "#f1c27d", topi: "peci",
+    rupa: { rambut: "pendek", warna_rambut: "#281f1c", warna_celana: "#37474f", kacamata: "tidak", alis: "tipis" } };
   // Label tampil gender dari kode server ('L'/'P'); kosong -> "—".
   export function labelGender(g) { return g === "L" ? "Laki-laki" : g === "P" ? "Perempuan" : "—"; }
   export function tampilLangkah(nama) {
@@ -138,6 +139,47 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
   buatSwatch($("#sw-kulit"), WARNA_KULIT, "kulit");
   ikatSeg($("#seg-topi"), form, "topi", "topi");
   ikatSeg($("#seg-gender"), form, "gender", "gender");
+  /* ---- Kustom karakter lanjutan (rambut, warna rambut/celana, kacamata,
+     alis) + PRATINJAU 3D langsung: model dibangun ulang tiap pilihan
+     berubah, bisa diseret untuk diputar. ---- */
+  export const WARNA_RAMBUT = ["#281f1c", "#4a3326", "#7a4e2d", "#b07a45", "#d9b26b", "#8a8f94", "#e14b6f", "#3f6fb5", "#2e9e5b", "#f2f2ee"];
+  export const WARNA_CELANA = ["#37474f", "#2e4053", "#4e342e", "#556052", "#1b1f22", "#8a7b6a", "#3f6fb5", "#7a1f2b", "#e8e2d4"];
+  buatSwatch($("#sw-rambut"), WARNA_RAMBUT, "warna_rambut", form.rupa);
+  buatSwatch($("#sw-celana"), WARNA_CELANA, "warna_celana", form.rupa);
+  ikatSeg($("#seg-rambut"), form.rupa, "rambut", "rambut");
+  ikatSeg($("#seg-kacamata"), form.rupa, "kacamata", "kacamata");
+  ikatSeg($("#seg-alis"), form.rupa, "alis", "alis");
+  const pratinjau = { r: null, scene: null, cam: null, kar: null, putar: 0.5, kunci: "", seret: null };
+  function siapkanPratinjau() {
+    const cv = $("#pratinjau-karakter"); if (!cv || pratinjau.r) return !!pratinjau.r;
+    try { pratinjau.r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); } catch (e) { return false; }
+    pratinjau.r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); pratinjau.r.setSize(200, 220, false);
+    pratinjau.r.outputEncoding = THREE.sRGBEncoding;
+    pratinjau.scene = new THREE.Scene();
+    pratinjau.scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a70, 0.9));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(2, 4, 3); pratinjau.scene.add(dl);
+    pratinjau.cam = new THREE.PerspectiveCamera(30, 200 / 220, 0.1, 50); pratinjau.cam.position.set(0, 1.15, 4.4); pratinjau.cam.lookAt(0, 1.0, 0);
+    cv.addEventListener("pointerdown", (e) => { pratinjau.seret = e.clientX; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener("pointermove", (e) => { if (pratinjau.seret == null) return; pratinjau.putar += (e.clientX - pratinjau.seret) * 0.02; pratinjau.seret = e.clientX; });
+    cv.addEventListener("pointerup", () => { pratinjau.seret = null; });
+    return true;
+  }
+  function loopPratinjau() {
+    const sec = document.querySelector('section[data-langkah="rupa"]');
+    if (sec && !sec.hidden && !$("#gerbang").hidden && siapkanPratinjau()) {
+      const kunci = JSON.stringify([form.baju, form.kulit, form.topi, form.rupa]);
+      if (kunci !== pratinjau.kunci) {
+        if (pratinjau.kar) pratinjau.scene.remove(pratinjau.kar);
+        pratinjau.kar = buatKarakter({ baju: form.baju, kulit: form.kulit, topi: form.topi, rupa: form.rupa });
+        pratinjau.scene.add(pratinjau.kar); pratinjau.kunci = kunci;
+      }
+      if (pratinjau.seret == null) pratinjau.putar += 0.008;
+      pratinjau.kar.rotation.y = pratinjau.putar;
+      pratinjau.r.render(pratinjau.scene, pratinjau.cam);
+    }
+    requestAnimationFrame(loopPratinjau);
+  }
+  requestAnimationFrame(loopPratinjau);
   export async function segarkanKota() {
     await ambilData();
     if (window.__kotaMassal) scene.remove(window.__kotaMassal.grup);
@@ -152,7 +194,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     try {
       const r = await fetch("/api/daftar", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: form.username, pin: form.pin, gender: form.gender, warna_baju: form.baju, warna_kulit: form.kulit, topi: form.topi }),
+        body: JSON.stringify({ username: form.username, pin: form.pin, gender: form.gender, warna_baju: form.baju, warna_kulit: form.kulit, topi: form.topi, rupa: form.rupa }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Gagal mendaftar");
@@ -307,7 +349,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
   export let panggungFoto = null;       // { renderer, scene, kamera } — dibuat malas, dipakai ulang
   export const cacheFoto3D = new Map(); // kunci penampilan -> dataURL PNG hasil render
   export function kunciRupa(rupa) {
-    return [(rupa && rupa.warna_baju) || "", (rupa && rupa.warna_kulit) || "", (rupa && rupa.topi) || ""].join("|");
+    return [(rupa && rupa.warna_baju) || "", (rupa && rupa.warna_kulit) || "", (rupa && rupa.topi) || "", JSON.stringify((rupa && rupa.rupa) || null)].join("|");
   }
   export function siapkanPanggungFoto() {
     if (panggungFoto) return panggungFoto;
@@ -341,6 +383,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
         baju: (rupa && rupa.warna_baju) || "#2e9e5b",
         kulit: (rupa && rupa.warna_kulit) || "#f1c27d",
         topi: (rupa && rupa.topi) || "tanpa",
+        rupa: (rupa && rupa.rupa) || null,
       });
       p.scene.add(kar);
       p.renderer.render(p.scene, p.kamera);

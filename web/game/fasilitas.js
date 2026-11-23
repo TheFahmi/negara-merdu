@@ -9,6 +9,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
     taman: "Taman Desa", lapangan: "Lapangan Bola", perpustakaan: "Perpustakaan Desa",
     balai_warga: "Balai Warga", sekolah: "Sekolah Dasar", puskesmas: "Puskesmas",
     pasar: "Pasar Desa", masjid: "Masjid", toko_pancing: "Toko Pancing",
+    apartemen: "Apartemen Merdu Residence", dapur_mbg: "Dapur MBG", mall: "Merdu Mall", koperasi: "Koperasi Desa Merah Putih",
   };
   export function pusatBlok(kol, bar) { // titik tengah alas blok (sama seperti alas taman lama)
     const s = sudutBlok(kol, bar);
@@ -616,7 +617,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
   /* Model baru fasilitas lama (fasilitasBaru.js) menimpa model lama —
      taman & toko pancing tetap memakai model di atas. */
   Object.assign(MODEL_FASILITAS, MODEL_BARU);
-  const BLOK_APT = new Set(APARTEMEN_BLOK.map((a) => a.kol + "," + a.bar)); // lahan yang dipakai apartemen
+  const BLOK_APT = new Set([...APARTEMEN_BLOK.map((a) => a.kol + "," + a.bar), "44,36"]); // lahan yang dipakai apartemen + stasiun/terminal (44,36)
   export function bangunLahanPembangunan() {
     const grup = new THREE.Group();
     const parks = [...TAMAN].map((k) => k.split(",").map(Number));

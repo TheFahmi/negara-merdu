@@ -11,6 +11,8 @@ import { LAMPU_TAMAN, M, geometriAtapPelana, kotak } from "./bersama.js";
 import { bangkuTaman, matAtapWarna, pagarSemak, pohonKecil, teksturBenderaMerdu, teksturPapanNama } from "./fasilitas.js";
 
 const KREM = 0xf6efdf, PUTIH = 0xfbfaf5, KAYU = 0x7a4a21, KAYU_M = 0xa9743f, BATU = 0xcfc6b0, ASPAL = 0x5c6066;
+/* Titik pintu & grup Merdu Mall (diisi saat modelnya dibangun) — dipakai rumah.js/kamera.js. */
+export const PINTU_MALL = [], MALL_KLIK = [];
 const KACA = 0x9fd3e6, KUSEN = 0x5a3a20, EMAS = 0xd9a441, HIJAU_T = 0x2f7a63;
 
 /* ---------- helper umum ---------- */
@@ -604,10 +606,158 @@ export const MODEL_BARU = {
     papanDepan(g, "RESIDENSIA 10", "Apartemen Modern 10 Lantai", 13, 28, 0.65);
   },
 
+  /* ===== KOPERASI DESA MERAH PUTIH (Kopdes): kantor koperasi + gerai
+     sembako berkanopi, unit simpan pinjam, apotek desa, gudang & cold
+     storage, mobil logistik, papan merah-putih, bendera. ===== */
+  koperasi(g) {
+    lingkungan(g, { jalanSampai: 10, lebarJalan: 7 });
+    g.add(kotak(50, 0.12, 30, 0xd8d2c6, 0, 0.06, -4)); // halaman
+    const MERAH = 0xc8102e;
+    // kantor utama 2 lantai
+    gedung(g, { z: -16, w: 26, d: 12, h: 8, lantai: 2, dinding: 0xfbfaf5, atap: MERAH });
+    g.add(kotak(26.4, 1.0, 0.3, MERAH, 0, 4.2, -9.85)); g.add(kotak(26.4, 0.5, 0.3, 0xffffff, 0, 3.5, -9.85)); // pita merah-putih
+    const papan = new THREE.Mesh(new THREE.BoxGeometry(18, 1.8, 0.25),
+      new THREE.MeshStandardMaterial({ map: teksturPapanNama("KOPERASI DESA MERAH PUTIH", "Kopdes Negara Merdu"), roughness: 0.85 }));
+    papan.position.set(0, 10.4, -9.8); g.add(papan);
+    // deret unit layanan berkanopi merah (sembako · simpan pinjam · apotek)
+    const UNIT = [["GERAI SEMBAKO", -14], ["SIMPAN PINJAM", 0], ["APOTEK DESA", 14]];
+    for (const [nama, x] of UNIT) {
+      gedung(g, { x, z: 2, w: 12, d: 7, h: 4, dinding: 0xf6efdf, atap: null, pintu: true });
+      g.add(kotak(12.6, 0.3, 3.2, MERAH, x, 4.4, 6.9));
+      for (const s of [-1, 1]) g.add(kotak(0.2, 4.0, 0.2, 0xb8bcc2, x + s * 6, 2.3, 8.3));
+      const pn = new THREE.Mesh(new THREE.BoxGeometry(9, 1, 0.2), new THREE.MeshStandardMaterial({ map: teksturPapanNama(nama, "Kopdes"), roughness: 0.85 }));
+      pn.position.set(x, 5.1, 8.5); g.add(pn);
+      g.add(kotak(12.4, 0.5, 7.4, 0xe6dcc6, x, 4.75, 2));
+    }
+    // karung beras & peti sembako di depan gerai, timbangan
+    for (let i = 0; i < 6; i++) g.add(kotak(0.9, 0.6, 0.6, 0xe9e0c8, -18 + (i % 3) * 1.0, 0.3 + Math.floor(i / 3) * 0.6, 8.8));
+    for (let i = 0; i < 4; i++) g.add(kotak(0.9, 0.5, 0.7, 0xc9a26b, -12 + i * 1.0, 0.25, 9.2));
+    // gudang + cold storage (barat) & mobil logistik
+    gedung(g, { x: -24, z: -16, w: 9, d: 12, h: 5, dinding: 0xd8dde2, atap: 0x8a8f94, pintu: false });
+    g.add(kotak(6, 4.2, 0.2, 0x9aa0a6, -24, 2.6, -9.95));
+    g.add(kotak(6, 4, 6, 0xeef3f6, 24, 2.2, -16)); g.add(kotak(6.2, 0.4, 6.2, 0x3f6fb5, 24, 4.3, -16)); // cold storage
+    const pnC = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.9), new THREE.MeshStandardMaterial({ map: teksturPapanNama("COLD STORAGE", "Hasil tani warga") }));
+    pnC.position.set(24, 3.4, -12.95); g.add(pnC);
+    const truk = new THREE.Group();
+    truk.add(kotak(2.2, 1.3, 2.0, MERAH, 0, 1.2, 2.4)); truk.add(kotak(2.0, 0.6, 1.4, 0x24323d, 0, 1.9, 2.6));
+    truk.add(kotak(2.4, 2.2, 4.2, 0xffffff, 0, 1.9, -0.8)); truk.add(kotak(2.42, 0.4, 4.22, MERAH, 0, 1.4, -0.8));
+    for (const [wx, wz] of [[-1.1, 2.2], [1.1, 2.2], [-1.1, -1.8], [1.1, -1.8]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.45, wz); truk.add(r); }
+    truk.position.set(-24, 0, -4); g.add(truk);
+    tiangBendera(g, 18, 14); tiangBendera(g, 22, 14);
+    parkir(g, 20, 22, 4, false);
+    for (const s of [-1, 1]) g.add(bangkuTaman(s * 7, 14, 0));
+    papanDepan(g, "KOPDES MERAH PUTIH", "Sembako · Simpan Pinjam · Apotek", -14, 28, 0.6);
+  },
+
+  /* ===== DAPUR MBG (Satuan Pelayanan Pemenuhan Gizi) — dapur Makan
+     Bergizi Gratis: gedung dapur higienis, cerobong/tudung exhaust,
+     dok muat berkanopi + 3 mobil boks MBG pengantar ke sekolah, troli
+     tumpukan ompreng, tandon air, gudang bahan, kebun gizi. ===== */
+  dapur_mbg(g) {
+    lingkungan(g, { jalanSampai: 14, lebarJalan: 8 });
+    gedung(g, { z: -14, w: 34, d: 16, h: 6, dinding: 0xfbfaf5, atap: 0x2f6f9f, jarakJendela: 4 });
+    g.add(kotak(34.4, 1.0, 0.3, 0x2f6f9f, 0, 6.0, -5.85)); // pita biru fasad
+    const papan = new THREE.Mesh(new THREE.BoxGeometry(20, 1.6, 0.25),
+      new THREE.MeshStandardMaterial({ map: teksturPapanNama("DAPUR MBG", "Satuan Pelayanan Pemenuhan Gizi"), roughness: 0.85 }));
+    papan.position.set(0, 7.5, -5.7); g.add(papan);
+    for (const x of [-12, -4, 4, 12]) { // tudung exhaust + cerobong dapur di atap
+      g.add(kotak(2.2, 1.0, 2.2, 0xb8bcc2, x, 9.6, -16));
+      const cb = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 3, 12), M(0x9aa0a6)); cb.position.set(x, 11.4, -16); g.add(cb);
+      const tp = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.5, 12), M(0x8a8f94)); tp.position.set(x, 13.1, -16); g.add(tp);
+    }
+    // dok muat berkanopi di sisi timur depan
+    g.add(kotak(16, 1.1, 6, BATU, 8, 0.55, -3));
+    g.add(kotak(17, 0.3, 8, 0x2f6f9f, 8, 5.2, -2));
+    for (const x of [0.5, 8, 15.5]) g.add(kotak(0.3, 4.1, 0.3, 0xb8bcc2, x, 3.1, 1.8));
+    for (const x of [3, 8, 13]) g.add(kotak(3.2, 3.6, 0.2, 0x9aa0a6, x, 2.9, -5.95)); // pintu rolling dok
+    // mobil boks pengantar MBG
+    const texMBG = teksturPapanNama("MBG", "Makan Bergizi Gratis");
+    for (const [x, w] of [[3, 0xffffff], [8, 0xffffff], [13, 0xffffff]]) {
+      const v = new THREE.Group();
+      v.add(kotak(2.1, 1.0, 2.0, 0x2f6f9f, 0, 1.0, 2.2)); v.add(kotak(2.0, 0.6, 1.4, 0x24323d, 0, 1.75, 2.4)); // kabin
+      v.add(kotak(2.3, 2.4, 3.6, w, 0, 1.75, -0.8));                                                       // boks
+      const sisi = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.0), new THREE.MeshStandardMaterial({ map: texMBG }));
+      sisi.rotation.y = Math.PI / 2; sisi.position.set(1.16, 2.0, -0.8); v.add(sisi);
+      const sisi2 = sisi.clone(); sisi2.rotation.y = -Math.PI / 2; sisi2.position.x = -1.16; v.add(sisi2);
+      for (const [wx, wz] of [[-1.05, 2.0], [1.05, 2.0], [-1.05, -1.6], [1.05, -1.6]]) {
+        const r = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.42, wz); v.add(r);
+      }
+      v.position.set(x, 0, 4.5); v.rotation.y = Math.PI; g.add(v);
+    }
+    // troli ompreng (tumpukan wadah makan stainless) di dok
+    for (const x of [-4, -1.5]) {
+      g.add(kotak(1.6, 0.1, 1.0, 0x9aa0a6, x, 0.6, 2)); for (let i = 0; i < 8; i++) g.add(kotak(1.3, 0.12, 0.8, 0xd8dde2, x, 0.75 + i * 0.16, 2));
+      for (const [dx, dz] of [[-0.7, -0.4], [0.7, -0.4], [-0.7, 0.4], [0.7, 0.4]]) g.add(kotak(0.06, 0.6, 0.06, 0x8a8f94, x + dx, 0.3, 2 + dz));
+    }
+    // tandon air + gudang bahan + kebun gizi + area cuci
+    for (const x of [-26, -22]) { const t = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 3.4, 16), M(0x2f6f9f)); t.position.set(x, 5.7, -26); g.add(t); g.add(kotak(4, 4, 4, 0x8a8f94, x, 2, -26)); }
+    gedung(g, { x: -24, z: 4, w: 10, d: 8, h: 4, dinding: 0xf1ede4, atap: 0x8a8f94 });
+    for (let i = 0; i < 4; i++) {
+      g.add(kotak(5, 0.35, 2.2, 0x7a5a38, -26 + (i % 2) * 7, 0.18, 16 + Math.floor(i / 2) * 4));
+      for (let k = 0; k < 6; k++) { const t = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 0), M([0x4da653, 0xe14b2f, 0xf2a33a][k % 3])); t.position.set(-28 + (i % 2) * 7 + k * 0.8, 0.6, 16 + Math.floor(i / 2) * 4); g.add(t); }
+    }
+    for (let i = 0; i < 5; i++) g.add(kotak(1.0, 0.7, 0.7, 0xc9a26b, 18 + i * 1.2, 0.35, 14)); // peti sayur
+    const spanduk = new THREE.Mesh(new THREE.PlaneGeometry(10, 1.4), new THREE.MeshStandardMaterial({ map: teksturPapanNama("MAKAN BERGIZI GRATIS", "Untuk anak sekolah Negara Merdu"), side: THREE.DoubleSide }));
+    spanduk.position.set(-12, 3.2, 10); g.add(spanduk);
+    for (const x of [-17, -7]) g.add(kotak(0.15, 3.9, 0.15, 0x7a4a21, x, 1.95, 10));
+    parkir(g, 22, 22, 4, false);
+  },
+
+  /* ===== MERDU MALL: mall megah 2 lantai — fasad kaca, portal atrium
+     tinggi, papan nama besar, atap kubah kaca, layar LED, plaza depan
+     berair mancur + tiang bendera, parkir luas. Interior: mallDalam.js. ===== */
+  mall(g) {
+    pagarSemak(g, 33.6, { s: [[-10, 10]] });
+    g.add(kotak(66, 0.12, 26, 0xd8d2c6, 0, 0.06, 20)); // plaza depan
+    const W = 56, D = 34, H = 14, zc = -10;
+    g.add(kotak(W + 1, 0.6, D + 1, BATU, 0, 0.3, zc));
+    g.add(kotak(W, H, D, 0xe9e3d6, 0, H / 2 + 0.6, zc)); // badan batu
+    // fasad kaca depan berderet + sirip vertikal
+    for (let i = 0; i < 14; i++) {
+      const x = -W / 2 + 2 + i * ((W - 4) / 13);
+      g.add(kotak(3.4, H - 2, 0.2, 0x2e5a73, x, H / 2 + 0.6, zc + D / 2 + 0.05));
+      g.add(kotak(0.3, H, 0.8, 0xcfc6b0, x + 1.9, H / 2 + 0.6, zc + D / 2 + 0.3));
+    }
+    g.add(kotak(W, 0.5, 0.5, 0xcfc6b0, 0, 7.4, zc + D / 2 + 0.3)); // lis antar lantai
+    // spanduk brand warna-warni di fasad samping
+    for (const [x, w] of [[-22, 0xe14b2f], [-14, 0xf2c230], [14, 0x2e9e5b], [22, 0x7b2ff7]]) g.add(kotak(5, 3, 0.2, w, x, 10.5, zc + D / 2 + 0.25));
+    // portal atrium kaca tinggi + kanopi lengkung
+    g.add(kotak(16, 18, 4, 0x9fc9d8, 0, 9.6, zc + D / 2 + 2)); g.add(kotak(16.6, 0.6, 4.6, 0xcfc6b0, 0, 18.8, zc + D / 2 + 2));
+    for (const x of [-8, -4, 0, 4, 8]) g.add(kotak(0.35, 18, 0.35, 0xe9e3d6, x, 9.6, zc + D / 2 + 4.05));
+    const kanopi = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 12, 24, 1, true, -Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: 0xd9dde2, side: THREE.DoubleSide, metalness: 0.3, roughness: 0.4 }));
+    kanopi.rotation.z = Math.PI / 2; kanopi.scale.set(0.35, 1, 1); kanopi.position.set(0, 4.6, zc + D / 2 + 5.6); g.add(kanopi);
+    g.add(kotak(4, 3.4, 0.3, 0x24323d, 0, 2.3, zc + D / 2 + 4.1)); // pintu putar/kaca
+    const nama = new THREE.Mesh(new THREE.BoxGeometry(24, 3.2, 0.4), new THREE.MeshStandardMaterial({ map: teksturPapanNama("MERDU MALL", "Belanja · Kuliner · Bioskop"), emissive: 0xffffff, emissiveIntensity: 0.15, roughness: 0.5 }));
+    nama.scale.set(0.62, 1, 1); nama.position.set(0, 15.6, zc + D / 2 + 4.3); g.add(nama); // di muka portal atrium
+    // atap: kubah kaca atrium + unit AC
+    const kubah = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 22, 24, 1, true, -Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: 0x9fd3e6, transparent: true, opacity: 0.75, metalness: 0.2, roughness: 0.1, side: THREE.DoubleSide }));
+    kubah.rotation.x = Math.PI / 2; kubah.rotation.z = Math.PI / 2; kubah.position.set(0, H + 0.6, zc); g.add(kubah);
+    for (let i = 0; i < 6; i++) g.add(kotak(2, 1.2, 2, 0xb8bcc2, -22 + (i % 3) * 4, H + 1.2, zc - 10 + Math.floor(i / 3) * 4));
+    // layar LED di sudut
+    g.add(kotak(0.5, 8, 10, 0x1b1f22, W / 2 + 0.3, 9, zc + 6));
+    const led = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 7.4), new THREE.MeshStandardMaterial({ map: teksturPapanNama("DISKON 50%", "Akhir pekan di Merdu Mall"), emissive: 0xffffff, emissiveIntensity: 0.6 }));
+    led.rotation.y = Math.PI / 2; led.position.set(W / 2 + 0.56, 9, zc + 6); g.add(led);
+    // plaza: air mancur + tiang bendera + pohon + bangku
+    const bak = new THREE.Mesh(new THREE.CylinderGeometry(5, 5.3, 0.7, 24), M(BATU)); bak.position.set(0, 0.35, 21); g.add(bak);
+    const air = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.1, 24), new THREE.MeshStandardMaterial({ color: 0x3f98bf, roughness: 0.08 })); air.position.set(0, 0.7, 21); g.add(air);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const j = new THREE.Mesh(new THREE.ConeGeometry(0.25, 2.2, 8), new THREE.MeshStandardMaterial({ color: 0xdff4fa, transparent: true, opacity: 0.6 })); j.position.set(Math.cos(a) * 2.6, 1.8, 21 + Math.sin(a) * 2.6); g.add(j); }
+    for (const x of [-6, 0, 6]) tiangBendera(g, x, 30);
+    for (const x of [-30, -20, 20, 30]) g.add(pohonKecil(x, 30, 1.0));
+    for (const s of [-1, 1]) { g.add(bangkuTaman(s * 9, 20, s * Math.PI / 2)); lampuTaman(g, s * 12, 14); lampuTaman(g, s * 12, 26); }
+    // parkir kiri & kanan
+    parkir(g, -26, 16, 4, true); parkir(g, 26, 16, 4, true);
+    for (const [x, z, w] of [[-26, 12, 0xd9462e], [-26, 18.4, 0x3f6fb5], [26, 11, 0x2b2d30], [26, 21, 0xe8c268]]) mobil(g, x, z, Math.PI / 2, w);
+    PINTU_MALL.length = 0; PINTU_MALL.push({ x: g.position.x, z: g.position.z + zc + D / 2 + 6.5 });
+    MALL_KLIK.length = 0; MALL_KLIK.push(g);
+  },
+
 };
 
 /* Tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok — bangunan berdinding saja. */
 export const TAPAK_BARU = {
+  koperasi: [[-13.6, -22.6, 13.6, -9.4], [-20.6, -1.9, 20.6, 5.9], [-29, -22.6, -19, -9.4], [21, -19.5, 27, -12.5]],
+  dapur_mbg: [[-17.6, -22.6, 17.6, -5.4], [0, -6, 16, 0], [-29.6, 0, -18.4, 8.6], [-28.5, -28.5, -19.5, -23.5]],
+  mall: [[-28.5, -27.5, 28.5, 7.5], [-8, 7, 8, 11.2], [-5.6, 15.7, 5.6, 26.3]],
   apartemen: [[-13.5, -14.5, 16.0, 4.5]],
   lapangan: [[-21, -31.5, 21, -24.5], [-21, 24.5, 21, 31.5], [-33, -3, -32, 3]],       // tribun + papan skor
   perpustakaan: [[-12.6, -16.6, 12.6, -1.4], [-6, -0.2, 6, 2.6]],

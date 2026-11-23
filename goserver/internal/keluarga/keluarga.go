@@ -116,7 +116,7 @@ type Data struct {
 func anggotaKeluarga(ctx context.Context, q db.Querier, kid int64) ([]*db.Warga, error) {
 	rows, err := q.Query(ctx,
 		"SELECT id, username, pin_hash, salt, warna_baju, warna_kulit, topi, "+
-			"nomor_rumah, blok, kavling, nik, keluarga_id, peran, created_at, gender "+
+			"nomor_rumah, blok, kavling, nik, keluarga_id, peran, created_at, gender, rupa "+
 			"FROM warga WHERE keluarga_id=$1 ORDER BY nomor_rumah ASC", kid)
 	if err != nil {
 		return nil, err

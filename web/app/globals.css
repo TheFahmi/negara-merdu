@@ -841,3 +841,15 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 }
 .panel-lift button:disabled { background: #ffd58a; border-color: #e0a640; color: #6b3e00; }
 .panel-lift button:active { transform: scale(.94); }
+
+/* Pratinjau 3D karakter di langkah "Atur rupa" + seg bisa melipat */
+.pratinjau-rupa { display: flex; flex-direction: column; align-items: center; margin: 4px 0 10px; }
+.pratinjau-rupa canvas {
+  width: 200px; height: 220px; border-radius: 16px; touch-action: none; cursor: grab;
+  background: radial-gradient(circle at 50% 35%, #ffffff, #e6efe0 70%);
+  box-shadow: inset 0 0 0 1px #d8e4cf;
+}
+.pratinjau-rupa span { font-size: 11.5px; color: #8a9a8f; margin-top: 4px; }
+.seg.seg-wrap { flex-wrap: wrap; }
+.seg.seg-wrap button { flex: 1 1 30%; }
+#gerbang .kartu-form { max-height: calc(100dvh - 28px); overflow-y: auto; }

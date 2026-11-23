@@ -39,14 +39,15 @@ const (
 
 // PemainView: bentuk data pemain sebagaimana dikirim ke klien.
 type PemainView struct {
-	U       string  `json:"u"`
-	Baju    string  `json:"baju"`
-	Kulit   string  `json:"kulit"`
-	Topi    string  `json:"topi"`
-	X       float64 `json:"x"`
-	Z       float64 `json:"z"`
-	Yaw     float64 `json:"yaw"`
-	Jabatan *string `json:"jabatan"`
+	U       string      `json:"u"`
+	Baju    string      `json:"baju"`
+	Kulit   string      `json:"kulit"`
+	Topi    string      `json:"topi"`
+	X       float64     `json:"x"`
+	Z       float64     `json:"z"`
+	Yaw     float64     `json:"yaw"`
+	Jabatan *string     `json:"jabatan"`
+	Rupa    *warga.Rupa `json:"rupa,omitempty"` // kustom karakter
 }
 
 type pemain struct {
@@ -61,6 +62,7 @@ func (p *pemain) publik() PemainView {
 	return PemainView{
 		U: p.rupa.Username, Baju: p.rupa.WarnaBaju, Kulit: p.rupa.WarnaKulit,
 		Topi: p.rupa.Topi, X: p.x, Z: p.z, Yaw: p.yaw, Jabatan: p.rupa.Jabatan,
+		Rupa: p.rupa.Rupa,
 	}
 }
 

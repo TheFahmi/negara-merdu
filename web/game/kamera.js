@@ -3,12 +3,13 @@
 import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, wilayahLengkap, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
 import { OFSET_MATAHARI, aturJangkauBayangan, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
-import { INT, dekatPintuKeluar, diInterior, jepitInteriorUmum, keluarInterior, masukApartemen, masukInterior, masukIstana, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
+import { INT, dekatPintuKeluar, diInterior, jepitInteriorUmum, keluarInterior, masukApartemen, masukInterior, masukIstana, masukMall, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
 import { sesi, teksWilayahPendek } from "./ui.js";
 import { buangGrup } from "./jaringan.js";
 import { perbaruiMinimapTampil } from "./peta.js";
 import { ketukIklan } from "./iklan.js";
 import { istanaKlik } from "./istana.js";
+import { MALL_KLIK } from "./fasilitasBaru.js";
 import { AP, apartemenKlik, pintuApartemen } from "./apartemen.js";
 import { waktuLalu } from "./main.js";
 
@@ -120,6 +121,14 @@ import { waktuLalu } from "./main.js";
         '<button class="btn-masuk" id="btn-masuk-apt" type="button">' + IK.pintu + " Masuk Apartemen</button>";
       $("#kartu").hidden = false;
       $("#btn-masuk-apt").addEventListener("click", () => { $("#kartu").hidden = true; masukApartemen(pintu); });
+      return;
+    }
+    const kenaMall = ray.intersectObjects(MALL_KLIK, true);
+    if (kenaMall.length && (!kena.length || kenaMall[0].distance < kena[0].distance)) {
+      $("#kartu .isi").innerHTML = "<h3>" + IK.rumah + " Merdu Mall</h3><p>Mall megah 2 lantai: 20+ toko, eskalator, food court, bioskop, air mancur atrium.</p>" +
+        '<button class="btn-masuk" id="btn-masuk-mall" type="button">' + IK.pintu + " Masuk Mall</button>";
+      $("#kartu").hidden = false;
+      $("#btn-masuk-mall").addEventListener("click", () => { $("#kartu").hidden = true; masukMall(); });
       return;
     }
     const kenaIstana = ray.intersectObjects(istanaKlik, true);
@@ -361,12 +370,12 @@ import { waktuLalu } from "./main.js";
      kepala sendiri. */
   export function rupaSaya() {
     const s = sesi.saya;
-    return s ? { baju: s.warna_baju, kulit: s.warna_kulit, topi: s.topi }
+    return s ? { baju: s.warna_baju, kulit: s.warna_kulit, topi: s.topi, rupa: s.rupa || null }
              : { baju: "#2e9e5b", kulit: "#f1c27d", topi: "tanpa" };
   }
   export function segarkanKarakterSaya() {
     const r = rupaSaya();
-    const kunci = [r.baju, r.kulit, r.topi].join("|");
+    const kunci = [r.baju, r.kulit, r.topi, JSON.stringify(r.rupa || null)].join("|");
     if (karSaya && kunci === kunciRupaSaya) return;
     if (karSaya) { scene.remove(karSaya); buangGrup(karSaya); karSaya = null; }
     kunciRupaSaya = kunci;

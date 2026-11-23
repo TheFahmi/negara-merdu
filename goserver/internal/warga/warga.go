@@ -24,7 +24,7 @@ var (
 	warnaRe    = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 )
 
-var topiSah = map[string]bool{"peci": true, "topi": true, "tanpa": true}
+var topiSah = map[string]bool{"peci": true, "topi": true, "hijab": true, "tanpa": true}
 
 // Publik: bentuk data warga untuk konsumsi publik (daftar warga, kartu
 // rumah, WebSocket). TANPA NIK & data keluarga.
@@ -37,6 +37,7 @@ type Publik struct {
 	Blok       int     `json:"blok"`
 	Kavling    int     `json:"kavling"`
 	Jabatan    *string `json:"jabatan"`
+	Rupa       *Rupa   `json:"rupa,omitempty"` // kustom karakter (rambut, kacamata, dll.)
 }
 
 // KePublik membentuk Publik dengan label jabatan dari peta (jalur daftar).
@@ -50,6 +51,7 @@ func KePublik(w *db.Warga, peta map[int64]*string) Publik {
 		Blok:       w.Blok,
 		Kavling:    w.Kavling,
 		Jabatan:    peta[w.ID],
+		Rupa:       RupaDari(w.Rupa),
 	}
 }
 
@@ -97,7 +99,7 @@ func DariToken(ctx context.Context, q db.Querier, token string) *db.Warga {
 	}
 	w, err := db.ScanWarga(q.QueryRow(ctx,
 		"SELECT w.id, w.username, w.pin_hash, w.salt, w.warna_baju, w.warna_kulit, "+
-			"w.topi, w.nomor_rumah, w.blok, w.kavling, w.nik, w.keluarga_id, w.peran, w.created_at, w.gender "+
+			"w.topi, w.nomor_rumah, w.blok, w.kavling, w.nik, w.keluarga_id, w.peran, w.created_at, w.gender, w.rupa "+
 			"FROM sesi s JOIN warga w ON w.id=s.warga_id WHERE s.token=$1", token))
 	if err != nil {
 		return nil
@@ -218,6 +220,11 @@ func (h *Handler) Daftar(w http.ResponseWriter, r *http.Request) {
 		galat(w, 400, "Pilihan topi tidak valid")
 		return
 	}
+	rupa, _, rupaOK := rupaDariPermintaan(data)
+	if !rupaOK {
+		galat(w, 400, "Pilihan rupa karakter tidak valid")
+		return
+	}
 	// Gender WAJIB untuk pendaftaran biasa. Pengecualian jalur pra-daftar
 	// resmi (auto-register follower): request membawa header
 	// X-Admin-Token yang sah -> gender boleh kosong, warga tercipta
@@ -278,9 +285,9 @@ func (h *Handler) Daftar(w http.ResponseWriter, r *http.Request) {
 	blok, kavling := db.Alokasi(nomor)
 	var wargaID int64
 	err = tx.QueryRow(ctx,
-		`INSERT INTO warga(username,pin_hash,salt,warna_baju,warna_kulit,topi,nomor_rumah,blok,kavling,gender)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-		username, pinHash, salt, baju, kulit, topi, nomor, blok, kavling, genderDB).Scan(&wargaID)
+		`INSERT INTO warga(username,pin_hash,salt,warna_baju,warna_kulit,topi,nomor_rumah,blok,kavling,gender,rupa)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+		username, pinHash, salt, baju, kulit, topi, nomor, blok, kavling, genderDB, rupa).Scan(&wargaID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -418,6 +425,17 @@ func (h *Handler) Lengkapi(w http.ResponseWriter, r *http.Request) {
 		}
 		topi = v
 	}
+	rupa := row.Rupa
+	if v, ada, ok := rupaDariPermintaan(data); !ok {
+		galat(w, 400, "Pilihan rupa karakter tidak valid")
+		return
+	} else if ada {
+		rupa = v
+	}
+	if _, err := h.DB.Pool.Exec(ctx, "UPDATE warga SET rupa=$1 WHERE id=$2", rupa, row.ID); err != nil {
+		galat(w, 500, "Kesalahan server")
+		return
+	}
 	if defaultPIN {
 		salt := db.TokenAcak(16)
 		if _, err := h.DB.Pool.Exec(ctx,
@@ -524,7 +542,7 @@ func (h *Handler) DaftarWarga(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := h.DB.Pool.Query(ctx,
 		"SELECT id, username, pin_hash, salt, warna_baju, warna_kulit, topi, "+
-			"nomor_rumah, blok, kavling, nik, keluarga_id, peran, created_at, gender "+
+			"nomor_rumah, blok, kavling, nik, keluarga_id, peran, created_at, gender, rupa "+
 			"FROM warga ORDER BY nomor_rumah "+arah+" LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		galat(w, 500, "Kesalahan server")

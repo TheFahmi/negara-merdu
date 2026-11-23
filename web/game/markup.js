@@ -166,6 +166,7 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
 
     <section data-langkah="rupa" hidden>
       <div class="judul">Atur rupa wargamu</div>
+      <div class="pratinjau-rupa"><canvas id="pratinjau-karakter" width="320" height="360" aria-label="Pratinjau karakter"></canvas><span>Seret untuk memutar</span></div>
       <div class="grup-rupa">
         <span>Jenis kelamin</span>
         <div class="seg" id="seg-gender">
@@ -186,7 +187,40 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
         <div class="seg" id="seg-topi">
           <button type="button" data-topi="peci" class="on">Peci</button>
           <button type="button" data-topi="topi">Topi</button>
+          <button type="button" data-topi="hijab">Hijab</button>
           <button type="button" data-topi="tanpa">Tanpa</button>
+        </div>
+      </div>
+      <div class="grup-rupa">
+        <span>Gaya rambut</span>
+        <div class="seg seg-wrap" id="seg-rambut">
+          <button type="button" data-rambut="pendek" class="on">Pendek</button>
+          <button type="button" data-rambut="panjang">Panjang</button>
+          <button type="button" data-rambut="kuncir">Kuncir</button>
+          <button type="button" data-rambut="ikal">Ikal</button>
+          <button type="button" data-rambut="botak">Botak</button>
+        </div>
+      </div>
+      <div class="grup-rupa">
+        <span>Warna rambut / hijab</span>
+        <div class="swatch" id="sw-rambut"></div>
+      </div>
+      <div class="grup-rupa">
+        <span>Warna celana / rok</span>
+        <div class="swatch" id="sw-celana"></div>
+      </div>
+      <div class="grup-rupa">
+        <span>Kacamata</span>
+        <div class="seg" id="seg-kacamata">
+          <button type="button" data-kacamata="tidak" class="on">Tidak</button>
+          <button type="button" data-kacamata="ya">Pakai</button>
+        </div>
+      </div>
+      <div class="grup-rupa">
+        <span>Alis</span>
+        <div class="seg" id="seg-alis">
+          <button type="button" data-alis="tipis" class="on">Tipis</button>
+          <button type="button" data-alis="tebal">Tebal</button>
         </div>
       </div>
       <div class="salah" id="salah-rupa" role="alert"></div>

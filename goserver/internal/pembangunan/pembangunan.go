@@ -36,8 +36,11 @@ var Fasilitas = []FasilitasDef{
 	{Kunci: "sekolah", Nama: "Sekolah Dasar", Biaya: 20_000_000, Kol: 52, Bar: 20},               // Blok 1653
 	{Kunci: "puskesmas", Nama: "Puskesmas", Biaya: 25_000_000, Kol: 60, Bar: 36},                 // Blok 2941
 	{Kunci: "pasar", Nama: "Pasar Desa", Biaya: 30_000_000, Kol: 28, Bar: 28},                    // Blok 2269
+	{Kunci: "koperasi", Nama: "Koperasi Desa Merah Putih", Biaya: 32_000_000, Kol: 36, Bar: 12},  // Blok 997 (Kopdes: sembako, simpan pinjam, apotek desa)
+	{Kunci: "dapur_mbg", Nama: "Dapur MBG (SPPG)", Biaya: 35_000_000, Kol: 44, Bar: 12},          // Blok 1005 (dapur Makan Bergizi Gratis, lahan berkala utara pusat)
 	{Kunci: "masjid", Nama: "Masjid", Biaya: 40_000_000, Kol: 44, Bar: 28},                       // Blok 2285
 	{Kunci: "apartemen", Nama: "Apartemen Merdu Residence", Biaya: 50_000_000, Kol: 39, Bar: 26}, // Blok 2120 (perintah Fahmi 2026-11-22: apartemen dipasang sebagai rencana pembangunan di selatan plaza)
+	{Kunci: "mall", Nama: "Merdu Mall", Biaya: 100_000_000, Kol: 36, Bar: 36},                    // Blok 2917 (mall megah ber-interior, lahan berkala selatan pusat)
 }
 
 // FasilitasVoting: bangunan di luar 8 fasilitas baku, hasil voting

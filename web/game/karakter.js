@@ -130,7 +130,9 @@ export function buatKarakter(opsi) {
   const kulit = parseInt((opsi.kulit || "#f1c27d").slice(1), 16);
   const bajuHex = opsi.baju || "#2e9e5b";
   const baju = parseInt(bajuHex.slice(1), 16);
-  const celana = warnaCelana(bajuHex);
+  const R = opsi.rupa || {}; // kustom karakter dari pendaftaran (rambut, warna rambut/celana, kacamata, alis)
+  const hexKe = (h, cadangan) => (typeof h === "string" && /^#[0-9a-fA-F]{6}$/.test(h) ? parseInt(h.slice(1), 16) : cadangan);
+  const celana = hexKe(R.warna_celana, warnaCelana(bajuHex));
   const matKulit = matKarakter(kulit), matBaju = matKarakter(baju), matCelana = matKarakter(celana);
 
   function bagian(geo, mat, x, y, z, bayangan) {
@@ -230,6 +232,7 @@ export function buatKarakter(opsi) {
 
     const alis = bagian(GEO.alis, matWajah, s * 0.155, 0.415, 0.342, false);
     alis.rotation.z = s * 0.14; alis.rotation.x = -0.12; kepalaGrup.add(alis);
+    if (R.alis === "tebal") alis.scale.set(1.1, 1.7, 1.2);
 
     const tel = bagian(GEO.telinga, matKulit, s * 0.43, 0.26, -0.01, false);
     tel.scale.set(0.45, 1.05, 0.72); kepalaGrup.add(tel);
@@ -249,22 +252,56 @@ export function buatKarakter(opsi) {
   gigi.rotation.z = Math.PI; kepalaGrup.add(gigi);
 
   // Rambut / Peci / Topi
-  const matRambut = matKarakter(0x281f1c);
-  if (opsi.topi === "peci") {
+  const matRambut = matKarakter(hexKe(R.warna_rambut, 0x281f1c));
+  const gaya = R.rambut || "pendek";
+  // Kacamata (opsional): 2 bingkai bulat + jembatan + gagang
+  if (R.kacamata === "ya") {
+    const matKaca = matKarakter(0x1b1b1d);
+    for (const s of [-1, 1]) {
+      const b = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.014, 8, 20), matKaca); b.position.set(s * 0.155, 0.285, 0.418); kepalaGrup.add(b);
+      const gg = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.32), matKaca); gg.position.set(s * 0.25, 0.3, 0.27); kepalaGrup.add(gg);
+    }
+    const jb = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.012, 0.012), matKaca); jb.position.set(0, 0.3, 0.425); kepalaGrup.add(jb);
+  }
+  // Rambut tambahan per gaya (dipasang juga di bawah topi/peci kecuali hijab & botak)
+  function rambutGaya() {
+    if (gaya === "panjang") { // tergerai sampai bahu
+      const ur = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.62, 18, 1, true, 1.55, Math.PI * 2 - 3.1), matRambut); // hanya separuh belakang: wajah & rahang tetap terbuka
+      ur.position.set(0, 0.06, -0.02); kepalaGrup.add(ur);
+    } else if (gaya === "kuncir") { // kuncir kuda di belakang + ikat rambut
+      const k = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), matRambut); k.scale.set(0.9, 1.6, 0.9); k.position.set(0, 0.22, -0.5); kepalaGrup.add(k);
+      const ikat = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.025, 8, 14), matKarakter(0xe14b6f)); ikat.position.set(0, 0.42, -0.47); ikat.rotation.x = Math.PI / 2.4; kepalaGrup.add(ikat);
+    } else if (gaya === "ikal") { // gumpal ikal di ubun-ubun
+      for (let i = 0; i < 11; i++) {
+        const a = i / 11 * Math.PI * 2, r = i % 2 ? 0.3 : 0.18;
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), matRambut); b.position.set(Math.cos(a) * r, 0.6 + (i % 3) * 0.03, Math.sin(a) * r - 0.04); kepalaGrup.add(b);
+      }
+    }
+  }
+  if (opsi.topi === "hijab") { // kerudung menutup kepala & leher, wajah terbuka
+    const matHijab = matKarakter(hexKe(R.warna_rambut && R.warna_rambut !== "#281f1c" ? R.warna_rambut : null, warnaSkala(baju, 0.85)));
+    const tudung = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), matHijab);
+    tudung.scale.set(1.0, 1.02, 0.98); tudung.position.set(0, 0.24, -0.02); tudung.castShadow = true; kepalaGrup.add(tudung);
+    const bingkai = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.06, 10, 28, Math.PI * 1.25), matHijab);
+    bingkai.position.set(0, 0.22, 0.2); bingkai.rotation.z = -Math.PI * 0.125 - Math.PI / 2 + Math.PI; bingkai.rotation.z = Math.PI * 1.375; kepalaGrup.add(bingkai);
+    const jubah = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.55, 24, 1, true), matHijab); jubah.position.set(0, -0.08, 0); kepalaGrup.add(jubah);
+  } else if (opsi.topi === "peci") {
     const matPeci = matKarakter(0x1c1c1e);
     kepalaGrup.add(bagian(GEO.peci, matPeci, 0, 0.61, 0, true));
     kepalaGrup.add(bagian(GEO.peciSabuk, matKarakter(0x2e2e34), 0, 0.48, 0, false));
     const kubahPeci = bagian(GEO.peciAtas, matPeci, 0, 0.745, 0, false);
     kubahPeci.scale.set(1, 0.24, 1); kepalaGrup.add(kubahPeci);
     // Sedikit rambut di samping & belakang bawah peci
-    for (const s of [-1, 1]) kepalaGrup.add(bagian(GEO.sampingRambut, matRambut, s * 0.40, 0.36, -0.06, false));
+    if (gaya !== "botak") { for (const s of [-1, 1]) kepalaGrup.add(bagian(GEO.sampingRambut, matRambut, s * 0.40, 0.36, -0.06, false)); if (gaya !== "ikal") rambutGaya(); }
   } else if (opsi.topi === "topi") {
     const matTopi = matKarakter(warnaTopi(bajuHex));
     const kubah = bagian(GEO.topiAtas, matTopi, 0, 0.25, 0, true);
     kubah.scale.set(1.03, 1.03, 0.95); kepalaGrup.add(kubah);
     const lidah = bagian(GEO.topiLidah, matTopi, 0, 0.42, 0.33, false);
     lidah.rotation.x = 0.08; kepalaGrup.add(lidah);
-    for (const s of [-1, 1]) kepalaGrup.add(bagian(GEO.sampingRambut, matRambut, s * 0.40, 0.33, -0.06, false));
+    if (gaya !== "botak") { for (const s of [-1, 1]) kepalaGrup.add(bagian(GEO.sampingRambut, matRambut, s * 0.40, 0.33, -0.06, false)); if (gaya !== "ikal") rambutGaya(); }
+  } else if (gaya === "botak") {
+    // botak: tanpa rambut
   } else {
     // Rambut penuh dengan volume belakang, sisi samping, dan poni
     const rambut = bagian(GEO.rambut, matRambut, 0, 0.25, -0.03, true);
@@ -276,6 +313,7 @@ export function buatKarakter(opsi) {
       const p = bagian(GEO.poni, matRambut, px, py, pz, false);
       p.scale.set(sx, sy, 0.85); kepalaGrup.add(p);
     }
+    rambutGaya();
   }
 
   g.userData.lenganK = lenganK; g.userData.lenganR = lenganR;
@@ -303,7 +341,10 @@ export function animasiJalan(kar, jarak, dt) {
   u.kakiK.rotation.x = s * AYUN_KAKI;
   u.kakiR.rotation.x = -s * AYUN_KAKI;
   if (u.lenganK && u.lenganR) { u.lenganK.rotation.x = -s * AYUN_LENGAN; u.lenganR.rotation.x = s * AYUN_LENGAN; }
-  return Math.abs(Math.sin(u.faseJalan)) * u.ayunKuat;
+  // Pantulan badan HALUS: (1 - cos 2φ)/2 — frekuensi sama dengan |sin φ| (2x per
+  // siklus langkah) tetapi tanpa "patahan" tajam di titik terendah, jadi
+  // karakter tidak lagi tampak tersentak-sentak saat berjalan.
+  return (1 - Math.cos(u.faseJalan * 2)) * 0.5 * u.ayunKuat;
 }
 
 export function skalaKedip(t, geser) {

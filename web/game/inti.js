@@ -60,6 +60,13 @@
     // Apartemen Merdu Residence (Fahmi 2026-11-22): Blok 2120 tepat di
     // selatan plaza — rencana pembangunan Rp50.000.000 (status dari server).
     apartemen: { kol: 39, bar: 26 },
+    // Dapur MBG (Makan Bergizi Gratis / SPPG) — Blok 1005, lahan berkala di
+    // utara pusat, searah sekolah. Merdu Mall — Blok 2917, lahan berkala di
+    // selatan pusat (bekas rencana lama Toko Pancing). Keduanya rencana
+    // pembangunan biasa (status dari server), tanpa mengubah alokasi rumah.
+    dapur_mbg: { kol: 44, bar: 12 },
+    koperasi: { kol: 36, bar: 12 }, // Koperasi Desa Merah Putih — Blok 997, di barat Dapur MBG
+    mall: { kol: 36, bar: 36 },
   };
 
   /* ===== Hierarki wilayah (WAJIB sama dengan goserver/internal/db/db.go) =====
