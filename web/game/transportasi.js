@@ -15,7 +15,7 @@
    - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri),
      berhenti 3 detik di tiap halte (halte berkanopi di trotoar). */
 import { JALAN, PITCH, PUSAT_X, faseLaluLintas, persimpanganKota, sudutBlok } from "./inti.js";
-import { M, gabungBerwarna, kotak, scene } from "./bersama.js";
+import { M, camera, gabungBerwarna, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 import { arahHalus, jalurPoligon, jarakKeBelok, posJalur, sTerdekatJalur } from "./jalur.js";
@@ -199,6 +199,7 @@ function buatKereta() {
       for (const dx of [-6.6, -2.0, 2.0, 6.6]) K(0.12, 1.3, 0.14, 0xf4f4f2, cx + dx, 2.4, s * 1.44); // tiang jendela
       // bangku panjang menghadap lorong
       for (const [x0, x1] of [[-6.6, -4.9], [-3.5, 3.5], [4.9, 6.6]]) {
+        for (let xs = x0 + 0.4; xs <= x1 - 0.35; xs += 0.75) (c.userData.kursi || (c.userData.kursi = [])).push({ lx: xs, ly: 0.49, lz: s * 1.0, rot: s > 0 ? Math.PI : 0, isi: null, lantai: 0.5 });
         K(x1 - x0, 0.12, 0.55, 0x2e6fa8, cx + (x0 + x1) / 2, 0.95, s * 1.08);
         K(x1 - x0, 0.6, 0.1, 0x2e6fa8, cx + (x0 + x1) / 2, 1.3, s * 1.32);
         K(x1 - x0, 0.4, 0.45, 0x9aa0a6, cx + (x0 + x1) / 2, 0.7, s * 1.08);
@@ -277,13 +278,15 @@ function buatBus(warna) {
   K(2.6, 0.2, 10.5, 0xf4f4f2, 0, 3.35, 0);                    // atap
   for (const s of [-1, 1]) {
     // dinding bawah berwarna (sisi +x punya bukaan pintu z 2,6..4,2)
-    if (s > 0) { K(0.12, 1.1, 7.2, w, 1.27, 1.15, -1.4); K(0.12, 1.1, 0.9, w, 1.27, 1.15, 4.75); }
+    if (s > 0) { K(0.12, 1.1, 7.75, w, 1.27, 1.15, -1.275); K(0.12, 1.1, 0.95, w, 1.27, 1.15, 4.675); } // rapat ke bukaan pintu z 2,6..4,2
     else K(0.12, 1.1, 10.3, w, -1.27, 1.15, 0);
     const sisi = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 0.9), new THREE.MeshStandardMaterial({ map: tex, transparent: true }));
     sisi.rotation.y = s * Math.PI / 2; sisi.position.set(s * 1.34, 1.15, -1.4); g.add(sisi);
-    kaca(0.05, 1.3, s > 0 ? 7.2 : 10.3, s * 1.27, 2.35, s > 0 ? -1.4 : 0);   // jendela
+    if (s > 0) { kaca(0.05, 1.3, 7.75, 1.27, 2.35, -1.275); kaca(0.05, 1.3, 0.95, 1.27, 2.35, 4.675); } // jendela kiri: belakang & depan pintu
+    else kaca(0.05, 1.3, 10.3, -1.27, 2.35, 0);                 // jendela kanan utuh
     K(0.12, 0.3, 10.3, w, s * 1.27, 3.15, 0);                  // pita atas
-    for (let z = -4.6; z <= 3.0; z += 1.6) K(0.14, 1.3, 0.1, w, s * 1.27, 2.35, z); // tiang jendela
+    for (let z = -4.6; z <= 3.0; z += 1.6) if (!(s > 0 && z > 2.5)) K(0.14, 1.3, 0.1, w, s * 1.27, 2.35, z); // tiang jendela
+    if (s > 0) for (const z of [2.6, 4.2]) K(0.14, 2.75, 0.12, w, 1.27, 1.95, z); // kusen pintu
   }
   kaca(0.05, 0.5, 1.5, 1.27, 3.05, 3.4);                      // kaca di atas bukaan pintu
   /* pintu bus 2 daun geser (kaca berbingkai) di bukaan z 2,6..4,2 — digeser
@@ -297,13 +300,15 @@ function buatBus(warna) {
     daun.position.set(1.36, 1.85, z0); g.add(daun);
     g.userData.pintu.push({ daun, z0, arah });
   }
-  kaca(2.4, 1.6, 0.06, 0, 2.3, 5.2); K(2.5, 1.2, 0.12, w, 0, 1.15, 5.2);   // depan: kaca depan + panel
-  kaca(2.2, 0.9, 0.06, 0, 2.5, -5.2); K(2.5, 2.0, 0.12, w, 0, 1.4, -5.2);  // belakang
+  kaca(2.6, 1.5, 0.06, 0, 2.5, 5.2); K(2.6, 1.2, 0.12, w, 0, 1.15, 5.2);   // depan: kaca depan (rapat ke atap & pilar) + panel
+  kaca(2.6, 0.85, 0.06, 0, 2.825, -5.2); K(2.6, 2.0, 0.12, w, 0, 1.4, -5.2);  // belakang: kaca rapat ke panel & atap
+  for (const [x, z] of [[-1.27, 5.2], [1.27, 5.2], [-1.27, -5.2], [1.27, -5.2]]) K(0.18, 2.8, 0.18, w, x, 1.95, z); // pilar sudut
   for (const s of [-1, 1]) { const l = new THREE.Mesh(new THREE.CircleGeometry(0.15, 12), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4d0, emissiveIntensity: 1 })); l.position.set(s * 0.9, 0.95, 5.27); g.add(l); }
   // kursi penumpang (2 baris kiri-kanan, menghadap depan)
   for (let r = 0; r < 6; r++) for (const s of [-1, 1]) {
     const z = -4.3 + r * 1.25; if (s > 0 && z > 2.2) continue;
     K(0.9, 0.12, 0.55, 0x2e6fa8, s * 0.72, 1.05, z); K(0.9, 0.65, 0.1, 0x2e6fa8, s * 0.72, 1.4, z - 0.27); K(0.08, 0.45, 0.08, 0x8a8f94, s * 0.72, 0.8, z);
+    (g.userData.kursi || (g.userData.kursi = [])).push({ lx: s * 0.72, ly: 0.59, lz: z + 0.02, rot: 0, isi: null, lorongX: 0.15, lantai: 0.65 }); // titik duduk penumpang
   }
   for (const z of [-3, -0.5, 2]) for (const s of [-1, 1]) K(0.05, 2.7, 0.05, 0xf2c230, s * 0.28, 1.95, z); // tiang kuning
   for (const s of [-1, 1]) K(0.04, 0.04, 9.5, 0xc0c4c8, s * 0.3, 3.05, 0);
@@ -398,6 +403,8 @@ export function bangunTransportasi() {
     const b = buatBus(r === 1 ? "#c8102e" : "#e8943a"); grup.add(b);
     bus.push({ g: b, r, s: RUTE[r].R.total * (i / 2 + 0.1), v: 0, tunggu: 0, halteTerakhir: -1, halteKini: null });
   }
+  for (const b of bus) isiAwal(b.g, 2 + Math.floor(Math.random() * 3));      // penumpang awal
+  for (const k of kereta) for (const c of k.mobil) isiAwal(c, 2 + Math.floor(Math.random() * 2));
   scene.add(grup);
   return grup;
 }
@@ -518,15 +525,20 @@ function jalankan(kar, rute, akhir, tunda, posisiAwal) {
 }
 function tambahTunggu(entri, pos, kunci) {
   const kar = ambilKarakter(); kar.position.set(pos.x, pos.y, pos.z); kar.rotation.y = pos.yaw;
-  const o = { kar, rute: [], diam: true, pos, kunci };
+  const o = { kar, rute: [], diam: true, pos, kunci, v: 1.5 };
   AKTIF.push(o); entri.tunggu[kunci].push(o); return o;
 }
+let jedaLod = 0;
 function perbaruiPenumpang(dt) {
   const t = performance.now() / 1000;
+  if ((jedaLod -= dt) <= 0) { // penumpang duduk hanya digambar bila kamera cukup dekat (hemat draw call)
+    jedaLod = 0.4;
+    for (const o of AKTIF) if (o.duduk && o.induk) { o.induk.getWorldPosition(_wp); o.kar.visible = _wp.distanceTo(camera.position) < 180; }
+  }
   for (let n = AKTIF.length - 1; n >= 0; n--) {
     const o = AKTIF[n], k = o.kar;
     if (o.tunda > 0) { o.tunda -= dt; animasiHidup(k, t, true); continue; }
-    if (!o.rute.length) { animasiHidup(k, t, true); animasiJalan(k, 0, dt); continue; }
+    if (!o.rute.length) { animasiHidup(k, t, true); if (!o.duduk) animasiJalan(k, 0, dt); continue; }
     const tj = o.rute[0], dx = tj.x - k.position.x, dz = tj.z - k.position.z, d = Math.hypot(dx, dz);
     const langkah = Math.min(d, o.v * dt);
     if (d > 0.05) {
@@ -549,57 +561,109 @@ function perbaruiPenumpang(dt) {
     }
   }
 }
-function peristiwaBusBerhenti(b, entri) {
-  const pintuLuar = duniaDari(b.g, 2.2, 0, 3.4).clone(), pintuDalam = duniaDari(b.g, 0.6, 0.55, 3.4).clone();
-  const y0 = entri.y + 0.02;
-  // turun
-  const nTurun = 1 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < nTurun; i++) {
-    const kar = ambilKarakter(); kar.position.set(pintuDalam.x, pintuDalam.y, pintuDalam.z); kar.visible = false;
-    const tujuan = { x: pintuLuar.x + entri.normal.x * 2 + (i - 0.5) * 1.2 * entri.normal.z, y: y0, z: pintuLuar.z + entri.normal.z * 2 - (i - 0.5) * 1.2 * entri.normal.x };
-    const o = jalankan(kar, [{ x: pintuLuar.x, y: y0, z: pintuLuar.z }, tujuan, { x: tujuan.x + entri.normal.x * 9, y: y0, z: tujuan.z + entri.normal.z * 9 }], lepasKarakter, i * 1.1);
-    setTimeout(() => { kar.visible = true; }, i * 1100);
+/* ---------- penumpang DI DALAM kendaraan: berjalan ke kursi & duduk ----------
+   Warga yang naik tidak lagi menghilang: setelah melewati pintu ia
+   menjadi anak grup kendaraan (ikut terbawa), berjalan di lorong ke kursi
+   kosong lalu duduk. Di pemberhentian berikutnya sebagian penumpang yang
+   duduk berdiri, berjalan ke pintu & turun. */
+const _wp = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
+function yawDunia(o) { o.getWorldQuaternion(_q); return _e.setFromQuaternion(_q, "YXZ").y; }
+function pindahInduk(kar, induk) {
+  kar.getWorldPosition(_wp); const yaw = yawDunia(kar);
+  induk.updateMatrixWorld(); induk.add(kar);
+  kar.position.copy(induk.worldToLocal(_wp.clone())); kar.rotation.y = yaw - yawDunia(induk);
+}
+function pose(kar, duduk) { const u = kar.userData; if (u.kakiK) { u.kakiK.rotation.x = duduk ? -1.35 : 0; u.kakiR.rotation.x = duduk ? -1.35 : 0; } }
+function kursiKosong(induk, dekatX) {
+  const bebas = (induk.userData.kursi || []).filter((k) => !k.isi);
+  if (!bebas.length) return null;
+  bebas.sort((a, b) => Math.abs(a.lx - dekatX) - Math.abs(b.lx - dekatX) + (Math.random() - 0.5) * 3);
+  return bebas[0];
+}
+function dudukkan(o, kursi, induk) {
+  const k = o.kar; if (k.parent !== induk) induk.add(k);
+  k.position.set(kursi.lx, kursi.ly, kursi.lz); k.rotation.y = kursi.rot; pose(k, true);
+  o.duduk = true; o.kursi = kursi; o.induk = induk; o.rute = []; o.akhir = null; kursi.isi = o;
+}
+function isiAwal(induk, n) { // penumpang yang sudah duduk sejak awal
+  for (let i = 0; i < n; i++) {
+    const kursi = kursiKosong(induk, (Math.random() - 0.5) * 10); if (!kursi) return;
+    const o = { kar: ambilKarakter(), rute: [], v: 1.4 }; AKTIF.push(o); dudukkan(o, kursi, induk);
   }
-  // naik
+}
+/* rute lokal dari kursi ke titik pintu-dalam (koordinat kendaraan) */
+function ruteKePintu(kursi, pintuLx, pintuLz, bus) {
+  const y = kursi.lantai;
+  if (bus) return [{ x: kursi.lorongX, y, z: kursi.lz + 0.5 }, { x: kursi.lorongX, y, z: pintuLz }, { x: pintuLx, y, z: pintuLz }];
+  return [{ x: kursi.lx, y, z: kursi.lz * 0.45 }, { x: pintuLx, y, z: 0 }, { x: pintuLx, y, z: pintuLz }];
+}
+function ruteKeKursi(kursi, pintuLx, pintuLz, bus) {
+  const y = kursi.lantai;
+  if (bus) return [{ x: kursi.lorongX, y, z: pintuLz }, { x: kursi.lorongX, y, z: kursi.lz + 0.5 }, { x: kursi.lx, y, z: kursi.lz + 0.45 }];
+  return [{ x: pintuLx, y, z: 0 }, { x: kursi.lx, y, z: 0 }, { x: kursi.lx, y, z: kursi.lz * 0.6 }];
+}
+/* seorang penumpang yang duduk berdiri & turun; ruteLuar = rute dunia setelah keluar pintu */
+function turunkan(o, pintuLx, pintuLz, bus, ruteLuar, tunda) {
+  const kursi = o.kursi; kursi.isi = null; o.kursi = null; o.duduk = false;
+  o.kar.visible = true; pose(o.kar, false);
+  o.tunda = tunda; o.rute = ruteKePintu(kursi, pintuLx, pintuLz, bus);
+  o.akhir = (x) => { pindahInduk(x.kar, grupPenumpang); x.rute = ruteLuar; x.akhir = lepasKarakter; };
+}
+/* warga yang menunggu naik: rute dunia ke pintu, lalu masuk & duduk */
+function naikkan(w, pintuLuar, pintuDalam, induk, pintuLx, pintuLz, bus, tunda) {
+  w.pergi = true; w.diam = false; w.tunda = tunda; w.v = 1.5 + Math.random() * 0.3;
+  w.rute = [{ x: pintuLuar.x, y: pintuLuar.y, z: pintuLuar.z }, { x: pintuDalam.x, y: pintuDalam.y, z: pintuDalam.z }];
+  w.akhir = (o) => {
+    const kursi = kursiKosong(induk, pintuLx);
+    if (!kursi) { lepasKarakter(o); return; } // penuh: berdiri di dalam (tak terlihat)
+    kursi.isi = o; pindahInduk(o.kar, induk);
+    o.rute = ruteKeKursi(kursi, pintuLx, pintuLz, bus);
+    o.akhir = (x) => dudukkan(x, kursi, induk);
+  };
+}
+function peristiwaBusBerhenti(b, entri) {
+  const pintuLuar = duniaDari(b.g, 2.2, 0, 3.4).clone(), pintuDalam = duniaDari(b.g, 0.9, 0.65, 3.4).clone();
+  const y0 = entri.y + 0.02; pintuLuar.y = y0;
+  const duduk = (b.g.userData.kursi || []).filter((k) => k.isi).map((k) => k.isi);
+  const nTurun = Math.min(duduk.length, Math.floor(Math.random() * 3));
+  duduk.sort(() => Math.random() - 0.5);
+  for (let i = 0; i < nTurun; i++) {
+    const tujuan = { x: pintuLuar.x + entri.normal.x * 2 + (i - 0.5) * 1.2 * entri.normal.z, y: y0, z: pintuLuar.z + entri.normal.z * 2 - (i - 0.5) * 1.2 * entri.normal.x };
+    turunkan(duduk[i], 0.9, 3.4, true, [{ x: pintuLuar.x, y: y0, z: pintuLuar.z }, tujuan, { x: tujuan.x + entri.normal.x * 9, y: y0, z: tujuan.z + entri.normal.z * 9 }], 0.3 + i * 1.2);
+  }
   entri.tunggu.h.forEach((w, i) => {
     if (!w.kar.visible || w.pergi) return;
-    w.pergi = true; w.diam = false;
-    w.tunda = 1.2 + nTurun * 1.1 + i * 0.9;
-    w.rute = [{ x: pintuLuar.x, y: y0, z: pintuLuar.z }, { x: pintuDalam.x, y: pintuDalam.y, z: pintuDalam.z }];
-    w.akhir = (o) => { o.kar.visible = false; KOLAM.push(o.kar); const j = AKTIF.indexOf(o); if (j >= 0) AKTIF.splice(j, 1); };
+    naikkan(w, pintuLuar, pintuDalam, b.g, 0.9, 3.4, true, 1.0 + nTurun * 1.6 + i * 0.9);
   });
 }
 function peristiwaKeretaBerhenti(k, idx) {
   const st = STASIUN[idx], e = st.entri;
-  // sisi peron untuk jalur ini: peron di sisi rel yang sama dengan jalur kereta (lebih jauh dari as)
-  const c0 = k.mobil[1]; const tengah = c0.position;
+  const tengah = k.mobil[1].position;
   const sisiDunia = Math.sign(tengah.z - st.z) || 1; // -1 peron utara as, +1 selatan
   const yPeron = YD + 1.2;
   e.tangga = { x: st.x, z: st.z + sisiDunia * 6.6 };
   const pintu = [];
   k.mobil.forEach((c) => {
-    for (const lx of [-4.2, 4.2]) {
-      // pilih sisi pintu lokal yang menghadap peron
-      const a = duniaDari(c, lx, 0.5, 1.0).clone(), b2 = duniaDari(c, lx, 0.5, -1.0).clone();
-      const lz = Math.abs(a.z - st.z) > Math.abs(b2.z - st.z) ? 1 : -1;
-      pintu.push({ dalam: duniaDari(c, lx, 0.5, lz * 0.9).clone(), luar: duniaDari(c, lx, 0.5, lz * 2.6).clone() });
-      k.sisiPintu = lz;
-    }
+    const a = duniaDari(c, 0, 0.5, 1.0).clone(), b2 = duniaDari(c, 0, 0.5, -1.0).clone();
+    const lz = Math.abs(a.z - st.z) > Math.abs(b2.z - st.z) ? 1 : -1; // sisi lokal yang menghadap peron
+    k.sisiPintu = lz;
+    for (const lx of [-4.2, 4.2]) pintu.push({ c, lx, lz, dalam: duniaDari(c, lx, 0.5, lz * 0.9).clone(), luar: duniaDari(c, lx, 0.5, lz * 2.6).clone() });
   });
-  pintu.forEach((p, i) => {
-    if (i % 2) return; // turun: 1 warga per gerbong
-    const kar = ambilKarakter(); kar.position.copy(p.dalam); kar.visible = false;
-    setTimeout(() => { kar.visible = true; }, 400 + i * 250);
-    jalankan(kar, [{ x: p.luar.x, y: yPeron, z: p.luar.z }, { x: p.luar.x, y: yPeron, z: st.z + sisiDunia * 6.8 }, { x: st.x, y: yPeron, z: st.z + sisiDunia * 6.8 }], lepasKarakter, 0.4 + i * 0.25);
+  // turun: 1-2 penumpang duduk per gerbong berjalan ke pintu terdekat lalu ke tangga peron
+  k.mobil.forEach((c, ci) => {
+    const duduk = (c.userData.kursi || []).filter((x) => x.isi).map((x) => x.isi).sort(() => Math.random() - 0.5);
+    const n = Math.min(duduk.length, Math.floor(Math.random() * 3));
+    for (let i = 0; i < n; i++) {
+      const o = duduk[i], lx = o.kursi.lx < 0 ? -4.2 : 4.2, p = pintu.find((q) => q.c === c && q.lx === lx);
+      turunkan(o, lx, p.lz * 0.9, false, [{ x: p.luar.x, y: yPeron, z: p.luar.z }, { x: p.luar.x, y: yPeron, z: st.z + sisiDunia * 6.8 }, { x: st.x, y: yPeron, z: st.z + sisiDunia * 6.8 }], 1.0 + i * 1.3 + ci * 0.2);
+    }
   });
   const kunci = String(sisiDunia);
   (e.tunggu[kunci] || []).forEach((w, i) => {
     if (!w.kar.visible || w.pergi) return;
     let p = pintu[0], dMin = Infinity;
     for (const q of pintu) { const d = Math.hypot(q.luar.x - w.kar.position.x, q.luar.z - w.kar.position.z); if (d < dMin) { dMin = d; p = q; } }
-    w.pergi = true; w.tunda = 2.5 + i * 0.6;
-    w.rute = [{ x: p.luar.x, y: yPeron, z: p.luar.z }, { x: p.dalam.x, y: p.dalam.y, z: p.dalam.z }];
-    w.akhir = (o) => { o.kar.visible = false; KOLAM.push(o.kar); const j = AKTIF.indexOf(o); if (j >= 0) AKTIF.splice(j, 1); };
+    naikkan(w, { x: p.luar.x, y: yPeron, z: p.luar.z }, { x: p.dalam.x, y: p.dalam.y, z: p.dalam.z }, p.c, p.lx, p.lz * 0.9, false, 3.5 + i * 0.7);
   });
   e.isiUlang = 22 + Math.random() * 10;
 }
