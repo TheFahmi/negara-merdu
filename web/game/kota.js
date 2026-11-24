@@ -3,7 +3,7 @@
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
-import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
+import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, plafonTerang, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
   export function bangunKotaMassal() {
     IM_LINGKUNGAN.length = 0; // daftar dekorasi dibangun ulang bersama grup kota
@@ -88,12 +88,13 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
       if (h2 < 0.85 && hashInt(d.nomor * 13 + 5) < 0.35) daftarCerobong.push(d); // cerobong hanya di atap miring
       if (hashInt(d.nomor * 17 + 3) < 0.7) daftarTeras.push(d);
     });
-    const matAtap = new THREE.MeshStandardMaterial({ map: TEX_ATAP, roughness: 0.95, flatShading: true });
-    const imPelana = new THREE.InstancedMesh(geometriAtapPelana(10.4, 3.2, 9.4), matAtap, Math.max(1, daftarPelana.length));
+    const matPelana = new THREE.MeshStandardMaterial({ map: TEX_ATAP, roughness: 0.95 }); // tanpa flatShading: plafon bawah (normal +y) tidak hitam — lihat meshPelana
+    const imPelana = new THREE.InstancedMesh(geometriAtapPelana(10.4, 3.2, 9.4), matPelana, Math.max(1, daftarPelana.length));
     const geoLimas = new THREE.ConeGeometry(6.6, 3.4, 4); geoLimas.rotateY(Math.PI / 4);
-    const imLimas = new THREE.InstancedMesh(geoLimas, matAtap, Math.max(1, daftarLimas.length));
-    const imDatar = new THREE.InstancedMesh(new THREE.BoxGeometry(9.6, 0.55, 8.6),
-      new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true }), Math.max(1, daftarDatar.length));
+    const geoLimasP = plafonTerang(geoLimas), matLimas = new THREE.MeshStandardMaterial({ map: TEX_ATAP, roughness: 0.95 });
+    const imLimas = new THREE.InstancedMesh(geoLimasP, matLimas, Math.max(1, daftarLimas.length));
+    const imDatar = new THREE.InstancedMesh(plafonTerang(new THREE.BoxGeometry(9.6, 0.55, 8.6)),
+      new THREE.MeshStandardMaterial({ roughness: 1 }), Math.max(1, daftarDatar.length));
     daftarPelana.forEach((d, i) => {
       const sy = syDari(d);
       dummy.position.set(d.x, 4.2 * sy, d.z); dummy.scale.set(1, sy, 1); dummy.rotation.set(0, 0, 0);
@@ -112,7 +113,7 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
     imPelana.count = daftarPelana.length; imLimas.count = daftarLimas.length; imDatar.count = daftarDatar.length;
     grup.add(imPelana); grup.add(imLimas); grup.add(imDatar);
     /* Mesh atap berdaftar KOSONG wajib disembunyikan (?v=33): imPelana &
-       imLimas BERBAGI material matAtap. Bila satu daftar kosong, setColorAt
+       imLimas DULU berbagi material matAtap (kini material sendiri-sendiri, penjaga ini tetap dipertahankan). Bila satu daftar kosong, setColorAt
        tak pernah terpanggil untuknya -> instanceColor null, sementara
        saudaranya punya instanceColor -> program shader matAtap memuat
        atribut instanceColor dan three r128 melempar TypeError

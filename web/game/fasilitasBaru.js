@@ -7,7 +7,7 @@
    pohon peneduh, lampu taman. Semua elemen di dalam blok (±34 lokal).
    Depan bangunan menghadap +z (selatan). Grup: y=0 = muka alas blok.
    TAPAK_BARU = AABB tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok. */
-import { LAMPU_TAMAN, M, geometriAtapPelana, kotak } from "./bersama.js";
+import { LAMPU_TAMAN, M, geometriAtapPelana, meshPelana, kotak } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { bangkuTaman, matAtapWarna, pagarSemak, pohonKecil, teksturBenderaMerdu, teksturPapanNama } from "./fasilitas.js";
 
@@ -60,7 +60,7 @@ function gedung(g, o) {
     g.add(kotak(4.4, 0.3, 2.6, BATU, x, 0.15, z + d / 2 + 1.3)); // anak tangga
   }
   if (atap) {
-    const ap = new THREE.Mesh(geometriAtapPelana(ridgeX ? d + 1.6 : w + 1.6, Math.min(w, d) * 0.32, ridgeX ? w + 1.6 : d + 1.6), matAtapWarna(atap));
+    const ap = meshPelana(geometriAtapPelana(ridgeX ? d + 1.6 : w + 1.6, Math.min(w, d) * 0.32, ridgeX ? w + 1.6 : d + 1.6), matAtapWarna(atap));
     if (ridgeX) ap.rotation.y = Math.PI / 2;
     ap.position.set(x, 0.5 + h, z); ap.castShadow = true; ap.receiveShadow = true; g.add(ap);
   }
@@ -186,7 +186,7 @@ export const MODEL_BARU = {
       const k = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 6.4, 14), M(PUTIH)); k.position.set(-4.8 + i * 2.4, 3.8, 1.8); k.castShadow = true; g.add(k);
     }
     g.add(kotak(12.6, 0.6, 4.6, 0xe6dcc6, 0, 7.2, 0.4));
-    const ped = new THREE.Mesh(geometriAtapPelana(4.6, 1.6, 12.6), M(0xe6dcc6)); ped.rotation.y = Math.PI / 2; ped.position.set(0, 7.5, 0.4); ped.castShadow = true; g.add(ped);
+    const ped = meshPelana(geometriAtapPelana(4.6, 1.6, 12.6), M(0xe6dcc6)); ped.rotation.y = Math.PI / 2; ped.position.set(0, 7.5, 0.4); ped.castShadow = true; g.add(ped);
     const papan = new THREE.Mesh(new THREE.BoxGeometry(8, 1.2, 0.2), new THREE.MeshStandardMaterial({ map: teksturPapanNama("PERPUSTAKAAN", "NEGARA MERDU"), roughness: 0.9 }));
     papan.position.set(0, 6.4, 2.75); g.add(papan);
     // taman baca: bangku melingkar + rak buku luar + payung
@@ -308,8 +308,8 @@ export const MODEL_BARU = {
     // LOS UTAMA: 48 x 26, kolom baja, atap susun (bawah + ventilasi atas)
     const LZ = -12, LW = 48, LD = 26;
     for (let x = -LW / 2; x <= LW / 2; x += 6) for (const z of [LZ - LD / 2, LZ, LZ + LD / 2]) g.add(kotak(0.45, 6, 0.45, 0x6e7378, x, 3, z));
-    const atap1 = new THREE.Mesh(geometriAtapPelana(LD + 3, 3.2, LW + 3), matAtapWarna(0x2f6f8f)); atap1.rotation.y = Math.PI / 2; atap1.position.set(0, 6, LZ); atap1.castShadow = true; g.add(atap1);
-    const atap2 = new THREE.Mesh(geometriAtapPelana(8, 1.6, LW + 1), matAtapWarna(0x245a75)); atap2.rotation.y = Math.PI / 2; atap2.position.set(0, 9.6, LZ); g.add(atap2);
+    const atap1 = meshPelana(geometriAtapPelana(LD + 3, 3.2, LW + 3), matAtapWarna(0x2f6f8f)); atap1.rotation.y = Math.PI / 2; atap1.position.set(0, 6, LZ); atap1.castShadow = true; g.add(atap1);
+    const atap2 = meshPelana(geometriAtapPelana(8, 1.6, LW + 1), matAtapWarna(0x245a75)); atap2.rotation.y = Math.PI / 2; atap2.position.set(0, 9.6, LZ); g.add(atap2);
     for (const x of [-LW / 2, LW / 2]) g.add(kotak(0.3, 1.4, 8, 0x6e7378, x, 9.0, LZ)); // dinding ventilasi
     g.add(kotak(LW + 1, 0.15, LD + 1, 0xd8d2c6, 0, 0.14, LZ)); // lantai los
     const papanLos = new THREE.Mesh(new THREE.BoxGeometry(14, 1.4, 0.25), new THREE.MeshStandardMaterial({ map: teksturPapanNama("LOS UTAMA", "Sayur · Buah · Ikan · Daging · Sembako"), roughness: 0.8 }));
@@ -362,7 +362,7 @@ export const MODEL_BARU = {
     for (let i = 0; i < 6; i++) {
       const x = -24 + i * 9.6, z = 8 + (i % 2) * 0.5;
       for (const [px, pz] of [[-1.8, -1.6], [1.8, -1.6], [-1.8, 1.6], [1.8, 1.6]]) g.add(kotak(0.15, 2.6, 0.15, 0x6e7378, x + px, 1.3, z + pz));
-      const atap = new THREE.Mesh(geometriAtapPelana(4.2, 0.9, 3.8), M(WARNA_TENDA[i])); atap.position.set(x, 2.6, z); atap.castShadow = true; g.add(atap);
+      const atap = meshPelana(geometriAtapPelana(4.2, 0.9, 3.8), M(WARNA_TENDA[i])); atap.position.set(x, 2.6, z); atap.castShadow = true; g.add(atap);
       g.add(kotak(3.4, 0.8, 1.4, KAYU_M, x, 0.4, z + 0.6));
       for (let k = 0; k < 3; k++) g.add(kotak(0.8, 0.5, 0.6, 0xc9a26b, x - 1 + k, 1.05, z + 0.6));
     }

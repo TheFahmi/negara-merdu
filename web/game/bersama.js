@@ -460,6 +460,10 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
       [B, E, F, [0, 0], [0, 1], [1, 0]], [B, F, C, [0, 0], [1, 1], [1, 1]], // lereng kanan
       [D, C, F, [0, 0], [1, 0], [0.5, 1]],                                  // ujung depan (+z)
       [B, A, E, [1, 0], [0, 0], [0.5, 1]],                                  // ujung belakang (-z)
+      /* plafon/lisplang bawah (menghadap -y): dulu tidak ada, jadi dari bawah
+         (1st/3rd Person di dekat rumah) bagian atap yang menjorok melewati
+         dinding terlihat bolong ke langit karena sisi belakang lereng di-cull. */
+      [A, B, C, [0.5, 0.5], [0.5, 0.5], [0.5, 0.5]], [A, C, D, [0.5, 0.5], [0.5, 0.5], [0.5, 0.5]],
     ];
     const pos = [], uv = [];
     for (const [p1, p2, p3, t1, t2, t3] of wajah) {
@@ -470,8 +474,30 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
     geo.computeVertexNormals();
+    /* normal plafon dibalik ke atas: menghadap -y ia hanya menerima cahaya
+       pantul tanah (nyaris hitam). Dengan normal +y ia diterangi langit
+       (hemisphere) & tetap berbayang atap -> rona genteng teduh, wajar. */
+    const nor = geo.attributes.normal;
+    for (let i = nor.count - 6; i < nor.count; i++) nor.setXYZ(i, 0, 1, 0);
     return geo;
   }
+  /* Mesh atap pelana: materialnya WAJIB tanpa flatShading — flatShading
+     menghitung normal dari turunan layar & mengabaikan normal plafon (+y),
+     sehingga plafon kembali hitam. Lereng tetap tampak rata karena
+     geometrinya tak berindeks (normal per wajah). Material harus milik mesh
+     ini sendiri (tidak dipakai bersama bentuk lain). */
+  /* Untuk atap limas (kerucut-4) & atap datar (kotak): jadikan tak berindeks
+     (normal per wajah = tetap tampak rata tanpa flatShading) lalu balik
+     normal wajah alas (seluruh titiknya di y terendah) ke +y, sama seperti
+     plafon pelana. Material pemakainya juga tanpa flatShading. */
+  export function plafonTerang(geo) {
+    const g = geo.index ? geo.toNonIndexed() : geo; g.computeVertexNormals();
+    const p = g.attributes.position, n = g.attributes.normal; let yMin = Infinity;
+    for (let i = 0; i < p.count; i++) yMin = Math.min(yMin, p.getY(i));
+    for (let i = 0; i < p.count; i += 3) if ([0, 1, 2].every((k) => Math.abs(p.getY(i + k) - yMin) < 1e-4)) for (let k = 0; k < 3; k++) n.setXYZ(i + k, 0, 1, 0);
+    return g;
+  }
+  export function meshPelana(geo, mat) { mat.flatShading = false; mat.needsUpdate = true; return new THREE.Mesh(geo, mat); }
   export function geometriPagar() { // pagar kayu: 4 tiang + 2 rel, panjang 12,6, basis y=0
     const bagian = [];
     for (const px of [-6, -2, 2, 6]) bagian.push({ geo: new THREE.BoxGeometry(0.22, 1.15, 0.22), x: px, y: 0.575, z: 0 });

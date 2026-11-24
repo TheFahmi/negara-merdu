@@ -2,7 +2,7 @@
    Fasilitas: papan nama, bendera, model fasilitas, lahan pembangunan, dan pinggiran kota. */
 import { MODEL_BARU } from "./fasilitasBaru.js";
 import { APARTEMEN_BLOK, FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, TAMAN, hashInt, sudutBlok } from "./inti.js";
-import { LAMPU_TAMAN, M, REG_TEX, TEX_ATAP, TEX_KILAU, buatKanvasSawah, buatTeksturProsedural, dataPembangunan, gabungGeometri, geometriAtapPelana, kotak, scene, tambahKilau } from "./bersama.js";
+import { LAMPU_TAMAN, M, REG_TEX, TEX_ATAP, TEX_KILAU, buatKanvasSawah, buatTeksturProsedural, dataPembangunan, gabungGeometri, geometriAtapPelana, meshPelana, kotak, scene, tambahKilau } from "./bersama.js";
 import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
 
   export const FASILITAS_NAMA = {
@@ -368,7 +368,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
     perpustakaan(g) {
       g.add(kotak(22, 0.14, 16, 0xd9c58f, 0, 0.07, 0));
       g.add(kotak(13, 5, 9, 0xfdebd0, 0, 2.64, 0));
-      const atap = new THREE.Mesh(geometriAtapPelana(15, 2.4, 11), matAtapWarna(0x795548));
+      const atap = meshPelana(geometriAtapPelana(15, 2.4, 11), matAtapWarna(0x795548));
       atap.position.y = 5.14; atap.castShadow = true; g.add(atap);
       const papan = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1.7, 0.15),
         new THREE.MeshStandardMaterial({ map: teksturPapanNama("PERPUSTAKAAN", null), roughness: 0.9 }));
@@ -394,7 +394,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
     sekolah(g) {
       g.add(kotak(30, 0.14, 16, 0xd9c58f, 0, 0.07, 0));
       g.add(kotak(22, 5, 9, 0xfdf3d8, 0, 2.64, -2));
-      const atap = new THREE.Mesh(geometriAtapPelana(24, 2.6, 11), matAtapWarna(0xc0392b));
+      const atap = meshPelana(geometriAtapPelana(24, 2.6, 11), matAtapWarna(0xc0392b));
       atap.position.set(0, 5.14, -2); atap.castShadow = true; g.add(atap);
       g.add(kotak(2, 3.2, 0.15, 0x7a4a21, 0, 1.74, 2.55));
       for (const x of [-8.5, -4.5, 4.5, 8.5]) g.add(kotak(2.2, 1.8, 0.15, 0xbfe8f5, x, 3.2, 2.55));
@@ -422,7 +422,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
       let n = 0;
       for (const z of [-7, 7]) for (const x of [-16.5, -5.5, 5.5, 16.5]) {
         g.add(kotak(8, 3, 6, DINDK[n % 4], x, 1.64, z));
-        const atap = new THREE.Mesh(geometriAtapPelana(9.6, 1.8, 7.4), matAtapWarna(ATAPK[n % 4]));
+        const atap = meshPelana(geometriAtapPelana(9.6, 1.8, 7.4), matAtapWarna(ATAPK[n % 4]));
         atap.position.set(x, 3.14, z); atap.castShadow = true; g.add(atap);
         n++;
       }
@@ -459,7 +459,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
     toko_pancing(g) {
       g.add(kotak(34, 0.14, 26, 0xd9c58f, 0, 0.07, 2));    // alas tanah z -11..15
       g.add(kotak(14, 4.6, 8, 0xf3e9d2, 0, 2.44, 10));     // gedung z 6..14
-      const atap = new THREE.Mesh(geometriAtapPelana(16, 2.2, 10), matAtapWarna(0x2f7a63));
+      const atap = meshPelana(geometriAtapPelana(16, 2.2, 10), matAtapWarna(0x2f7a63));
       atap.position.set(0, 4.74, 10); atap.castShadow = true; g.add(atap);
       const papan = new THREE.Mesh(new THREE.BoxGeometry(9.5, 1.9, 0.15),
         new THREE.MeshStandardMaterial({ map: teksturPapanTokoPancing(), roughness: 0.9 }));

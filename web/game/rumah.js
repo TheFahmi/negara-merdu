@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "rumah" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
 import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
-import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
+import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, meshPelana, plafonTerang, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { PETUNJUK, aturMode, fp, modeKamera, posisiDepanRumah } from "./kamera.js";
@@ -132,13 +132,14 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
     }
     const matAtap = new THREE.MeshStandardMaterial({ color: atap, map: TEX_ATAP, roughness: 0.9, flatShading: true });
     if (varian === 0) {
-      const roof = new THREE.Mesh(geometriAtapPelana(6.8, 2.3, 6.2), matAtap);
+      const roof = meshPelana(geometriAtapPelana(6.8, 2.3, 6.2), matAtap);
       roof.position.y = 3.42; roof.castShadow = true; g.add(roof);
     } else if (varian === 1) {
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(4.15, 2.35, 4), matAtap);
-      roof.position.y = 4.58; roof.rotation.y = Math.PI / 4; roof.castShadow = true; g.add(roof);
+      matAtap.flatShading = false; const geoL = new THREE.ConeGeometry(4.15, 2.35, 4); geoL.rotateY(Math.PI / 4);
+      const roof = new THREE.Mesh(plafonTerang(geoL), matAtap);
+      roof.position.y = 4.58; roof.castShadow = true; g.add(roof);
     } else {
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.36, 5.6), matAtap);
+      matAtap.flatShading = false; const slab = new THREE.Mesh(plafonTerang(new THREE.BoxGeometry(6.2, 0.36, 5.6)), matAtap);
       slab.position.y = 3.58; slab.castShadow = true; g.add(slab);
       g.add(kotak(5.8, 0.28, 0.14, TRIM, 0, 3.88, 2.55));
       g.add(kotak(2.2, 0.72, 2.0, dinding, -1.2, 4.10, -0.8));
