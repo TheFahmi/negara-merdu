@@ -396,95 +396,87 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
 </div>
 
 <div id="muat">
-  <div class="kotak">
-    <svg class="adegan" viewBox="0 0 320 190" aria-hidden="true">
-      <circle class="halo" cx="160" cy="44" r="29" fill="#f6cd6b" opacity="0.25"/>
-      <circle cx="160" cy="44" r="19" fill="#f6cd6b"/>
-      <circle cx="160" cy="44" r="13" fill="#ffe1a0"/>
-      <g class="awan1" fill="#ffffff" opacity="0.85">
-        <ellipse cx="54" cy="32" rx="20" ry="7"/>
-        <ellipse cx="68" cy="26" rx="12" ry="6"/>
-      </g>
-      <g class="awan2" fill="#ffffff" opacity="0.7">
-        <ellipse cx="262" cy="22" rx="16" ry="6"/>
-        <ellipse cx="273" cy="17" rx="10" ry="5"/>
-      </g>
-      <path d="M0 150 Q90 133 175 143 T320 141 V190 H0 Z" fill="#a5c98c"/>
-      <g>
-        <rect x="88.8" y="138" width="2.4" height="9" fill="#8a5a30"/>
-        <circle cx="90" cy="131" r="7.5" fill="#4da653"/>
-        <circle cx="83.5" cy="135" r="5" fill="#4da653"/>
-        <circle cx="96.5" cy="135" r="5" fill="#4da653"/>
-      </g>
-      <g>
-        <rect x="228.8" y="138" width="2.4" height="9" fill="#8a5a30"/>
-        <circle cx="230" cy="131" r="7.5" fill="#4da653"/>
-        <circle cx="223.5" cy="135" r="5" fill="#4da653"/>
-        <circle cx="236.5" cy="135" r="5" fill="#4da653"/>
-      </g>
-      <g>
-        <rect x="61" y="117" width="4.5" height="8" fill="#a9743f"/>
-        <path d="M33 129 L53 114 L73 129 Z" fill="#c05a34"/>
-        <rect x="38" y="129" width="30" height="20" fill="#f6e3c5"/>
-        <rect x="41.5" y="134" width="6" height="6" fill="#39566b"/>
-        <rect x="49.5" y="139" width="7" height="10" fill="#7a4a21"/>
-      </g>
-      <g>
-        <path d="M247 129 L267 114 L287 129 Z" fill="#2e5d43"/>
-        <rect x="252" y="129" width="30" height="20" fill="#f3e9cf"/>
-        <rect x="272.5" y="134" width="6" height="6" fill="#39566b"/>
-        <rect x="263.5" y="139" width="7" height="10" fill="#7a4a21"/>
-      </g>
-      <g>
-        <rect x="100" y="131" width="36" height="19" fill="#fdf3d8"/>
-        <rect x="184" y="131" width="36" height="19" fill="#fdf3d8"/>
-        <rect x="100" y="129.4" width="36" height="1.8" fill="#d9a441"/>
-        <rect x="184" y="129.4" width="36" height="1.8" fill="#d9a441"/>
-        <path d="M97 131 L118 119 L139 131 Z" fill="#2e5d43"/>
-        <path d="M181 131 L202 119 L223 131 Z" fill="#2e5d43"/>
-        <rect x="114" y="137" width="7" height="7" fill="#39566b"/>
-        <rect x="199" y="137" width="7" height="7" fill="#39566b"/>
-        <rect x="136" y="117" width="48" height="33" fill="#fdf3d8"/>
-        <rect x="136" y="115.2" width="48" height="2" fill="#d9a441"/>
-        <path d="M131 117 L160 100 L189 117 Z" fill="#2e5d43"/>
-        <rect x="142" y="125" width="5.5" height="7.5" fill="#39566b"/>
-        <rect x="172.5" y="125" width="5.5" height="7.5" fill="#39566b"/>
-        <rect x="155.8" y="136" width="8.4" height="14" fill="#7a4a21"/>
-        <rect x="146.5" y="91" width="27" height="13" fill="#fdf3d8"/>
-        <rect x="146.5" y="89.4" width="27" height="1.8" fill="#d9a441"/>
-        <path d="M143 91 L160 80 L177 91 Z" fill="#2e5d43"/>
-        <path d="M151.5 80 A8.5 8.5 0 0 1 168.5 80 Z" fill="#2e5d43"/>
-        <rect x="159.3" y="68.5" width="1.4" height="3.5" fill="#d9a441"/>
-        <circle cx="160" cy="66.8" r="2.1" fill="#d9a441"/>
-        <rect x="159.45" y="54" width="1.1" height="12.5" fill="#7a6248"/>
-        <rect x="160.6" y="54" width="11.5" height="7" fill="#2e5d43" stroke="#d9a441" stroke-width="0.5"/>
-        <circle cx="166.3" cy="57.5" r="1.9" fill="#d9a441"/>
-        <circle cx="129" cy="146" r="4.5" fill="#5da85f"/>
-        <circle cx="191" cy="146" r="4.5" fill="#5da85f"/>
-        <path d="M149 150 L171 150 L175 154.5 L145 154.5 Z" fill="#d9c58f"/>
-      </g>
-      <path d="M0 159 Q160 151 320 159 V190 H0 Z" fill="#7fae5f"/>
-      <path d="M147 152.5 L173 152.5 L196 190 L124 190 Z" fill="#66766a"/>
-      <clipPath id="klipJalan"><path d="M147 152.5 L173 152.5 L196 190 L124 190 Z"/></clipPath>
-      <g clip-path="url(#klipJalan)">
-        <g class="garis-jalan" fill="#fff8dc">
-          <rect x="157.9" y="146" width="2.6" height="7"/>
-          <rect x="157.5" y="160" width="3.4" height="8.5"/>
-          <rect x="157" y="176" width="4.6" height="10.5"/>
-        </g>
-      </g>
-    </svg>
-    <svg class="lambang" viewBox="0 0 64 64" aria-hidden="true">
+  <svg class="panorama" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
-        <linearGradient id="gradEmasMuat" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#f6cd6b"/>
-          <stop offset="1" stop-color="#dd9a26"/>
+        <linearGradient id="mLangit" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3f7fcf"/><stop offset=".45" stop-color="#8fc0ec"/>
+          <stop offset=".72" stop-color="#ffd59b"/><stop offset="1" stop-color="#ffb27a"/>
         </linearGradient>
+        <radialGradient id="mSinar" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#fff3c4" stop-opacity=".95"/><stop offset=".35" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffb27a" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="mSawah" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8cc65f"/><stop offset="1" stop-color="#4f9a3c"/></linearGradient>
+        <linearGradient id="mKabut" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe6c2" stop-opacity="0"/><stop offset="1" stop-color="#ffe6c2" stop-opacity=".75"/></linearGradient>
       </defs>
-      <path d="M32 4 L60 28 L52 28 L52 58 L38 58 L38 42 L26 42 L26 58 L12 58 L12 28 L4 28 Z" fill="url(#gradEmasMuat)" stroke="#b97e14" stroke-width="1.4"/>
+      <rect width="1600" height="900" fill="url(#mLangit)"/>
+      <circle class="m-sinar" cx="800" cy="470" r="260" fill="url(#mSinar)"/>
+      <circle cx="800" cy="470" r="62" fill="#ffe9a8"/>
+      <g class="m-awan1" fill="#fff" opacity=".9"><ellipse cx="260" cy="190" rx="90" ry="24"/><ellipse cx="320" cy="170" rx="60" ry="26"/><ellipse cx="210" cy="178" rx="44" ry="18"/></g>
+      <g class="m-awan2" fill="#fff" opacity=".75"><ellipse cx="1290" cy="140" rx="80" ry="20"/><ellipse cx="1340" cy="124" rx="50" ry="22"/></g>
+      <g class="m-awan3" fill="#fff" opacity=".6"><ellipse cx="980" cy="250" rx="70" ry="16"/><ellipse cx="1020" cy="238" rx="40" ry="16"/></g>
+      <g class="m-burung" fill="none" stroke="#2c3e50" stroke-width="3" stroke-linecap="round">
+        <path d="M600 300 q10 -10 20 0 q10 -10 20 0"/><path d="M650 270 q8 -8 16 0 q8 -8 16 0"/><path d="M700 310 q7 -7 14 0 q7 -7 14 0"/>
+      </g>
+      <!-- pegunungan jauh (rendah-poli, seperti di dalam game) -->
+      <path d="M0 560 L120 430 L210 500 L330 360 L450 520 L560 420 L660 540 L940 540 L1040 410 L1160 520 L1270 380 L1390 500 L1500 420 L1600 520 L1600 600 L0 600 Z" fill="#7d9d8a"/>
+      <path d="M330 360 L390 440 L360 470 L300 400 Z M1270 380 L1320 450 L1290 480 L1240 410 Z M1040 410 L1080 470 L1010 450 Z" fill="#9db7a6"/>
+      <path d="M330 360 L352 386 L338 392 L318 380 Z M1270 380 L1290 404 L1276 410 L1258 398 Z" fill="#f4f1ea"/>
+      <path d="M0 600 L180 520 L340 575 L520 505 L700 580 L900 580 L1080 500 L1260 570 L1420 515 L1600 580 L1600 640 L0 640 Z" fill="#5f9a5a"/>
+      <rect y="540" width="1600" height="110" fill="url(#mKabut)"/>
+      <!-- kota: rumah warga mengapit istana -->
+      <g><rect x="611" y="572" width="36" height="18" fill="#f6ead2"/><path d="M607 572 L629 558 L651 572 Z" fill="#b03a2e"/><rect x="624" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="559" y="582" width="34" height="18" fill="#f6ead2"/><path d="M555 582 L576 568 L597 582 Z" fill="#e67e22"/><rect x="571" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="498" y="572" width="35" height="18" fill="#f6ead2"/><path d="M494 572 L516 558 L538 572 Z" fill="#16a085"/><rect x="511" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="442" y="582" width="34" height="18" fill="#f6ead2"/><path d="M438 582 L459 568 L480 582 Z" fill="#8e44ad"/><rect x="454" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="374" y="572" width="35" height="18" fill="#f6ead2"/><path d="M370 572 L392 558 L414 572 Z" fill="#b03a2e"/><rect x="387" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="322" y="582" width="35" height="18" fill="#f6ead2"/><path d="M318 582 L340 568 L362 582 Z" fill="#8e44ad"/><rect x="335" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="256" y="572" width="42" height="18" fill="#f6ead2"/><path d="M252 572 L277 558 L302 572 Z" fill="#b03a2e"/><rect x="272" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="200" y="582" width="35" height="18" fill="#f6ead2"/><path d="M196 582 L218 568 L240 582 Z" fill="#8e44ad"/><rect x="213" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="153" y="572" width="34" height="18" fill="#f6ead2"/><path d="M149 572 L170 558 L191 572 Z" fill="#b03a2e"/><rect x="165" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="946" y="572" width="37" height="18" fill="#f6ead2"/><path d="M942 572 L964 558 L986 572 Z" fill="#c0392b"/><rect x="959" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1012" y="582" width="36" height="18" fill="#f6ead2"/><path d="M1008 582 L1030 568 L1052 582 Z" fill="#d35400"/><rect x="1025" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1068" y="572" width="36" height="18" fill="#f6ead2"/><path d="M1064 572 L1086 558 L1108 572 Z" fill="#e67e22"/><rect x="1081" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1128" y="582" width="38" height="18" fill="#f6ead2"/><path d="M1124 582 L1147 568 L1170 582 Z" fill="#2e7d4f"/><rect x="1142" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1178" y="572" width="37" height="18" fill="#f6ead2"/><path d="M1174 572 L1197 558 L1220 572 Z" fill="#16a085"/><rect x="1192" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1234" y="582" width="42" height="18" fill="#f6ead2"/><path d="M1230 582 L1255 568 L1280 582 Z" fill="#e67e22"/><rect x="1250" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1304" y="572" width="34" height="18" fill="#f6ead2"/><path d="M1300 572 L1321 558 L1342 572 Z" fill="#8e44ad"/><rect x="1316" y="578" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1356" y="582" width="42" height="18" fill="#f6ead2"/><path d="M1352 582 L1377 568 L1402 582 Z" fill="#b03a2e"/><rect x="1372" y="588" width="7" height="7" fill="#4a6a82"/></g><g><rect x="1420" y="572" width="39" height="18" fill="#f6ead2"/><path d="M1416 572 L1440 558 L1464 572 Z" fill="#1f618d"/><rect x="1435" y="578" width="7" height="7" fill="#4a6a82"/></g>
+      <rect x="1290" y="480" width="54" height="110" fill="#e9dcc4"/><rect x="1290" y="476" width="54" height="6" fill="#c9a25a"/>
+      <g fill="#6e8ca3"><rect x="1298" y="492" width="8" height="9"/><rect x="1314" y="492" width="8" height="9"/><rect x="1330" y="492" width="8" height="9"/><rect x="1298" y="508" width="8" height="9"/><rect x="1314" y="508" width="8" height="9"/><rect x="1330" y="508" width="8" height="9"/><rect x="1298" y="524" width="8" height="9"/><rect x="1314" y="524" width="8" height="9"/><rect x="1330" y="524" width="8" height="9"/><rect x="1298" y="540" width="8" height="9"/><rect x="1314" y="540" width="8" height="9"/><rect x="1330" y="540" width="8" height="9"/><rect x="1298" y="556" width="8" height="9"/><rect x="1314" y="556" width="8" height="9"/><rect x="1330" y="556" width="8" height="9"/><rect x="1298" y="572" width="8" height="9"/><rect x="1314" y="572" width="8" height="9"/><rect x="1330" y="572" width="8" height="9"/></g>
+      <!-- istana negara -->
+      <g>
+        <rect x="660" y="540" width="280" height="56" fill="#fdf3d8"/><rect x="660" y="534" width="280" height="8" fill="#d9a441"/>
+        <path d="M648 540 L700 516 L900 516 L952 540 Z" fill="#2e5d43"/>
+        <rect x="740" y="496" width="120" height="44" fill="#fdf3d8"/>
+        <path d="M728 498 L800 466 L872 498 Z" fill="#2e5d43"/>
+        <path d="M772 466 A28 28 0 0 1 828 466 Z" fill="#2e5d43"/><rect x="772" y="464" width="56" height="4" fill="#d9a441"/>
+        <circle cx="800" cy="434" r="5" fill="#d9a441"/><rect x="798.5" y="408" width="3" height="26" fill="#7a6248"/>
+        <path class="m-bendera" d="M801.5 408 h30 v9 h-30 Z" fill="#d62828"/><path class="m-bendera" d="M801.5 417 h30 v9 h-30 Z" fill="#ffffff"/>
+        <g fill="#fdf3d8"><rect x="752" y="540" width="8" height="56"/><rect x="772" y="540" width="8" height="56"/><rect x="792" y="540" width="8" height="56"/><rect x="812" y="540" width="8" height="56"/><rect x="832" y="540" width="8" height="56"/><rect x="852" y="540" width="8" height="56"/></g>
+        <g fill="#4a6a82"><rect x="680" y="556" width="12" height="16"/><rect x="714" y="556" width="12" height="16"/><rect x="872" y="556" width="12" height="16"/><rect x="906" y="556" width="12" height="16"/></g>
+        <rect x="788" y="566" width="24" height="30" fill="#7a4a21"/>
+        <rect x="792" y="596" width="16" height="44" fill="#c8102e"/>
+      </g>
+      <!-- rel layang + KRL melintas -->
+      <rect x="0" y="618" width="1600" height="10" fill="#9aa0a6"/><rect x="0" y="628" width="1600" height="4" fill="#6b7076"/>
+      <g fill="#8a9096"><rect x="40" y="632" width="12" height="40"/><rect x="160" y="632" width="12" height="40"/><rect x="280" y="632" width="12" height="40"/><rect x="400" y="632" width="12" height="40"/><rect x="520" y="632" width="12" height="40"/><rect x="640" y="632" width="12" height="40"/><rect x="760" y="632" width="12" height="40"/><rect x="880" y="632" width="12" height="40"/><rect x="1000" y="632" width="12" height="40"/><rect x="1120" y="632" width="12" height="40"/><rect x="1240" y="632" width="12" height="40"/><rect x="1360" y="632" width="12" height="40"/><rect x="1480" y="632" width="12" height="40"/><rect x="1600" y="632" width="12" height="40"/></g>
+      <g class="m-krl">
+        <g><rect x="0" y="586" width="88" height="32" rx="5" fill="#f4f4f2"/><rect x="0" y="606" width="88" height="5" fill="#c8102e"/><g fill="#5b7d95"><rect x='8' y='592' width='14' height='10' rx='2'/><rect x='28' y='592' width='14' height='10' rx='2'/><rect x='48' y='592' width='14' height='10' rx='2'/><rect x='68' y='592' width='14' height='10' rx='2'/></g><rect x="92" y="586" width="88" height="32" rx="5" fill="#f4f4f2"/><rect x="92" y="606" width="88" height="5" fill="#c8102e"/><g fill="#5b7d95"><rect x='100' y='592' width='14' height='10' rx='2'/><rect x='120' y='592' width='14' height='10' rx='2'/><rect x='140' y='592' width='14' height='10' rx='2'/><rect x='160' y='592' width='14' height='10' rx='2'/></g><rect x="184" y="586" width="88" height="32" rx="5" fill="#f4f4f2"/><rect x="184" y="606" width="88" height="5" fill="#c8102e"/><g fill="#5b7d95"><rect x='192' y='592' width='14' height='10' rx='2'/><rect x='212' y='592' width='14' height='10' rx='2'/><rect x='232' y='592' width='14' height='10' rx='2'/><rect x='252' y='592' width='14' height='10' rx='2'/></g><rect x="276" y="586" width="88" height="32" rx="5" fill="#f4f4f2"/><rect x="276" y="606" width="88" height="5" fill="#c8102e"/><g fill="#5b7d95"><rect x='284' y='592' width='14' height='10' rx='2'/><rect x='304' y='592' width='14' height='10' rx='2'/><rect x='324' y='592' width='14' height='10' rx='2'/><rect x='344' y='592' width='14' height='10' rx='2'/></g>
+        <path d="M368 586 h14 q14 0 20 16 v16 h-34 Z" fill="#c8102e"/></g>
+      </g>
+      <!-- sawah berundak -->
+      <path d="M0 672 Q400 640 800 668 T1600 660 V900 H0 Z" fill="url(#mSawah)"/>
+      <path d="M0 720 Q420 690 820 716 T1600 706" fill="none" stroke="#c9b04a" stroke-width="22" opacity=".55"/>
+      <path d="M0 770 Q380 742 800 768 T1600 760" fill="none" stroke="#6fb04a" stroke-width="26" opacity=".7"/>
+      <path d="M0 826 Q420 798 820 824 T1600 816" fill="none" stroke="#3f8a35" stroke-width="30" opacity=".6"/>
+      <!-- jalan + bus Trans Merdu -->
+      <path d="M0 690 Q800 676 1600 688 L1600 712 Q800 700 0 714 Z" fill="#5c6066"/>
+      <path d="M0 702 Q800 688 1600 700" fill="none" stroke="#f2c230" stroke-width="2.5" stroke-dasharray="22 18"/>
+      <g class="m-bus"><rect x="0" y="664" width="96" height="30" rx="6" fill="#c8102e"/><rect x="6" y="670" width="84" height="11" rx="2" fill="#bfe0ef"/><circle cx="20" cy="696" r="7" fill="#1c1c1e"/><circle cx="76" cy="696" r="7" fill="#1c1c1e"/><rect x="0" y="684" width="96" height="3" fill="#f2c230"/></g>
+      <!-- kelapa di tepi bingkai -->
+      <g fill="#3d2b1f"><path d="M96 900 Q116 740 150 640 l8 3 Q130 760 112 900 Z"/><path d="M1504 900 Q1486 760 1452 650 l-8 3 Q1470 770 1488 900 Z"/></g>
+      <g class="m-daun" fill="#2f6b34"><path d="M154 640 q-80 -10 -120 30 q60 -20 120 -24 Z"/><path d="M154 640 q-30 -70 -90 -80 q50 30 82 82 Z"/><path d="M154 640 q50 -60 110 -60 q-60 20 -104 64 Z"/><path d="M154 640 q80 0 110 44 q-50 -26 -108 -40 Z"/></g>
+      <g class="m-daun2" fill="#2f6b34"><path d="M1448 650 q80 -10 120 30 q-60 -20 -120 -24 Z"/><path d="M1448 650 q30 -70 90 -80 q-50 30 -82 82 Z"/><path d="M1448 650 q-50 -60 -110 -60 q60 20 104 64 Z"/><path d="M1448 650 q-80 0 -110 44 q50 -26 108 -40 Z"/></g>
     </svg>
-    <div class="judul">Negara Merdu</div>
-    <div class="sub" id="muat-status">Menghubungi Istana Negara…</div>
-    <div class="bar"><i id="muat-bar"></i></div>
-  </div>
+    <div class="muat-panel">
+      <div class="muat-merek">
+        <svg class="lambang" viewBox="0 0 64 64" aria-hidden="true">
+          <defs><linearGradient id="gradEmasMuat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6cd6b"/><stop offset="1" stop-color="#dd9a26"/></linearGradient></defs>
+          <circle cx="32" cy="32" r="30" fill="#7a1f1f"/>
+          <path d="M32 11 L52 28 L46 28 L46 50 L37 50 L37 39 L27 39 L27 50 L18 50 L18 28 L12 28 Z" fill="url(#gradEmasMuat)" stroke="#b97e14" stroke-width="1.2"/>
+        </svg>
+        <div>
+          <div class="judul">Negara Merdu</div>
+          <div class="tagline">Kota virtual milik warganya · @negaramerdu</div>
+        </div>
+      </div>
+      <div class="sub" id="muat-status">Menghubungi Istana Negara…</div>
+      <div class="bar"><i id="muat-bar"></i></div>
+      <div class="langkah" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="tips" id="muat-tips">Tips: naik bus Trans Merdu di halte, lalu turun di plaza</div>
+    </div>
 </div>`;

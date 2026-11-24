@@ -119,18 +119,35 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     var muat = document.getElementById("muat");
     var statusEl = document.getElementById("muat-status");
     var barEl = document.getElementById("muat-bar");
+    var tipsEl = document.getElementById("muat-tips");
     if (!muat || !statusEl || !barEl) return;
     var langkah = ["Menghubungi Istana Negara…", "Memuat warga & rumah…", "Membangun kota…", "Menyiapkan kamera…"];
-    var i = 0, t = null;
-    function selesai() { return muat.style.display === "none"; }
+    var tips = [
+      "Tips: naik bus Trans Merdu di halte, lalu turun di Halte Plaza",
+      "Tips: KRL Merdu berhenti di Stasiun Merdu — tekan “Naik KRL” di pintu stasiun",
+      "Tips: ketuk papan iklan atau Istana Negara untuk melihat info",
+      "Tips: Panggung Rakyat di sisi timur plaza sedang ada pertunjukan",
+      "Tips: ganti kamera 1st Person, 3rd Person, atau Drone di bar bawah",
+      "Tips: ikut pemilu Lurah, Camat, dan Walikota dari menu",
+    ];
+    var i = 0, j = Math.floor(Math.random() * tips.length), t = null, tt = null;
+    function selesai() { return muat.style.display === "none" || muat.classList.contains("selesai"); }
     function tampil() {
       if (selesai()) { if (t) clearInterval(t); return; }
-      statusEl.textContent = langkah[i];
+      statusEl.textContent = langkah[i]; muat.dataset.langkah = String(i);
     }
     t = setInterval(function () {
       if (selesai()) { clearInterval(t); return; }
       if (i < langkah.length - 1) { i++; tampil(); }
     }, 1500);
+    if (tipsEl) {
+      tipsEl.textContent = tips[j];
+      tt = setInterval(function () {
+        if (selesai()) { clearInterval(tt); return; }
+        tipsEl.classList.add("ganti");
+        setTimeout(function () { j = (j + 1) % tips.length; tipsEl.textContent = tips[j]; tipsEl.classList.remove("ganti"); }, 350);
+      }, 3400);
+    }
     tampil();
   })();
 
@@ -175,7 +192,10 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
       animasi();
       sambungWS();
     } catch (e) { console.error("Gagal membangun kota:", e); }
-    $("#muat").style.display = "none";
+    { // layar muat memudar (panel & panorama), lalu dilepas dari tata letak
+      const m = $("#muat"); m.dataset.langkah = "3"; $("#muat-bar").style.animation = "none"; $("#muat-bar").style.transform = "scaleX(1)";
+      m.classList.add("selesai"); setTimeout(() => { m.style.display = "none"; }, 650);
+    }
     $("#hud").hidden = false;
     if (!sesi.saya) { $("#gerbang").hidden = false; tampilLangkah("nama"); }
     else if (sesi.pinDefault || sesi.genderKosong) bukaLengkapi(); // sesi pulih pun wajib melengkapi dulu
