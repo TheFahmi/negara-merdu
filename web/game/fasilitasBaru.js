@@ -7,6 +7,7 @@
    pohon peneduh, lampu taman. Semua elemen di dalam blok (±34 lokal).
    Depan bangunan menghadap +z (selatan). Grup: y=0 = muka alas blok.
    TAPAK_BARU = AABB tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok. */
+import { SKALA_MOBIL } from "./inti.js";
 import { LAMPU_TAMAN, M, geometriAtapPelana, meshPelana, kotak } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { bangkuTaman, matAtapWarna, pagarSemak, pohonKecil, teksturBenderaMerdu, teksturPapanNama } from "./fasilitas.js";
@@ -97,10 +98,10 @@ function papanDepan(g, judul, sub, x, z, skala) {
 }
 function parkir(g, x, z, n, arahX) { // deret garis parkir di atas aspal
   const L = n * 3.2;
-  g.add(kotak(arahX ? 6 : L + 1, 0.08, arahX ? L + 1 : 6, ASPAL, x, 0.06, z));
+  g.add(kotak(arahX ? 7 : L + 1, 0.08, arahX ? L + 1 : 7, ASPAL, x, 0.06, z)); // petak 3,2 x 6: muat mobil SKALA_MOBIL (2,6 x 5,7)
   for (let i = 0; i <= n; i++) {
     const o = -L / 2 + i * 3.2;
-    g.add(kotak(arahX ? 5 : 0.15, 0.1, arahX ? 0.15 : 5, 0xf4f1e6, x + (arahX ? 0 : o), 0.07, z + (arahX ? o : 0)));
+    g.add(kotak(arahX ? 6 : 0.15, 0.1, arahX ? 0.15 : 6, 0xf4f1e6, x + (arahX ? 0 : o), 0.07, z + (arahX ? o : 0)));
   }
 }
 function mobil(g, x, z, ry, warna) {
@@ -111,7 +112,7 @@ function mobil(g, x, z, ry, warna) {
   for (const [wx, wz] of [[-0.95, 1.3], [0.95, 1.3], [-0.95, -1.3], [0.95, -1.3]]) {
     const r = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12), M(0x222222)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.38, wz); m.add(r);
   }
-  m.position.set(x, 0, z); m.rotation.y = ry || 0; g.add(m);
+  m.position.set(x, 0, z); m.rotation.y = ry || 0; m.scale.setScalar(SKALA_MOBIL); g.add(m); // skala sama dengan mobil kota
   return m;
 }
 function tiangBendera(g, x, z) {
@@ -230,7 +231,7 @@ export const MODEL_BARU = {
     gedung(g, { x: -22, z: 14, w: 10, d: 8, h: 4.2, dinding: 0xf1e8d2, atap: 0xb5533c, pintu: true });
     tiangBendera(g, 9, 14);
     parkir(g, 20, 16, 4, true);
-    mobil(g, 20, 13.6, Math.PI / 2, 0xd9462e); mobil(g, 20, 20, Math.PI / 2, 0x3f6fb5);
+    mobil(g, 20, 14.4, Math.PI / 2, 0xd9462e); mobil(g, 20, 20.8, Math.PI / 2, 0x3f6fb5); // tepat di tengah petak
     papanDepan(g, "BALAI WARGA", "Pendopo Negara Merdu", -12, 28, 0.6);
   },
 
@@ -281,7 +282,7 @@ export const MODEL_BARU = {
     const amb = mobil(g, 4, 2, 0, 0xffffff);
     amb.add(kotak(2.0, 1.6, 2.4, 0xffffff, 0, 1.6, 1.1)); amb.add(kotak(2.02, 0.3, 4.22, 0xd63b2f, 0, 1.0, 0));
     amb.add(kotak(0.6, 0.2, 0.4, 0x3f6fb5, 0, 2.5, -0.6));
-    parkir(g, -18, 14, 5, false); mobil(g, -22.8, 14, 0, 0x8a8f94); mobil(g, -16.4, 14, 0, 0xe8c268);
+    parkir(g, -18, 14, 5, false); mobil(g, -24.4, 14, 0, 0x8a8f94); mobil(g, -14.8, 14, 0, 0xe8c268);
     // taman obat + bangku tunggu
     for (const [x, z] of [[16, 14], [22, 14], [16, 20], [22, 20]]) {
       g.add(kotak(4.5, 0.4, 4.5, 0x7a5a38, x, 0.2, z));
@@ -386,7 +387,7 @@ export const MODEL_BARU = {
       m.add(kotak(0.7, 0.06, 0.06, 0x8a8f94, 0, 1.2, 0.6));
       m.position.set(20 + (i % 5) * 1.2, 0.1, 20 + Math.floor(i / 5) * 2.6); g.add(m);
     }
-    parkir(g, -20, 24, 4, false); mobil(g, -23, 24, 0, 0x3f6fb5); mobil(g, -16.6, 24, 0, 0xe8c268);
+    parkir(g, -20, 24, 4, false); mobil(g, -24.8, 24, 0, 0x3f6fb5); mobil(g, -15.2, 24, 0, 0xe8c268);
     for (const [x, z] of [[-31, -30], [31, -30], [-31, 30], [31, 30]]) g.add(pohonKecil(x, z, 1.0));
   },
 
@@ -666,8 +667,8 @@ export const MODEL_BARU = {
 
     // --- 5. PARKIR, MOBIL & POHON ---
     parkir(g, -18, 18, 4, false);
-    mobil(g, -21.2, 18, 0, 0x3f6fb5);
-    mobil(g, -14.8, 18, 0, 0xd9462e);
+    mobil(g, -22.8, 18, 0, 0x3f6fb5);
+    mobil(g, -13.2, 18, 0, 0xd9462e);
     mobil(g, 0, 12.5, Math.PI / 2, 0xf2f0eb); // mobil drop-off di depan lobi
     for (const [px, pz] of [[-29, -28], [29, -28], [-29, 28], [29, 28], [-29, 0], [29, 8]]) {
       g.add(pohonKecil(px, pz, 1.05));
@@ -711,7 +712,7 @@ export const MODEL_BARU = {
     truk.add(kotak(2.2, 1.3, 2.0, MERAH, 0, 1.2, 2.4)); truk.add(kotak(2.0, 0.6, 1.4, 0x24323d, 0, 1.9, 2.6));
     truk.add(kotak(2.4, 2.2, 4.2, 0xffffff, 0, 1.9, -0.8)); truk.add(kotak(2.42, 0.4, 4.22, MERAH, 0, 1.4, -0.8));
     for (const [wx, wz] of [[-1.1, 2.2], [1.1, 2.2], [-1.1, -1.8], [1.1, -1.8]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.45, wz); truk.add(r); }
-    truk.position.set(-24, 0, -4); g.add(truk);
+    truk.position.set(-24, 0, -4); truk.scale.setScalar(SKALA_MOBIL); g.add(truk); // sebanding mobil kota
     tiangBendera(g, 18, 14); tiangBendera(g, 22, 14);
     parkir(g, 20, 22, 4, false);
     for (const s of [-1, 1]) g.add(bangkuTaman(s * 7, 14, 0));
@@ -751,7 +752,7 @@ export const MODEL_BARU = {
       for (const [wx, wz] of [[-1.05, 2.0], [1.05, 2.0], [-1.05, -1.6], [1.05, -1.6]]) {
         const r = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.42, wz); v.add(r);
       }
-      v.position.set(x, 0, 4.5); v.rotation.y = Math.PI; g.add(v);
+      v.position.set(x, 0, 5.2); v.rotation.y = Math.PI; v.scale.setScalar(SKALA_MOBIL); g.add(v); // sebanding mobil kota
     }
     // troli ompreng (tumpukan wadah makan stainless) di dok
     for (const x of [-4, -1.5]) {
@@ -815,7 +816,7 @@ export const MODEL_BARU = {
     for (const s of [-1, 1]) { g.add(bangkuTaman(s * 9, 20, s * Math.PI / 2)); lampuTaman(g, s * 12, 14); lampuTaman(g, s * 12, 26); }
     // parkir kiri & kanan
     parkir(g, -26, 16, 4, true); parkir(g, 26, 16, 4, true);
-    for (const [x, z, w] of [[-26, 12, 0xd9462e], [-26, 18.4, 0x3f6fb5], [26, 11, 0x2b2d30], [26, 21, 0xe8c268]]) mobil(g, x, z, Math.PI / 2, w);
+    for (const [x, z, w] of [[-26, 11.2, 0xd9462e], [-26, 17.6, 0x3f6fb5], [26, 11.2, 0x2b2d30], [26, 20.8, 0xe8c268]]) mobil(g, x, z, Math.PI / 2, w);
     PINTU_MALL.length = 0; PINTU_MALL.push({ x: g.position.x, z: g.position.z + zc + D / 2 + 6.5 });
     MALL_KLIK.length = 0; MALL_KLIK.push(g);
   },

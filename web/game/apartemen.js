@@ -11,7 +11,7 @@
      UNIT   : kamar apartemen — ruang tamu, dapur, kamar tidur bersekat,
               jendela kaca besar berpemandangan kota, balkon
    Keluar gedung hanya dari lobi (pintu selatan) atau tombol Keluar. */
-import { $, APARTEMEN_BLOK, hashInt, sudutBlok, JALAN, PITCH } from "./inti.js";
+import { SKALA_MOBIL, $, APARTEMEN_BLOK, hashInt, sudutBlok, JALAN, PITCH } from "./inti.js";
 import { M, kotak, scene, wkt } from "./bersama.js";
 import { bangkuTaman, pagarSemak, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { WARNA_MOBIL } from "./kendaraan.js";
@@ -94,11 +94,11 @@ export function bangunApartemen() {
     // parkir + mobil (barat)
     g.add(kotak(12, 0.08, 22, 0x5c6066, -20, 0.06, 14));
     for (let i = 0; i < 6; i++) {
-      g.add(kotak(5, 0.1, 0.15, 0xf4f1e6, -23, 0.07, 4.2 + i * 3.6)); g.add(kotak(5, 0.1, 0.15, 0xf4f1e6, -17, 0.07, 4.2 + i * 3.6));
+      g.add(kotak(5.9, 0.1, 0.15, 0xf4f1e6, -23, 0.07, 4.2 + i * 3.6)); g.add(kotak(5.9, 0.1, 0.15, 0xf4f1e6, -17, 0.07, 4.2 + i * 3.6));
       if (hashInt(data.kol * 7 + i) > 0.3) { // mobil penghuni
         const m = new THREE.Group(), w = WARNA_MOBIL[(i + data.kol) % WARNA_MOBIL.length];
         m.add(kotak(4.2, 0.7, 1.9, w, 0, 0.7, 0)); m.add(kotak(2.3, 0.65, 1.7, w, -0.2, 1.35, 0)); m.add(kotak(2.0, 0.5, 1.75, 0x24323d, -0.2, 1.37, 0));
-        m.position.set(i % 2 ? -23 : -17, 0, 6 + i * 3.6); g.add(m);
+        m.position.set(i % 2 ? -23 : -17, 0, 6 + i * 3.6); m.scale.setScalar(SKALA_MOBIL); g.add(m); // skala sama dengan mobil kota
       }
     }
     for (const [x, z] of [[-30, -30], [-30, -15], [30, -30], [30, -15], [-12, 30], [12, 30], [30, 28], [-30, 28]]) g.add(pohonKecil(x, z, 1.0));
