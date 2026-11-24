@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
-import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
+import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, plafonTerang, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
@@ -495,8 +495,8 @@ geoKepalaL.translate(1.02, 4.80, 0);
       // Cek apakah mendekati garis henti persimpangan saat lampu bukan hijau
       const relatif = ((m.pos + batas) % PITCH + PITCH) % PITCH;
       const mendekatiHenti = m.arah === 1
-        ? (relatif > PITCH - 9 && relatif < PITCH - 4.5)
-        : (relatif > JALAN + 4.5 && relatif < JALAN + 9);
+        ? (relatif > PITCH - 10.5 && relatif < PITCH - 6.2) // mobil diperbesar (SKALA_MOBIL): moncong tetap di belakang garis henti
+        : (relatif > JALAN + 6.2 && relatif < JALAN + 10.5);
       const berhenti = mendekatiHenti && fase[m.sumbu] !== "hijau";
 
       if (!berhenti && dt > 0) {
@@ -512,7 +512,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
         _dummyM.position.set(m.pos, 0, m.tetap);
         _dummyM.rotation.set(0, m.arah === 1 ? Math.PI / 2 : -Math.PI / 2, 0);
       }
-      _dummyM.scale.set(1, 1, 1);
+      _dummyM.scale.setScalar(SKALA_MOBIL);
       _dummyM.updateMatrix();
       imBodi.setMatrixAt(i, _dummyM.matrix);
       imDetail.setMatrixAt(i, _dummyM.matrix);

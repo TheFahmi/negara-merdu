@@ -14,6 +14,10 @@
   export const BLOK_KOLOM = 80, BLOK_BARIS = 50, PER_BLOK = 25, SISI = 5;
   export const PITCH = 84, JALAN = 14, KAV_PITCH = 14;
   export const KAPASITAS = 100000;
+  /* Skala mobil penumpang (parkir di rumah & lalu lintas arteri) relatif model
+     ±4,2 m: dunia game berskala besar (lajur 7, rumah 8,6, pintu ±3), jadi
+     mobil 1:1 tampak kerdil di samping rumah. Satu konstanta untuk keduanya. */
+  export const SKALA_MOBIL = 1.35;
   /* Warna aspal: SATU sumber untuk tekstur jalan (buatKanvasTanah) dan
      tutup marka persimpangan (kota.js) — dulu dua nilai terpisah sehingga
      persimpangan tampak sebagai tambalan berbentuk salib. */

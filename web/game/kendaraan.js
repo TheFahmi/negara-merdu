@@ -8,7 +8,7 @@
       jarak dengan mobil di depan, dan berbelok acak di persimpangan.
    Semua mobil = 2 InstancedMesh (badan berwarna per instans + detail
    kaca/lampu/roda berwarna verteks) per kelompok -> murah di HP. */
-import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
+import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, SKALA_MOBIL, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
 import { M, PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { rintanganFasilitas } from "./rumah.js";
 
@@ -65,13 +65,13 @@ export function bangunMobilParkir() {
          timur (kx 4) memarkir di sisi BARAT rumah — dulu mobilnya keluar
          kavling dan nangkring di trotoar. */
       const sisi = (k % SISI) === SISI - 1 ? -1 : 1;
-      posisi.push({ x: x + sisi * (detail ? 5.75 : 5.5), z: z + 1.2, w: WARNA_MOBIL[Math.floor(hashInt(blok * 31 + k * 7) * WARNA_MOBIL.length)] });
+      posisi.push({ x: x + sisi * (detail ? 5.75 : 5.6), z: z + 1.0, w: WARNA_MOBIL[Math.floor(hashInt(blok * 31 + k * 7) * WARNA_MOBIL.length)] });
     }
   }
   const { badan, detail } = buatInstans(posisi.length);
   const d = new THREE.Object3D(), c = new THREE.Color();
   posisi.forEach((p, i) => {
-    d.position.set(p.x, 0, p.z); d.rotation.set(0, 0, 0); d.scale.set(0.95, 0.95, 0.95); d.updateMatrix();
+    d.position.set(p.x, 0, p.z); d.rotation.set(0, 0, 0); d.scale.setScalar(SKALA_MOBIL); d.updateMatrix();
     badan.setMatrixAt(i, d.matrix); detail.setMatrixAt(i, d.matrix); badan.setColorAt(i, c.setHex(p.w));
   });
   badan.count = detail.count = posisi.length;
