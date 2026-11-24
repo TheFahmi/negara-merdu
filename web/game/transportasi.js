@@ -352,7 +352,7 @@ function bangunTitikHentiJalur(R) {
 
 export function bangunTransportasi() {
   const grup = new THREE.Group(); grupPenumpang = grup;
-  bangunRel(grup); bangunStasiun(grup); bangunStasiunUtara(grup);
+  bangunRel(grup); bangunStasiun(grup, { x: XST, sBlok: sSt }); bangunStasiunUtara(grup);
   STASIUN.push({ nama: "Stasiun Merdu", x: XST, z: RZ, pintu: { x: XST, z: sSt.z + JALAN + 21 } });
   STASIUN.push({ nama: "Stasiun Merdu Utara", x: X_UTARA, z: ZN, pintu: { x: X_UTARA, z: ZN + 27.5 } });
   for (const [J, nama] of [[JALUR_A, "A"], [JALUR_B, "B"]]) {
