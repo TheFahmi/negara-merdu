@@ -2,6 +2,7 @@
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
+import { arahHalus, jalurPoligon, jarakKeBelok, posJalur } from "./jalur.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, plafonTerang, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
@@ -427,43 +428,24 @@ geoKepalaL.translate(1.02, 4.80, 0);
     }
     const geoDetail = gabungBerwarna(bagianDet);
 
-    // Jalur arteri utama (di luar plaza): 4 jalur vertikal + 4 jalur horizontal (masing-masing 2 arah)
+    /* Mobil arteri BERKELILING rute kotak di jalan arteri (24 Nov 2026; dulu
+       melaju lurus lalu "teleport" di ujung kota): lintasan jalurPoligon()
+       bersudut bulat (r 9 di as) & lajur kiri 3,5 -> belok melengkung mulus.
+       Rute berpasangan searah & berlawanan jarum jam di jalan yang sama. */
     const daftar = [];
     const PALET_MOBIL = [0xd9462e, 0x3f6fb5, 0xe8c268, 0x2e9e5b, 0xf2f0eb, 0x5c6770, 0xe07a3f, 0x4a7a8c];
-    const jalurUS = [20, 36, 44, 60]; // kolom jalan vertikal (lewati area plaza 38..41)
-    const jalurTB = [10, 20, 30, 40]; // baris jalan horizontal (lewati area plaza 24..25)
-
-    // 32 mobil sumbu Utara-Selatan (lajur kiri: +z di timur x0+10.5, -z di barat x0+3.5)
-    jalurUS.forEach((kol, ki) => {
-      const x0 = sudutBlok(kol, 0).x;
-      for (const arah of [1, -1]) {
-        const laneX = arah === 1 ? x0 + JALAN * 0.75 : x0 + JALAN * 0.25;
-        for (let m = 0; m < 4; m++) {
-          const idx = daftar.length;
-          daftar.push({
-            sumbu: "us", arah, tetap: laneX,
-            pos: -KOTA_D / 2 + ((m * 0.25 + hashInt(idx * 17 + 3) * 0.18) % 1) * KOTA_D,
-            kec: 16 + hashInt(idx * 31 + 7) * 10,
-            warna: PALET_MOBIL[idx % PALET_MOBIL.length],
-          });
-        }
-      }
-    });
-
-    // 32 mobil sumbu Timur-Barat (lajur kiri: +x di utara z0+3.5, -x di selatan z0+10.5)
-    jalurTB.forEach((bar, bi) => {
-      const z0 = sudutBlok(0, bar).z;
-      for (const arah of [1, -1]) {
-        const laneZ = arah === 1 ? z0 + JALAN * 0.25 : z0 + JALAN * 0.75;
-        for (let m = 0; m < 4; m++) {
-          const idx = daftar.length;
-          daftar.push({
-            sumbu: "tb", arah, tetap: laneZ,
-            pos: -KOTA_W / 2 + ((m * 0.25 + hashInt(idx * 23 + 5) * 0.18) % 1) * KOTA_W,
-            kec: 16 + hashInt(idx * 29 + 11) * 10,
-            warna: PALET_MOBIL[idx % PALET_MOBIL.length],
-          });
-        }
+    const cxK = (k) => sudutBlok(k, 0).x + JALAN / 2, czB = (b) => sudutBlok(0, b).z + JALAN / 2;
+    const kotakRute = (k0, k1, b0, b1, cw) => { const p = [[cxK(k0), czB(b0)], [cxK(k1), czB(b0)], [cxK(k1), czB(b1)], [cxK(k0), czB(b1)]]; return jalurPoligon(cw ? p : p.reverse(), { r: 9, L: 3.5 }); };
+    const RUTE_MOBIL = [
+      [kotakRute(20, 60, 10, 40, true), 12], [kotakRute(20, 60, 10, 40, false), 12],
+      [kotakRute(36, 44, 20, 30, true), 8], [kotakRute(36, 44, 20, 30, false), 8],
+      [kotakRute(20, 36, 30, 40, true), 6], [kotakRute(44, 60, 10, 20, true), 6],
+      [kotakRute(20, 44, 10, 20, false), 6], [kotakRute(44, 60, 30, 40, false), 6],
+    ];
+    RUTE_MOBIL.forEach(([J, n]) => {
+      for (let m = 0; m < n; m++) {
+        const idx = daftar.length;
+        daftar.push({ J, s: J.total * (m + hashInt(idx * 17 + 3) * 0.4) / n, v: 0, kec: 15 + hashInt(idx * 31 + 7) * 8, warna: PALET_MOBIL[idx % PALET_MOBIL.length], x: 0, z: 0, hx: 0, hz: 1 });
       }
     });
 
@@ -488,30 +470,38 @@ geoKepalaL.translate(1.02, 4.80, 0);
     if (!imBodi || !daftar.length) return;
     const fase = faseLaluLintas(t);
     const halfW = KOTA_W / 2, halfD = KOTA_D / 2;
-
     for (let i = 0; i < daftar.length; i++) {
       const m = daftar[i];
-      const batas = m.sumbu === "us" ? halfD : halfW;
-      // Cek apakah mendekati garis henti persimpangan saat lampu bukan hijau
-      const relatif = ((m.pos + batas) % PITCH + PITCH) % PITCH;
-      const mendekatiHenti = m.arah === 1
-        ? (relatif > PITCH - 10.5 && relatif < PITCH - 6.2) // mobil diperbesar (SKALA_MOBIL): moncong tetap di belakang garis henti
-        : (relatif > JALAN + 6.2 && relatif < JALAN + 10.5);
-      const berhenti = mendekatiHenti && fase[m.sumbu] !== "hijau";
-
-      if (!berhenti && dt > 0) {
-        m.pos += m.arah * m.kec * dt;
-        if (m.pos > batas) m.pos = -batas;
-        else if (m.pos < -batas) m.pos = batas;
+      let vMaks = m.kec;
+      // tikungan di depan: melambat (lintasan bulat r ±9 -> ±8 m/s)
+      const dB = jarakKeBelok(m.J, m.s + 3, 30);
+      if (dB < 30) vMaks = Math.min(vMaks, 7 + dB * 0.4);
+      // lampu lalu lintas (hanya di ruas lurus): sumbu & arah dari arah hadap
+      const p = posJalur(m.J, m.s);
+      if (!p.belok) {
+        const us = Math.abs(p.hz) > Math.abs(p.hx), arah = us ? Math.sign(p.hz) : Math.sign(p.hx);
+        const pos = us ? p.z : p.x, batas = us ? halfD : halfW;
+        const relatif = ((pos + batas) % PITCH + PITCH) % PITCH;
+        const dekat = arah === 1 ? (relatif > PITCH - 10.5 && relatif < PITCH - 6.2) : (relatif > JALAN + 6.2 && relatif < JALAN + 10.5); // moncong di belakang garis henti
+        if (dekat && fase[us ? "us" : "tb"] !== "hijau") vMaks = 0;
       }
-
-      if (m.sumbu === "us") {
-        _dummyM.position.set(m.tetap, 0, m.pos);
-        _dummyM.rotation.set(0, m.arah === 1 ? 0 : Math.PI, 0);
-      } else {
-        _dummyM.position.set(m.pos, 0, m.tetap);
-        _dummyM.rotation.set(0, m.arah === 1 ? Math.PI / 2 : -Math.PI / 2, 0);
+      // antre: mobil lain di depan pada lajur yang sama (semua rute)
+      const fl = Math.hypot(p.hx, p.hz) || 1, fx = p.hx / fl, fz = p.hz / fl;
+      for (let j = 0; j < daftar.length; j++) {
+        if (j === i) continue;
+        const o = daftar[j], dx = o.x - p.x, dz = o.z - p.z, maju = dx * fx + dz * fz;
+        if (maju <= 0 || maju > 14) continue;
+        if (Math.abs(dx * fz - dz * fx) > 1.8 || o.hx * fx + o.hz * fz < 0.5) continue;
+        vMaks = Math.min(vMaks, Math.max(0, (maju - 8.5) * 2.2));
       }
+      if (dt > 0) {
+        m.v += Math.sign(vMaks - m.v) * Math.min(Math.abs(vMaks - m.v), (vMaks < m.v ? 14 : 5) * dt);
+        m.s = (m.s + m.v * dt) % m.J.total;
+      }
+      const q = posJalur(m.J, m.s), ql = Math.hypot(q.hx, q.hz) || 1;
+      m.x = q.x; m.z = q.z; m.hx = q.hx / ql; m.hz = q.hz / ql;
+      _dummyM.position.set(q.x, 0, q.z);
+      _dummyM.rotation.set(0, arahHalus(m.J, m.s, 2), 0);
       _dummyM.scale.setScalar(SKALA_MOBIL);
       _dummyM.updateMatrix();
       imBodi.setMatrixAt(i, _dummyM.matrix);
@@ -520,3 +510,4 @@ geoKepalaL.translate(1.02, 4.80, 0);
     imBodi.instanceMatrix.needsUpdate = true;
     imDetail.instanceMatrix.needsUpdate = true;
   }
+
