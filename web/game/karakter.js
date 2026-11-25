@@ -124,6 +124,11 @@ export function warnaSkala(hex, faktor) {
   return c.getHex();
 }
 
+/* Proporsi realistis: pinggul 0,85 (dulu 0,52), torso dinaikkan NAIK,
+   kepala diperkecil SKALA_KEPALA. Kode lama yang mendudukkan karakter
+   (kaki diputar ~-1,35) mengandaikan pinggul 0,52 — animasiHidup()
+   menurunkan tubuh 0,33 & menekuk lutut otomatis saat pose duduk. */
+export const PINGGUL = 0.85, NAIK = 0.33, SKALA_KEPALA = 0.34;
 export function buatKarakter(opsi) {
   const GEO = geoKarakter();
   const g = new THREE.Group();
@@ -142,61 +147,65 @@ export function buatKarakter(opsi) {
     return m;
   }
 
+  const tubuh = new THREE.Group(); g.add(tubuh); // semua bagian; turun saat duduk supaya pinggul tetap di tinggi dudukan lama (0,52)
   // Kaki: pivot di pinggul y=0.52, telapak sepatu tepat di y=0
   const matLipat = matKarakter(warnaSkala(celana, 1.3));
   const matSepatu = matKarakter(0x2f2c28);
   const matSol = matKarakter(0xe6dfd0);
+  /* PROPORSI REALISTIS (25 Nov 2026): tinggi ±1,78, kepala ±1/7 tinggi,
+     tungkai panjang berlutut. Pinggul di y 0,85; lutut 0,43. */
   function buatKaki(sx) {
-    const kaki = new THREE.Group(); kaki.position.set(sx, 0.52, 0);
-    kaki.add(bagian(GEO.celana, matCelana, 0, -0.20, 0, true));
-    kaki.add(bagian(GEO.lipatCelana, matLipat, 0, -0.37, 0, false));
-    // Sepatu rounded
-    kaki.add(bagian(GEO.sepatuBelakang, matSepatu, 0, -0.455, -0.01, false));
-    const ujung = bagian(GEO.sepatuUjung, matSepatu, 0, -0.465, 0.085, false);
-    ujung.scale.set(1, 0.55, 1.15); kaki.add(ujung);
-    kaki.add(bagian(GEO.solSepatu, matSol, 0, -0.502, 0.02, false));
-    kaki.add(bagian(GEO.solUjung, matSol, 0, -0.502, 0.11, false));
+    const kaki = new THREE.Group(); kaki.position.set(sx, PINGGUL, 0);
+    const paha = bagian(GEO.celana, matCelana, 0, -0.21, 0, true); paha.scale.set(0.95, 1.05, 0.95); kaki.add(paha);
+    const lutut = new THREE.Group(); lutut.position.y = -0.42; kaki.add(lutut); kaki.userData.lutut = lutut;
+    const betis = bagian(GEO.celana, matCelana, 0, -0.15, 0, true); betis.scale.set(0.85, 0.75, 0.85); lutut.add(betis);
+    lutut.add(bagian(GEO.lipatCelana, matLipat, 0, -0.30, 0, false));
+    lutut.add(bagian(GEO.sepatuBelakang, matSepatu, 0, -0.365, -0.01, false));
+    const ujung = bagian(GEO.sepatuUjung, matSepatu, 0, -0.375, 0.085, false);
+    ujung.scale.set(1, 0.55, 1.15); lutut.add(ujung);
+    lutut.add(bagian(GEO.solSepatu, matSol, 0, -0.412, 0.02, false));
+    lutut.add(bagian(GEO.solUjung, matSol, 0, -0.412, 0.11, false));
     return kaki;
   }
-  const kakiK = buatKaki(-0.155), kakiR = buatKaki(0.155);
-  g.add(kakiK); g.add(kakiR);
+  const kakiK = buatKaki(-0.11), kakiR = buatKaki(0.11);
+  tubuh.add(kakiK); tubuh.add(kakiR);
 
   // Pinggul & Torso
-  const pinggul = bagian(GEO.pinggul, matCelana, 0, 0.56, 0, true);
-  pinggul.scale.z = 0.78; g.add(pinggul);
+  const pinggul = bagian(GEO.pinggul, matCelana, 0, 0.56 + NAIK, 0, true);
+  pinggul.scale.set(0.66, 1, 0.52); tubuh.add(pinggul);
 
-  const badan = bagian(GEO.badan, matBaju, 0, 0.87, 0, true);
-  badan.scale.z = 0.78; g.add(badan);
+  const badan = bagian(GEO.badan, matBaju, 0, 0.87 + NAIK, 0, true);
+  badan.scale.set(0.64, 1.02, 0.5); badan.userData.skala = { x: 0.64, z: 0.5 }; tubuh.add(badan);
 
   // Leher
-  g.add(bagian(GEO.leher, matKulit, 0, 1.22, 0, false));
+  { const lh = bagian(GEO.leher, matKulit, 0, 1.22 + NAIK, 0, false); lh.scale.set(0.62, 1.1, 0.62); tubuh.add(lh); }
 
   // Detail Kemeja (kerah, plaket, kancing, saku dada kiri)
   const matKerahGelap = matKarakter(warnaSkala(baju, 0.72));
-  const kerah = bagian(GEO.kerah, matKerahGelap, 0, 1.15, 0, false);
-  kerah.scale.z = 0.78; g.add(kerah);
+  const kerah = bagian(GEO.kerah, matKerahGelap, 0, 1.15 + NAIK, 0, false);
+  kerah.scale.set(0.62, 1, 0.5); tubuh.add(kerah);
 
   for (const s of [-1, 1]) {
-    const bahu = bagian(GEO.bahu, matBaju, s * 0.37, 1.12, 0, false);
-    bahu.scale.set(1, 0.92, 0.78); g.add(bahu);
-    const lidah = bagian(GEO.kerahDepan, matKerahGelap, s * 0.085, 1.10, 0.258, false);
-    lidah.rotation.set(0.10, 0, -s * 0.42); g.add(lidah);
+    const bahu = bagian(GEO.bahu, matBaju, s * 0.235, 1.12 + NAIK, 0, false);
+    bahu.scale.set(0.72, 0.7, 0.62); tubuh.add(bahu);
+    const lidah = bagian(GEO.kerahDepan, matKerahGelap, s * 0.055, 1.10 + NAIK, 0.165, false); lidah.scale.set(0.65, 0.8, 1);
+    lidah.rotation.set(0.10, 0, -s * 0.42); tubuh.add(lidah);
   }
-  const plaket = bagian(GEO.plaket, matKarakter(warnaSkala(baju, 0.86)), 0, 0.88, 0.242, false);
-  plaket.rotation.x = 0.11; g.add(plaket);
+  const plaket = bagian(GEO.plaket, matKarakter(warnaSkala(baju, 0.86)), 0, 0.88 + NAIK, 0.156, false); plaket.scale.x = 0.6;
+  plaket.rotation.x = 0.11; tubuh.add(plaket);
 
-  const saku = bagian(GEO.saku, matKarakter(warnaSkala(baju, 0.88)), 0.14, 0.95, 0.232, false);
-  saku.rotation.set(0.10, 0.18, 0); g.add(saku);
+  const saku = bagian(GEO.saku, matKarakter(warnaSkala(baju, 0.88)), 0.09, 0.95 + NAIK, 0.15, false); saku.scale.set(0.6, 0.6, 1);
+  saku.rotation.set(0.10, 0.18, 0); tubuh.add(saku);
 
   const matKancing = matKarakter(0x2a2320);
   for (const ky of [1.03, 0.88, 0.73]) {
-    g.add(bagian(GEO.kancing, matKancing, 0, ky, 0.264 + (ky - 0.88) * 0.11, false));
+    tubuh.add(bagian(GEO.kancing, matKancing, 0, ky + NAIK, 0.17 + (ky - 0.88) * 0.07, false));
   }
 
   // Lengan & Tangan beribu jari
   function buatLengan(sx) {
-    const lengan = new THREE.Group(); lengan.position.set(sx, 1.12, 0);
-    lengan.rotation.z = sx < 0 ? -0.10 : 0.10;
+    const lengan = new THREE.Group(); lengan.position.set(sx, 1.12 + NAIK, 0); lengan.scale.set(0.72, 1.08, 0.72);
+    lengan.rotation.z = sx < 0 ? -0.06 : 0.06;
     lengan.add(bagian(GEO.lenganAtas, matBaju, 0, -0.16, 0, true));
     lengan.add(bagian(GEO.manset, matKarakter(warnaSkala(baju, 0.8)), 0, -0.34, 0, false));
     lengan.add(bagian(GEO.lenganBawah, matKulit, 0, -0.47, 0, false));
@@ -206,11 +215,11 @@ export function buatKarakter(opsi) {
     lengan.add(bagian(GEO.jempol, matKulit, sx < 0 ? 0.048 : -0.048, -0.63, 0.045, false));
     return lengan;
   }
-  const lenganK = buatLengan(-0.40), lenganR = buatLengan(0.40);
-  g.add(lenganK); g.add(lenganR);
+  const lenganK = buatLengan(-0.27), lenganR = buatLengan(0.27);
+  tubuh.add(lenganK); tubuh.add(lenganR);
 
   // Kepala & Wajah
-  const kepalaGrup = new THREE.Group(); kepalaGrup.position.y = 1.32; g.add(kepalaGrup);
+  const kepalaGrup = new THREE.Group(); kepalaGrup.position.y = 1.32 + NAIK - 0.04; kepalaGrup.scale.setScalar(SKALA_KEPALA); tubuh.add(kepalaGrup);
   const kepalaMesh = bagian(GEO.kepala, matKulit, 0, 0.24, 0, true);
   kepalaMesh.scale.set(1, 1, 0.92); kepalaGrup.add(kepalaMesh);
 
@@ -222,34 +231,34 @@ export function buatKarakter(opsi) {
   const mataK = [], mataR = [];
   for (const s of [-1, 1]) {
     const putih = bagian(GEO.mataPutih, matPutih, s * 0.155, 0.285, 0.362, false);
-    putih.scale.set(1.04, 1.28, 0.48); kepalaGrup.add(putih);
+    putih.scale.set(0.62, 0.62, 0.42); putih.position.z += 0.012; kepalaGrup.add(putih);
     const pup = bagian(GEO.pupil, matWajah, s * 0.155, 0.28, 0.396, false);
-    pup.scale.set(1, 1.25, 0.52); kepalaGrup.add(pup);
-    const sorot = bagian(GEO.highlight, matPutih, s * 0.155 - 0.02, 0.318, 0.422, false);
+    pup.scale.set(0.55, 0.6, 0.45); pup.position.z -= 0.01; kepalaGrup.add(pup);
+    const sorot = bagian(GEO.highlight, matPutih, s * 0.155 - 0.012, 0.3, 0.408, false); sorot.scale.setScalar(0.5);
     kepalaGrup.add(sorot);
     for (const m of [putih, pup, sorot]) m.userData.sy = m.scale.y;
     (s < 0 ? mataK : mataR).push(putih, pup, sorot);
 
     const alis = bagian(GEO.alis, matWajah, s * 0.155, 0.415, 0.342, false);
     alis.rotation.z = s * 0.14; alis.rotation.x = -0.12; kepalaGrup.add(alis);
-    if (R.alis === "tebal") alis.scale.set(1.1, 1.7, 1.2);
+    alis.scale.set(0.8, 0.7, 1); if (R.alis === "tebal") alis.scale.set(0.9, 1.2, 1.2);
 
     const tel = bagian(GEO.telinga, matKulit, s * 0.43, 0.26, -0.01, false);
     tel.scale.set(0.45, 1.05, 0.72); kepalaGrup.add(tel);
 
     const pipi = bagian(GEO.pipi, matPipi, s * 0.245, 0.185, 0.334, false);
-    pipi.rotation.y = s * 0.45; pipi.rotation.x = 0.10; kepalaGrup.add(pipi);
+    pipi.rotation.y = s * 0.45; pipi.rotation.x = 0.10; pipi.visible = false; kepalaGrup.add(pipi); // pipi merah kartun dimatikan (realistis)
   }
 
   // Hidung bulat stylized
   const hidung = bagian(GEO.hidung, matKulit, 0, 0.20, 0.405, false);
-  hidung.scale.set(1.05, 0.82, 1.15); kepalaGrup.add(hidung);
+  hidung.scale.set(0.75, 1.1, 1.0); kepalaGrup.add(hidung);
 
   // Senyum
   const mulut = bagian(GEO.mulut, matKarakter(0x7c4030), 0, 0.095, 0.372, false);
-  mulut.rotation.z = Math.PI; kepalaGrup.add(mulut);
+  mulut.rotation.z = Math.PI; mulut.scale.set(0.55, 0.35, 1); mulut.position.y += 0.02; kepalaGrup.add(mulut);
   const gigi = bagian(GEO.gigi, matPutih, 0, 0.099, 0.368, false);
-  gigi.rotation.z = Math.PI; kepalaGrup.add(gigi);
+  gigi.rotation.z = Math.PI; gigi.visible = false; kepalaGrup.add(gigi);
 
   // Rambut / Peci / Topi
   const matRambut = matKarakter(hexKe(R.warna_rambut, 0x281f1c));
@@ -284,7 +293,7 @@ export function buatKarakter(opsi) {
     tudung.scale.set(1.0, 1.02, 0.98); tudung.position.set(0, 0.24, -0.02); tudung.castShadow = true; kepalaGrup.add(tudung);
     const bingkai = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.06, 10, 28, Math.PI * 1.25), matHijab);
     bingkai.position.set(0, 0.22, 0.2); bingkai.rotation.z = -Math.PI * 0.125 - Math.PI / 2 + Math.PI; bingkai.rotation.z = Math.PI * 1.375; kepalaGrup.add(bingkai);
-    const jubah = new THREE.Mesh(new THREE.ConeGeometry(0.52, 0.55, 24, 1, true), matHijab); jubah.position.set(0, -0.08, 0); kepalaGrup.add(jubah);
+    const jubah = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.9, 24, 1, true), matHijab); jubah.position.set(0, -0.25, 0); kepalaGrup.add(jubah);
   } else if (opsi.topi === "peci") {
     const matPeci = matKarakter(0x1c1c1e);
     kepalaGrup.add(bagian(GEO.peci, matPeci, 0, 0.61, 0, true));
@@ -316,6 +325,7 @@ export function buatKarakter(opsi) {
     rambutGaya();
   }
 
+  g.userData.tubuh = tubuh; g.userData.lututK = kakiK.userData.lutut; g.userData.lututR = kakiR.userData.lutut;
   g.userData.lenganK = lenganK; g.userData.lenganR = lenganR;
   g.userData.kakiK = kakiK; g.userData.kakiR = kakiR;
   g.userData.kepala = kepalaGrup;
@@ -355,6 +365,14 @@ export function skalaKedip(t, geser) {
   return 1 - Math.sin((f / LAMA) * Math.PI) * 0.92;
 }
 
+/* Pose duduk (paha diputar ke depan): tubuh turun supaya pinggul di 0,52
+   (tinggi dudukan yang dipakai kode lama) & betis ditekuk ke bawah. */
+export function aturDuduk(kar) {
+  const u = kar.userData; if (!u.tubuh || !u.kakiK) return;
+  const duduk = u.kakiK.rotation.x < -1.0 && u.kakiR.rotation.x < -1.0;
+  u.tubuh.position.y = duduk ? 0.52 - PINGGUL : 0;
+  if (u.lututK) { u.lututK.rotation.x = duduk ? -u.kakiK.rotation.x : 0; u.lututR.rotation.x = duduk ? -u.kakiR.rotation.x : 0; }
+}
 export function animasiHidup(kar, t, diam) {
   const u = kar.userData;
   if (!u.mataK || !u.mataR) return;
@@ -362,10 +380,11 @@ export function animasiHidup(kar, t, diam) {
   for (const m of u.mataK) m.scale.y = m.userData.sy * s;
   for (const m of u.mataR) m.scale.y = m.userData.sy * s;
   if (u.badan) {
-    const napas = diam ? 1 + Math.sin(t * 1.7 + (u.geserHidup || 0)) * 0.018 : 1;
-    u.badan.scale.x = napas;
-    u.badan.scale.z = 0.78 * napas;
+    const napas = diam ? 1 + Math.sin(t * 1.7 + (u.geserHidup || 0)) * 0.018 : 1, sk = u.badan.userData.skala || { x: 1, z: 0.78 };
+    u.badan.scale.x = sk.x * napas;
+    u.badan.scale.z = sk.z * napas;
   }
+  aturDuduk(kar);
   if (diam && u.lenganK && u.lenganR) {
     const ayun = Math.sin(t * 1.7 + (u.geserHidup || 0) + 0.7) * 0.045;
     u.lenganK.rotation.x = ayun; u.lenganR.rotation.x = ayun;
