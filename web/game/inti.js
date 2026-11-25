@@ -354,7 +354,7 @@
       kepadatan: L.kepadatan, skalaTekstur: L.skalaTekstur,
     };
   }
-  export function indeksUntukPilihan(pilihan) { return pilihan === "rendah" ? 0 : LANGKAH_KUALITAS.length - 1; }
+  export function indeksUntukPilihan(pilihan) { return pilihan === "rendah" ? 0 : pilihan === "sedang" ? 1 : LANGKAH_KUALITAS.length - 1; } // Rendah · Sedang · Tinggi (= Maksimal)
   /* Mesin keadaan otomatis: st = {langkah, diAtasSejak, jedaSampai} (dijutasi).
      fps < 30 -> turun 1 langkah (dijeda 8 dtk antar perubahan).
      fps > 55 berkelanjutan 30 dtk -> naik 1 langkah (maks langkah teratas).

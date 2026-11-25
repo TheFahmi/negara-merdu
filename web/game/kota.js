@@ -44,10 +44,18 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
       const milik = warnaPemilik.get(d.kunciPos);
       if (milik) { // identitas pemilik: atap = warna bajunya, DILEMBUTKAN (saturasi & terang dijepit) supaya tetap seperti genteng cat, bukan neon
         warna.set(milik); const hsl = { h: 0, s: 0, l: 0 }; warna.getHSL(hsl);
-        return warna.setHSL(hsl.h, Math.min(hsl.s, 0.5) * 0.85, Math.min(0.56, Math.max(0.34, hsl.l)));
+        // realistis: rona baju pemilik dipertahankan tapi seperti genteng metal pasir/cat kusam
+        const t = hashInt(d.nomor * 41 + 9);
+        if (t < 0.35) return warna.setHSL(0.03 + t * 0.06, 0.5, 0.36 + hashInt(d.nomor) * 0.07);   // sebagian tetap genteng terakota
+        return warna.setHSL(hsl.h, Math.min(hsl.s, 0.5) * 0.55, Math.min(0.42, Math.max(0.28, hsl.l * 0.8)));
       }
-      const hsl = warnaAtapZonaHSL(d.zona, d.h, hashInt(d.nomor * 3 + 7));
-      return warna.setHSL(hsl[0], hsl[1], hsl[2]);
+      /* REALISTIS: atap rumah Indonesia = genteng tanah liat (terakota),
+         genteng beton (abu/cokelat tua) atau metal pasir (hijau/biru tua) —
+         rona zona tetap dipakai tapi dijepit ke saturasi & terang yang wajar. */
+      const hsl = warnaAtapZonaHSL(d.zona, d.h, hashInt(d.nomor * 3 + 7)), j = hashInt(d.nomor * 41 + 9);
+      if (j < 0.45) return warna.setHSL(0.03 + j * 0.05, 0.52, 0.36 + hashInt(d.nomor) * 0.08);      // terakota
+      if (j < 0.65) return warna.setHSL(0.07, 0.12, 0.26 + hashInt(d.nomor) * 0.08);                // genteng beton gelap
+      return warna.setHSL(hsl[0], Math.min(hsl[1], 0.32), Math.min(0.4, Math.max(0.26, hsl[2] * 0.8))); // metal pasir berwarna kalem
     };
     /* Dinding rumah terisi: 1 InstancedMesh bertekstur plesteran (tekstur
        terang dikali warna instans — pastel sekeluarga dengan atap zonanya). */
@@ -146,7 +154,7 @@ import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gab
       dummy.updateMatrix(); imTeras.setMatrixAt(i, dummy.matrix);
       imTeras.setColorAt(i, warna.setHex(WARNA_KAYU[Math.floor(hashInt(d.nomor * 37 + 2) * 3)]));
     });
-    imTeras.count = daftarTeras.length;
+    imTeras.count = 0; imTeras.visible = false; // teras kini bagian geometriDetailMassal (kanopi + keramik)
     grup.add(imCerobong); grup.add(imTeras);
     /* Lingkungan kavling: pagar kayu + semak + pohon kecil — semua instanced.
        Berlaku di SEMUA petak (daftar penuh): di kavling terisi jadi halaman

@@ -48,6 +48,7 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
         <div class="seg" id="seg-kualitas">
           <button type="button" data-kualitas="otomatis">Otomatis</button>
           <button type="button" data-kualitas="rendah">Rendah</button>
+          <button type="button" data-kualitas="sedang">Sedang</button>
           <button type="button" data-kualitas="tinggi">Tinggi</button>
         </div>
         <p id="info-kualitas"></p>

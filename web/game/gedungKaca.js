@@ -18,7 +18,7 @@ import { buatJip, buatMobil, buatTruk } from "./mobilGeo.js";
 import { buatJam } from "./jam.js";
 import { buatPetugas } from "./keamanan.js";
 import { GEDUNG_KACA_BLOK, JALAN, PITCH, SKALA_KARAKTER, sudutBlok } from "./inti.js";
-import { M, camera, gabungBerwarna, kotak, scene } from "./bersama.js";
+import { M, camera, gabungBerwarna, jarakDetail, kotak, scene } from "./bersama.js";
 import { buatKarakter, animasiHidup, animasiJalan } from "./karakter.js";
 import { SKALA_MOBIL, hashInt } from "./inti.js";
 import { pohonKecil, teksturPapanNama } from "./fasilitas.js";
@@ -486,7 +486,7 @@ export function perbaruiGedungKaca(dt, t) {
   if (kini - lodTerakhir > 400) { // LOD tiap 0,4 dtk waktu nyata (tak bergantung FPS)
     lodTerakhir = kini;
     for (const G of GEDUNG) {
-      const dekat = Math.hypot(camera.position.x - G.cx, camera.position.z - G.cz) < 320;
+      const dekat = Math.hypot(camera.position.x - G.cx, camera.position.z - G.cz) < jarakDetail(); // ikut kualitas grafik
       for (const o of G.dalam) if (o) o.visible = dekat;
       for (const p of G.orang) p.kar.visible = dekat;
       G.dekat = dekat;

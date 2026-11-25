@@ -6,7 +6,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
   export let pilihanKualitas = "otomatis";
   try {
     const s = localStorage.getItem("pinarak_kualitas");
-    if (s === "rendah" || s === "tinggi" || s === "otomatis") pilihanKualitas = s;
+    if (s === "rendah" || s === "sedang" || s === "tinggi" || s === "otomatis") pilihanKualitas = s;
   } catch (e) {}
   export let langkahKualitas = indeksUntukPilihan(pilihanKualitas);
   export let PARAM = parameterKualitas(langkahKualitas, window.devicePixelRatio || 1);
@@ -431,22 +431,64 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
      jadi bingkai 3D duduk di atas kaca lukisan, bukan di sebelahnya.
      Origo di tanah (y=0) — instans memakai skala-y yang sama dengan
      dinding, jadi alignmen bertahan di semua variasi tinggi rumah. */
+  /* Detail muka rumah massal REALISTIS (26 Nov 2026): satu geometri
+     berwarna verteks untuk semua rumah (1 draw call). Dinding 8,6 x 4,2 x 7,6
+     berpusat di (0, 2,1, 0); muka depan z +3,8.
+     - pondasi + anak tangga teras, lantai teras keramik
+     - kanopi teras beratap genteng di atas 2 tiang + lampu teras
+     - pintu panel kayu berbingkai + kaca di atas pintu, kenop, nomor rumah
+     - jendela berkaca (biru-langit memantul) + tirai + teralis + ambang +
+       lis atas, juga di sisi kiri, kanan & belakang
+     - roster ventilasi di atas jendela, lis plafon & talang air + pipa turun
+     - unit AC luar di sisi, meteran listrik, kotak surat */
   export function geometriDetailMassal() {
     const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-    const TRIM = 0xfdf3d8, KAYU = 0x7a5230;
-    const bagian = [
-      { geo: B(9.3, 0.55, 8.3), x: 0, y: 0.27, z: 0, warna: 0x9a938a },        // plinth pondasi
-      { geo: B(9.0, 0.4, 8.0), x: 0, y: 4.02, z: 0, warna: TRIM },             // lis di bawah atap
-      { geo: B(1.6, 2.7, 0.14), x: 0, y: 1.35, z: 3.82, warna: TRIM },         // bingkai pintu
-      { geo: B(1.34, 2.5, 0.16), x: 0, y: 1.25, z: 3.85, warna: 0x7a4a21 },    // daun pintu
-      { geo: B(0.14, 0.14, 0.1), x: 0.45, y: 1.25, z: 3.94, warna: 0xd9a441 }, // kenop
-    ];
-    for (const sx of [-1, 1]) {
-      bagian.push({ geo: B(2.26, 1.64, 0.12), x: sx * 1.89, y: 2.22, z: 3.81, warna: KAYU }); // bingkai jendela
-      bagian.push({ geo: B(0.09, 1.46, 0.14), x: sx * 1.89, y: 2.22, z: 3.83, warna: KAYU }); // kusen vertikal
-      bagian.push({ geo: B(2.08, 0.09, 0.14), x: sx * 1.89, y: 2.22, z: 3.83, warna: KAYU }); // kusen horizontal
-      bagian.push({ geo: B(2.42, 0.12, 0.22), x: sx * 1.89, y: 1.36, z: 3.85, warna: TRIM }); // ambang
-    }
+    const TRIM = 0xfdf3d8, KAYU = 0x7a5230, KACA = 0x8fb4c8, TIRAI = 0xe9dcc2, BESI = 0x2a2c30, KERAMIK = 0xc9b9a0;
+    const bagian = [];
+    const P = (w, h, d, x, y, z, warna, rx, ry) => bagian.push({ geo: B(w, h, d), x, y, z, rx: rx || 0, ry: ry || 0, warna });
+    P(9.3, 0.55, 8.3, 0, 0.27, 0, 0x9a938a);                                   // pondasi
+    P(9.0, 0.4, 8.0, 0, 4.02, 0, TRIM);                                        // lis plafon
+    // teras depan: lantai keramik + 2 anak tangga
+    P(5.6, 0.3, 2.2, 0, 0.42, 4.9, KERAMIK);
+    P(2.0, 0.15, 0.4, 0, 0.13, 6.15, 0x9a938a); P(2.0, 0.3, 0.35, 0, 0.2, 5.85, 0x9a938a);
+    // kanopi teras: 2 tiang + atap miring + lisplang
+    for (const sx of [-1, 1]) { P(0.22, 3.2, 0.22, sx * 2.6, 2.15, 5.85, TRIM); P(0.34, 0.2, 0.34, sx * 2.6, 0.62, 5.85, 0x9a938a); }
+    P(6.2, 0.14, 2.6, 0, 3.86, 5.0, 0xa04a32, -0.2); P(6.3, 0.22, 0.08, 0, 3.66, 6.28, TRIM);
+    P(0.22, 0.22, 0.22, 1.2, 3.45, 4.2, 0xfff1c4);                              // lampu teras
+    // pintu: bingkai, daun panel, kaca atas, kenop, nomor
+    // pintu menutup PENUH bukaan kusen (dulu ada celah kaca pucat di atas daun pintu)
+    P(1.7, 3.0, 0.14, 0, 1.5, 3.82, TRIM);                                     // kusen
+    P(1.36, 2.82, 0.18, 0, 1.43, 3.86, 0x7a4a21);                              // daun pintu setinggi kusen
+    for (const [py, ph] of [[0.7, 0.9], [1.9, 0.9]]) for (const px of [-0.3, 0.3]) P(0.45, ph, 0.04, px, py, 3.96, 0x6a3f1c); // panel
+    P(1.2, 0.22, 0.04, 0, 2.6, 3.96, 0x6a3f1c);                                // panel atas
+    P(1.8, 0.16, 0.22, 0, 3.05, 3.86, TRIM);                                   // lis atas pintu
+    P(0.12, 0.12, 0.08, 0.5, 1.3, 3.97, 0xd9a441);                             // kenop
+    P(0.45, 0.25, 0.04, 1.3, 2.4, 3.82, 0x1d3a5f);                              // pelat nomor rumah
+    // jendela: fungsi umum di bidang (normal arah n: 'z' / 'x')
+    const jendela = (x, z, sisi, lebar) => {
+      const dz = sisi === "z" ? Math.sign(z) : 0, dx = sisi === "x" ? Math.sign(x) : 0;
+      const W = (w, d) => (sisi === "z" ? [w, d] : [d, w]);
+      const put = (w, h, d, ox, y, off, warna) => { const [a, c] = W(w, d); P(a, h, c, x + (sisi === "z" ? ox : dx * off), y, z + (sisi === "z" ? dz * off : ox), warna); };
+      put(lebar + 0.2, 1.7, 0.12, 0, 2.2, 0.0, KAYU);               // kusen luar
+      put(lebar, 1.5, 0.06, 0, 2.2, 0.03, KACA);                    // kaca
+      put(lebar * 0.42, 1.4, 0.03, -lebar * 0.26, 2.22, -0.02, TIRAI); // tirai dalam (terlihat lewat kaca)
+      put(0.08, 1.5, 0.1, 0, 2.2, 0.06, KAYU);                      // kusen tengah
+      for (let i = 1; i < 6; i++) put(0.03, 1.5, 0.04, -lebar / 2 + i * lebar / 6, 2.2, 0.12, BESI); // teralis
+      put(lebar + 0.4, 0.12, 0.24, 0, 1.38, 0.08, TRIM);            // ambang bawah
+      put(lebar + 0.3, 0.12, 0.16, 0, 3.08, 0.06, TRIM);            // lis atas
+      put(lebar, 0.3, 0.05, 0, 3.5, 0.0, 0xd8cfbf);                 // roster ventilasi
+      for (let i = 0; i < 5; i++) put(0.16, 0.16, 0.06, -lebar / 2 + 0.2 + i * (lebar - 0.4) / 4, 3.5, 0.02, 0x8a8478);
+    };
+    for (const sx of [-1, 1]) jendela(sx * 2.25, 3.8, "z", 1.9);
+    jendela(-4.3, -1.6, "x", 1.4); jendela(4.3, -1.6, "x", 1.4); jendela(4.3, 1.6, "x", 1.0);
+    jendela(-1.8, -3.8, "z", 1.4); jendela(1.9, -3.8, "z", 1.0);
+    // talang air & pipa turun
+    P(9.4, 0.14, 0.16, 0, 4.25, 4.12, 0x6b6f74); P(9.4, 0.14, 0.16, 0, 4.25, -4.12, 0x6b6f74);
+    for (const [x, z] of [[4.45, 4.1], [-4.45, -4.1]]) P(0.12, 4.0, 0.12, x, 2.2, z, 0x6b6f74);
+    // unit AC luar, meteran listrik, kotak surat
+    P(0.85, 0.6, 0.35, -2.4, 1.2, -4.0, 0xe9ecef); P(0.5, 0.5, 0.02, -2.4, 1.2, -4.19, 0x8a8f94);   // AC luar (belakang, tak tertabrak mobil carport)
+    P(0.35, 0.45, 0.16, 3.55, 1.6, 3.88, 0x8a8f94);                                                   // meteran listrik
+    P(0.4, 0.3, 0.25, 2.6, 1.35, 6.0, 0xc8102e);
     return gabungBerwarna(bagian);
   }
   /* Atap pelana (prisma segitiga): bubungan sejajar sumbu z, ujung segitiga
@@ -574,6 +616,9 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
      otomatis naik/turun. Mode kamera & interior tidak disentuh sama sekali. */
   export const fpsStat = { bingkai: 0, akumulasi: 0, diAtasSejak: 0, jedaSampai: 0 };
   export let frameTerakhirMs = 0, indikatorTimer = null;
+  /* Jarak tampil detail (interior gedung, penumpang, NPC gedung) mengikuti
+     langkah kualitas: Rendah 120 m · Sedang 200 m · Tinggi 320 m. */
+  export function jarakDetail() { return [120, 200, 280, 320][langkahKualitas] || 320; }
   export function terapkanKualitas() {
     const pBaru = parameterKualitas(langkahKualitas, window.devicePixelRatio || 1);
     const bayanganBerubah = pBaru.bayangan !== PARAM.bayangan;
@@ -612,8 +657,10 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
     info.textContent = pilihanKualitas === "otomatis"
       ? "Otomatis aktif — tingkat saat ini: " + PARAM.nama + ". Naik/turun sendiri mengikuti kelancaran HP."
       : pilihanKualitas === "rendah"
-        ? "Rendah: hemat baterai & lancar di HP kentang (tanpa bayangan, detail sedikit)."
-        : "Tinggi: tampilan paling bagus (bayangan lembut, detail penuh).";
+        ? "Rendah: hemat baterai & lancar di HP kentang (tanpa bayangan, resolusi rendah, isi gedung & penumpang hanya dari dekat)."
+        : pilihanKualitas === "sedang"
+          ? "Sedang: seimbang — tanpa bayangan, detail lingkungan setengah, isi gedung terlihat dari jarak menengah."
+          : "Tinggi: tampilan paling bagus (bayangan lembut, resolusi penuh, detail penuh, isi gedung terlihat dari jauh).";
   }
   export function setPilihanKualitas(v) {
     pilihanKualitas = v;

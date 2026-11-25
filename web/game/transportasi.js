@@ -15,7 +15,7 @@
    - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri),
      berhenti 3 detik di tiap halte (halte berkanopi di trotoar). */
 import { JALAN, PITCH, PUSAT_X, faseLaluLintas, persimpanganKota, sudutBlok } from "./inti.js";
-import { M, camera, gabungBerwarna, kotak, scene } from "./bersama.js";
+import { M, camera, gabungBerwarna, jarakDetail, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
@@ -805,7 +805,7 @@ function perbaruiPenumpang(dt) {
   const t = performance.now() / 1000;
   if ((jedaLod -= dt) <= 0) { // penumpang duduk hanya digambar bila kamera cukup dekat (hemat draw call)
     jedaLod = 0.4;
-    for (const o of AKTIF) if (o.duduk && o.induk) { o.induk.getWorldPosition(_wp); o.kar.visible = _wp.distanceTo(camera.position) < 180; }
+    for (const o of AKTIF) if (o.duduk && o.induk) { o.induk.getWorldPosition(_wp); o.kar.visible = _wp.distanceTo(camera.position) < jarakDetail() * 0.56; } // ikut kualitas grafik
   }
   for (let n = AKTIF.length - 1; n >= 0; n--) {
     const o = AKTIF[n], k = o.kar;
