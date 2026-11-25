@@ -15,6 +15,7 @@
    -> beberapa draw call per gedung; kaca 1 mesh transparan; layar & lampu 1
    mesh Basic. Interior + orang disembunyikan bila kamera jauh (> 320 m). */
 import { buatJam } from "./jam.js";
+import { buatPetugas } from "./keamanan.js";
 import { GEDUNG_KACA_BLOK, JALAN, PITCH, SKALA_KARAKTER, sudutBlok } from "./inti.js";
 import { M, camera, gabungBerwarna, kotak, scene } from "./bersama.js";
 import { buatKarakter, animasiHidup, animasiJalan } from "./karakter.js";
@@ -47,15 +48,17 @@ function Kumpul() {
 function duduk(kar) { const u = kar.userData; if (u.kakiK) { u.kakiK.rotation.x = -1.4; u.kakiR.rotation.x = -1.4; } }
 function orang(G, g, i, x, y, z, ry, sit, opsi) {
   const o = opsi || {};
-  const k = buatKarakter({ baju: o.baju || BAJU[i % BAJU.length], kulit: ["#f1c27d", "#c68642", "#e0ac69", "#8d5524"][(i * 5) % 4], topi: i % 5 === 2 ? "hijab" : "tanpa", rupa: o.celana ? { warna_celana: o.celana } : undefined });
+  const k = o.petugas ? buatPetugas(o.petugas, i) : buatKarakter({ baju: o.baju || BAJU[i % BAJU.length], kulit: ["#f1c27d", "#c68642", "#e0ac69", "#8d5524"][(i * 5) % 4], topi: i % 5 === 2 ? "hijab" : "tanpa", rupa: o.celana ? { warna_celana: o.celana } : undefined });
   k.scale.setScalar(SKALA_KARAKTER * (o.skala || 1)); k.position.set(x, y, z); k.rotation.y = ry; k.userData.geserHidup = i * 0.7;
   if (sit) duduk(k);
   g.add(k); G.orang.push({ kar: k, sit, fase: i * 0.9, aksi: o.aksi, x0: x, z0: z, rentang: o.rentang || 0 });
   return k;
 }
 
+/* limas 4 sisi beralas persegi (sudut di ±1) — diskalakan per sumbu tanpa miring */
+function atapLimas() { const c = new THREE.ConeGeometry(Math.SQRT2, 1, 4, 1); c.rotateY(Math.PI / 4); return c; }
 /* ---------- isi halaman (biar tidak sepi) ---------- */
-function pejalan(G, g, i, a, b, y) { const k = orang(G, g, i, a.x, y === undefined ? 0.3 : y, a.z, 0, false); const p = G.orang[G.orang.length - 1]; p.jalur = { a, b }; p.s = hashInt(i * 7) * Math.hypot(b.x - a.x, b.z - a.z); p.arah = i % 2 ? 1 : -1; return k; }
+function pejalan(G, g, i, a, b, y, opsi) { const k = orang(G, g, i, a.x, y === undefined ? 0.3 : y, a.z, 0, false, opsi); const p = G.orang[G.orang.length - 1]; p.jalur = { a, b }; p.s = hashInt(i * 7) * Math.hypot(b.x - a.x, b.z - a.z); p.arah = i % 2 ? 1 : -1; return k; }
 function mobilParkir(g, x, z, ry, warna) {
   const m = new THREE.Group();
   m.add(kotak(1.9, 0.62, 4.2, warna, 0, 0.68, 0)); m.add(kotak(1.74, 0.62, 2.3, warna, 0, 1.3, -0.25)); m.add(kotak(1.78, 0.5, 2.0, 0x24323d, 0, 1.32, -0.25));
@@ -177,7 +180,7 @@ function sekolah(G, g, data) {
   K.b(W + 2, 0.4, D + 6, 0x9aa0a6, 0, 0.2, z0 + 1.5);
   for (let f = 0; f <= L; f++) { K.b(W, 0.3, D + 3, 0xe9e2d3, 0, f * H + 0.4, z0 + 1.5); if (f) K.b(W, 1.0, 0.15, 0xfdf3d8, 0, f * H + 0.95, z0 + D / 2 + 3); } // pelat + pagar selasar
   // atap pelana genteng
-  const atap = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4, 1), M(0xb5533c)); atap.scale.set(W * 0.75, 3, (D + 4) * 0.75); atap.rotation.y = Math.PI / 4; atap.position.set(0, L * H + 1.9, z0 + 1.5); atap.castShadow = true; g.add(atap);
+  const atap = new THREE.Mesh(atapLimas(), M(0xb5533c)); atap.scale.set(W * 0.53, 3, (D + 4) * 0.53); atap.position.set(0, L * H + 1.9, z0 + 1.5); atap.castShadow = true; g.add(atap);
   // dinding belakang (utara) penuh, dinding ujung, sekat kelas
   K.b(W, L * H, 0.3, 0xfdf3d8, 0, L * H / 2 + 0.4, z0 - D / 2);
   for (const sx of [-1, 1]) K.b(0.3, L * H, D, 0xfdf3d8, sx * W / 2, L * H / 2 + 0.4, z0);
@@ -237,7 +240,7 @@ function sekolah(G, g, data) {
   for (const [w, x] of [[0xf2c230, -7], [0x3aa6b9, 7]]) K.b(0.3, 3.2, 9, w, tx + x, 2.2, tz);
   K.b(14, 3.2, 0.3, 0xe85d75, tx, 2.2, tz - 4.5);
   K.b(14, 0.9, 0.25, 0x2e9e5b, tx, 1.05, tz + 4.5); K.k(13.5, 2.0, 0.06, tx, 2.5, tz + 4.5);
-  const atapTK = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4), M(0xc8102e)); atapTK.scale.set(11, 2.4, 7.5); atapTK.rotation.y = Math.PI / 4; atapTK.position.set(tx, 5.0, tz); g.add(atapTK);
+  const atapTK = new THREE.Mesh(atapLimas(), M(0xc8102e)); atapTK.scale.set(7.8, 2.4, 5.3); atapTK.position.set(tx, 5.0, tz); g.add(atapTK);
   const pTK = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.8), new THREE.MeshBasicMaterial({ map: teksturPapanNama("TK MERDU CERIA", "Taman Kanak-kanak") })); pTK.position.set(tx, 3.4, tz + 4.65); g.add(pTK);
   for (const dx of [-4, 0, 4]) {
     dalam.c(0.9, 0.06, [0xf2c230, 0x3aa6b9, 0xe85d75][(dx + 4) / 4], tx + dx, 1.05, tz);
@@ -364,15 +367,117 @@ function kampus(G, g, data) {
   return { W: W + 2, D: D + 6, z0: z0 + 2, statis };
 }
 
+/* ===================== MARKAS POLISI & TENTARA ===================== */
+export const PARKIR_POLISI = []; // posisi dunia mobil polisi yang parkir (diisi saat bangun)
+function markasPolisi(G, g, data) {
+  const L = 3, H = 4.0, W = 30, D = 14, z0 = -16, K = Kumpul(), dalam = Kumpul(), BIRU = 0x1d3a5f;
+  K.b(W + 4, 0.4, D + 4, 0x9aa0a6, 0, 0.2, z0);
+  for (let f = 0; f <= L; f++) K.b(W, 0.35, D, 0xe9e2d3, 0, f * H + 0.4, z0);
+  K.b(W + 0.6, 1.0, D + 0.6, BIRU, 0, L * H + 0.9, z0);
+  K.b(W, L * H, 0.3, 0xf4f4f2, 0, L * H / 2 + 0.4, z0 - D / 2);
+  for (const sx of [-1, 1]) K.b(0.3, L * H, D, 0xf4f4f2, sx * W / 2, L * H / 2 + 0.4, z0);
+  for (let f = 0; f < L; f++) {
+    const lantai = f * H + 0.58, y0 = f * H + 0.6, hh = H - 0.25, zD = z0 + D / 2;
+    K.k(W, hh, 0.06, 0, y0 + hh / 2, zD); for (let x = -W / 2 + 3; x < W / 2; x += 3) K.b(0.14, hh, 0.14, BIRU, x, y0 + hh / 2, zD);
+    K.b(W, 0.4, 0.25, BIRU, 0, (f + 1) * H + 0.3, zD);
+    dalam.b(W - 0.6, 0.04, D - 0.6, [0x8a8f94, 0x5b6b7a, 0x5b6b7a][f], 0, lantai, z0);
+    for (let x = -12; x <= 12; x += 6) dalam.n(2.4, 0.06, 0.6, 0xfffbe8, x, (f + 1) * H + 0.18, z0);
+    if (f === 0) { // SPKT: loket pelayanan + warga melapor + ruang tunggu
+      dalam.b(16, 1.1, 1.2, 0x7a4a21, 0, lantai + 0.55, z0 + 1); dalam.b(16.2, 0.08, 1.4, 0xf4f4f2, 0, lantai + 1.14, z0 + 1);
+      dalam.n(6, 0.9, 0.08, 0x1d3a8f, 0, lantai + 2.8, z0 - 6.5);
+      for (const x of [-6, 0, 6]) { orang(G, g, 1400 + x, x, lantai, z0 - 0.2, 0, false, { petugas: "polisi" }); orang(G, g, 1410 + x, x + 0.6, lantai, z0 + 2.4, Math.PI, false); }
+      for (const x of [-12, -10, 10, 12]) { dalam.b(1.4, 0.45, 0.6, 0x2e6fa8, x, lantai + 0.25, z0 + 5); orang(G, g, 1420 + x, x, lantai, z0 + 5, Math.PI, true); }
+    } else { // ruang kerja reserse/lalu lintas: meja + monitor + petugas
+      for (const x of [-11, -6, -1, 4, 9]) for (const z of [z0 - 3, z0 + 2]) {
+        dalam.b(2.2, 0.08, 1.1, 0xe8e2d6, x, lantai + 0.75, z); dalam.n(0.7, 0.45, 0.05, 0x6fc3ff, x, lantai + 1.05, z - 0.4); dalam.b(0.75, 0.5, 0.04, 0x1b1d20, x, lantai + 1.05, z - 0.43);
+        dalam.b(0.55, 0.08, 0.55, 0x2b2d30, x, lantai + 0.5, z + 0.8);
+        if ((x + z + f) % 2 === 0) orang(G, g, 1430 + f * 20 + x + z, x, lantai, z + 0.8, Math.PI, true, { petugas: "polisi", aksi: "tulis" });
+      }
+      pejalan(G, g, 1480 + f, { x: -13, z: z0 + 5.6 }, { x: 13, z: z0 + 5.6 }, lantai, { petugas: "polisi" });
+    }
+  }
+  const papan = new THREE.Mesh(new THREE.BoxGeometry(18, 1.8, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(data.nama, "Melindungi & Mengayomi"), roughness: 0.8 }));
+  papan.position.set(0, L * H + 0.9, z0 + D / 2 + 0.35); g.add(papan);
+  const jk = buatJam(0.7); jk.position.set(12, L * H + 0.9, z0 + D / 2 + 0.45); g.add(jk);
+  // halaman: parkir mobil patroli (diisi keamanan.js), tiang bendera, pos jaga, petugas apel
+  K.b(W, 0.08, 18, 0x5c6066, 0, 0.3, 12);
+  for (let i = 0; i < 5; i++) { K.b(0.15, 0.04, 6, 0xf4f1e6, -12 + i * 6, 0.36, 10); if (i < 4) PARKIR_POLISI.push({ x: G.cx - 9 + i * 6, z: G.cz + 10, ry: Math.PI }); }
+  K.c(0.1, 10, 0xdddddd, 18, 5.3, 24); const bd = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.6), new THREE.MeshBasicMaterial({ color: 0xc8102e, side: THREE.DoubleSide })); bd.position.set(18.9, 9.9, 24); g.add(bd);
+  const bd2 = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.6), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })); bd2.position.set(18.9, 9.3, 24); g.add(bd2);
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) orang(G, g, 1500 + r * 6 + c, -10 + c * 1.6, 0.36, 24 + r * 1.6, Math.PI, false, { petugas: "polisi" }); // apel
+  orang(G, g, 1520, -5.8, 0.36, 21, 0, false, { petugas: "polisi", aksi: "presentasi" }); G.orang[G.orang.length - 1].ry0 = 0;
+  K.b(3, 2.6, 3, BIRU, -12, 1.6, 31); K.b(3.6, 0.3, 3.6, 0xf4f4f2, -12, 3.05, 31); orang(G, g, 1521, -9.6, 0.36, 31.5, 0, false, { petugas: "polisi" });
+  for (const x of [-6, 6]) K.b(1.2, 4.2, 1.2, BIRU, x, 2.4, 33); K.b(13.2, 1.1, 0.8, 0xf4f4f2, 0, 4.9, 33);
+  const pg = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.9), new THREE.MeshBasicMaterial({ map: teksturPapanNama(data.nama, "Pelayanan 24 Jam") })); pg.position.set(0, 4.9, 33.45); g.add(pg);
+  const statis = K.jadi(g), isi = dalam.jadi(g); G.dalam.push(isi.o, isi.nl, isi.kc);
+  for (const [x, z] of [[-26, 30], [26, 30], [-26, 6], [26, 6]]) g.add(pohonKecil(x, z, 1.1));
+  return { W: W + 2, D: D + 2, z0, statis };
+}
+function markasTentara(G, g, data) {
+  const K = Kumpul(), dalam = Kumpul(), HIJAU = 0x4f5d3a, KREM = 0xd8cfb0;
+  // 2 barak panjang berkaca (barat & timur) + gedung komando di utara
+  const barak = (bx, nama) => {
+    const W = 12, D = 26, H = 4.2, z0 = 2;
+    K.b(W + 1, 0.4, D + 1, 0x9aa0a6, bx, 0.2, z0); K.b(W, 0.3, D, KREM, bx, 0.45, z0);
+    const at = new THREE.Mesh(atapLimas(), M(HIJAU)); at.scale.set(W * 0.56, 2.4, D * 0.53); at.position.set(bx, H + 1.7, z0); at.castShadow = true; g.add(at);
+    K.b(W, H, 0.3, KREM, bx, H / 2 + 0.4, z0 - D / 2); K.b(W, H, 0.3, KREM, bx, H / 2 + 0.4, z0 + D / 2);
+    for (const sx of [-1, 1]) { K.b(0.3, 1.0, D, KREM, bx + sx * W / 2, 0.9, z0); K.k(0.06, 2.4, D, bx + sx * W / 2, 2.6, z0); K.b(0.3, 0.8, D, KREM, bx + sx * W / 2, H, z0); for (let z = z0 - D / 2 + 3; z < z0 + D / 2; z += 3) K.b(0.15, 2.4, 0.15, HIJAU, bx + sx * W / 2, 2.6, z); }
+    for (let i = 0; i < 8; i++) for (const sx of [-1, 1]) { // ranjang susun + loker
+      const z = z0 - D / 2 + 2.2 + i * 3, x = bx + sx * 3.6;
+      dalam.b(1.0, 0.15, 2.0, 0x556b2f, x, 0.95, z); dalam.b(1.0, 0.15, 2.0, 0x556b2f, x, 2.15, z);
+      for (const dz of [-0.95, 0.95]) dalam.b(0.08, 2.0, 0.08, 0x5f6b75, x - 0.45, 1.4, z + dz);
+      dalam.b(0.6, 1.8, 0.6, 0x7b8086, bx + sx * 5.4, 1.35, z);
+      if ((i + sx) % 3 === 0) orang(G, g, 1600 + bx + i * 2 + sx, x, 1.0, z, sx > 0 ? -Math.PI / 2 : Math.PI / 2, true, { petugas: "tentara" });
+    }
+    const pp = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.8), new THREE.MeshBasicMaterial({ map: teksturPapanNama(nama, "Asrama Prajurit") })); pp.position.set(bx, H - 0.3, z0 + D / 2 + 0.2); g.add(pp);
+  };
+  barak(-22, "BARAK A"); barak(22, "BARAK B");
+  // gedung komando (utara), fasad kaca
+  const W = 26, D = 10, z0 = -23, H = 4.2;
+  K.b(W + 2, 0.4, D + 2, 0x9aa0a6, 0, 0.2, z0);
+  for (let f = 0; f <= 2; f++) K.b(W, 0.35, D, KREM, 0, f * H + 0.4, z0);
+  K.b(W, 2 * H, 0.3, KREM, 0, H + 0.4, z0 - D / 2); for (const sx of [-1, 1]) K.b(0.3, 2 * H, D, KREM, sx * W / 2, H + 0.4, z0);
+  K.b(W + 0.6, 0.9, D + 0.6, HIJAU, 0, 2 * H + 0.85, z0);
+  for (let f = 0; f < 2; f++) {
+    const lantai = f * H + 0.58, y0 = f * H + 0.6, hh = H - 0.25;
+    K.k(W, hh, 0.06, 0, y0 + hh / 2, z0 + D / 2); for (let x = -W / 2 + 2.6; x < W / 2; x += 2.6) K.b(0.14, hh, 0.14, HIJAU, x, y0 + hh / 2, z0 + D / 2);
+    dalam.b(W - 0.6, 0.04, D - 0.6, 0x6b6450, 0, lantai, z0);
+    if (f === 0) { dalam.b(8, 0.1, 3, 0x7a4a21, 0, lantai + 0.78, z0); dalam.n(5, 2.4, 0.06, 0x2e7d5b, 0, lantai + 2, z0 - 4.6); // meja peta + layar taktis
+      for (const [x, z, ry] of [[-3, z0 - 2, 0], [3, z0 - 2, 0], [-3, z0 + 2, Math.PI], [3, z0 + 2, Math.PI], [-4.8, z0, Math.PI / 2]]) orang(G, g, 1700 + x * 3 + z, x, lantai, z, ry, false, { petugas: "tentara", aksi: "presentasi" }), (G.orang[G.orang.length - 1].ry0 = ry); }
+    else for (const x of [-9, -4, 1, 6]) { dalam.b(2.2, 0.08, 1.1, 0xe8e2d6, x, lantai + 0.75, z0); dalam.n(0.7, 0.45, 0.05, 0x9fe0b0, x, lantai + 1.05, z0 - 0.4); dalam.b(0.55, 0.08, 0.55, 0x2b2d30, x, lantai + 0.5, z0 + 0.8); orang(G, g, 1720 + x, x, lantai, z0 + 0.8, Math.PI, true, { petugas: "tentara", aksi: "tulis" }); }
+  }
+  const papan = new THREE.Mesh(new THREE.BoxGeometry(16, 1.6, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(data.nama, "Pertahanan Negara Merdu"), roughness: 0.8 }));
+  papan.position.set(0, 2 * H + 0.85, z0 + D / 2 + 0.35); g.add(papan);
+  const jk = buatJam(0.6); jk.position.set(10, 2 * H + 0.85, z0 + D / 2 + 0.45); g.add(jk);
+  // lapangan apel: barisan prajurit + komandan, prajurit lari keliling, kendaraan militer, menara jaga
+  K.b(24, 0.06, 18, 0x8a8f6a, 0, 0.3, 4);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 7; c++) orang(G, g, 1800 + r * 7 + c, -6 + c * 2, 0.33, 2 + r * 2, Math.PI, false, { petugas: "tentara" });
+  orang(G, g, 1830, 0, 0.33, -2.5, 0, false, { petugas: "tentara", aksi: "presentasi" }); G.orang[G.orang.length - 1].ry0 = 0;
+  for (let i = 0; i < 6; i++) pejalan(G, g, 1840 + i, { x: -11 + (i % 2) * 0.9, z: 12.5 + Math.floor(i / 2) * 0.9 }, { x: 11 + (i % 2) * 0.9, z: 12.5 + Math.floor(i / 2) * 0.9 }, 0.33, { petugas: "tentara" }); // prajurit lari pagi
+  const truk = (x, z) => { K.b(2.4, 1.5, 2.2, HIJAU, x, 1.35, z + 2.6); K.b(2.0, 0.6, 1.4, 0x24323d, x, 2.0, z + 2.7); K.b(2.6, 0.5, 5, HIJAU, x, 1.0, z - 1); K.b(2.6, 2.2, 5, 0x5a6640, x, 2.4, z - 1);
+    for (const [wx, wz] of [[-1.2, 2.6], [1.2, 2.6], [-1.2, -0.6], [1.2, -0.6], [-1.2, -2.4], [1.2, -2.4]]) K.c(0.5, 0.3, 0x1c1c1e, x + wx, 0.6, z + wz); };
+  truk(-24, 26); truk(-18, 26);
+  K.b(2.0, 0.8, 4, HIJAU, 22, 1.0, 26); K.b(1.8, 0.6, 1.6, HIJAU, 22, 1.65, 25.4); for (const [wx, wz] of [[-1, 1.3], [1, 1.3], [-1, -1.3], [1, -1.3]]) K.c(0.45, 0.3, 0x1c1c1e, 22 + wx, 0.6, 26 + wz); // jip
+  for (const x of [-28, 28]) { for (const dx of [-1, 1]) for (const dz of [-1, 1]) K.b(0.2, 7, 0.2, 0x6b4a2b, x + dx, 3.8, -30 + dz); K.b(3, 0.2, 3, 0x6b4a2b, x, 7.3, -30); K.b(3.2, 0.25, 3.2, HIJAU, x, 9.4, -30); orang(G, g, 1860 + x, x, 7.4, -30, 0, false, { petugas: "tentara" }); }
+  for (const x of [-6, 6]) K.b(1.4, 4.6, 1.4, HIJAU, x, 2.6, 33); K.b(13.4, 1.2, 0.9, KREM, 0, 5.3, 33);
+  const pg = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.95), new THREE.MeshBasicMaterial({ map: teksturPapanNama(data.nama, "Kawasan Militer") })); pg.position.set(0, 5.3, 33.5); g.add(pg);
+  for (const x of [-9, 9]) { K.b(2.2, 2.6, 2.2, HIJAU, x, 1.6, 33); orang(G, g, 1870 + x, x + Math.sign(x) * -1.8, 0.33, 34.2, 0, false, { petugas: "tentara" }); }
+  K.c(0.1, 11, 0xdddddd, 0, 5.8, 14.5); const bd = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.62), new THREE.MeshBasicMaterial({ color: 0xc8102e, side: THREE.DoubleSide })); bd.position.set(0.95, 10.9, 14.5); g.add(bd);
+  const bd2 = bd.clone(); bd2.material = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }); bd2.position.y = 10.28; g.add(bd2);
+  const statis = K.jadi(g), isi = dalam.jadi(g); G.dalam.push(isi.o, isi.nl, isi.kc);
+  return { W: 58, D: 36, z0: -4, statis, rintangan: [[-22, 2, 13, 27], [22, 2, 13, 27], [0, -23, 28, 12]] };
+}
+
 export function bangunGedungKaca() {
   const grup = new THREE.Group();
   for (const data of GEDUNG_KACA_BLOK) {
     const s = sudutBlok(data.kol, data.bar), cx = s.x + JALAN + (PITCH - JALAN) / 2, cz = s.z + JALAN + (PITCH - JALAN) / 2;
     const g = new THREE.Group(); g.position.set(cx, 0.245, cz); grup.add(g);
     const G = { g, dalam: [], orang: [], cx, cz };
-    const r = data.jenis === "kantor" ? kantor(G, g, data) : data.jenis === "kampus" ? kampus(G, g, data) : sekolah(G, g, data);
+    const r = data.jenis === "kantor" ? kantor(G, g, data) : data.jenis === "kampus" ? kampus(G, g, data) : data.jenis === "polisi" ? markasPolisi(G, g, data) : data.jenis === "tentara" ? markasTentara(G, g, data) : sekolah(G, g, data);
     const zc = r.z0 || 0;
-    rintanganGedung.push({ minX: cx - r.W / 2 - 0.5, maxX: cx + r.W / 2 + 0.5, minZ: cz + zc - r.D / 2 - 0.5, maxZ: cz + zc + r.D / 2 + 0.5 });
+    if (r.rintangan) for (const [x, z, w, d] of r.rintangan) rintanganGedung.push({ minX: cx + x - w / 2, maxX: cx + x + w / 2, minZ: cz + z - d / 2, maxZ: cz + z + d / 2 });
+    else rintanganGedung.push({ minX: cx - r.W / 2 - 0.5, maxX: cx + r.W / 2 + 0.5, minZ: cz + zc - r.D / 2 - 0.5, maxZ: cz + zc + r.D / 2 + 0.5 });
     GEDUNG.push(G);
   }
   scene.add(grup);

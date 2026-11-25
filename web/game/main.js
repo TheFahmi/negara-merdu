@@ -21,7 +21,8 @@ import { perbaruiPasar } from "./fasilitasBaru.js";
 import { bangunPegunungan } from "./ragam.js";
 import { perbaruiPlazaRamai } from "./plazaRamai.js";
 import { perbaruiJam } from "./jam.js";
-import { bangunGedungKaca, perbaruiGedungKaca, rintanganGedung } from "./gedungKaca.js";
+import { PARKIR_POLISI, bangunGedungKaca, perbaruiGedungKaca, rintanganGedung } from "./gedungKaca.js";
+import { bangunKeamananIstana, bangunPatroliPolisi, perbaruiKeamanan } from "./keamanan.js";
 import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
 
   /* ================= ANIMASI ================= */
@@ -94,7 +95,8 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     perbaruiPasar(dt, t); // pedagang & pembeli Pasar Desa
     perbaruiPlazaRamai(dt, t);
     perbaruiGedungKaca(dt, t);
-    perbaruiJam(); // semua jam analog real time // band, penonton, air mancur menari, umbul-umbul, merpati
+    perbaruiJam();
+    perbaruiKeamanan(dt, t); // semua jam analog real time // band, penonton, air mancur menari, umbul-umbul, merpati
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);
@@ -188,7 +190,8 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
       bangunMobilPajangan(); // 8 mobil detail parkir tepi jalan (plaza & fasilitas)
       bangunApartemen(); rintanganFasilitas.push(...tapakApartemen());
       bangunTransportasi(); rintanganFasilitas.push(...rintanganTransportasi);
-      bangunGedungKaca(); rintanganFasilitas.push(...rintanganGedung); // kantor & sekolah berkaca ber-interior // stasiun, kereta, bus
+      bangunGedungKaca(); rintanganFasilitas.push(...rintanganGedung);
+      bangunKeamananIstana(); bangunPatroliPolisi(PARKIR_POLISI); // tentara & polisi istana, mobil patroli keliling negara // kantor & sekolah berkaca ber-interior // stasiun, kereta, bus
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
       bangunLahanPembangunan(); // petak kosong + fasilitas terbangun (status dari ambilData)
       terapkanKualitas(); // dorong kepadatan awan & info panel sesuai pilihan tersimpan
