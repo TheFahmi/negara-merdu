@@ -229,6 +229,10 @@ function bangunStasiun(grup, st) {
    dinding bawah + pita jendela kaca + atap, bangku panjang di kedua sisi
    (gaya KRL), tiang & gantungan tangan, lampu plafon, pintu, lorong antar
    gerbong terbuka; kabin masinis + hidung merah di gerbong depan. */
+const TEX_PETA_KRL = (() => { const cv = document.createElement("canvas"); cv.width = 512; cv.height = 96; const c = cv.getContext("2d"); c.fillStyle = "#0b1622"; c.fillRect(0, 0, 512, 96);
+  c.strokeStyle = "#c8102e"; c.lineWidth = 8; c.beginPath(); c.moveTo(30, 52); c.lineTo(482, 52); c.stroke();
+  const st = ["MERDU", "TIMUR", "MERDU UTARA", "BARAT"]; st.forEach((n, i) => { const x = 40 + i * 140; c.fillStyle = i === 0 ? "#2aff6a" : "#ffffff"; c.beginPath(); c.arc(x, 52, 10, 0, 7); c.fill(); c.font = "bold 18px system-ui"; c.textAlign = "center"; c.fillText(n, x, 86); });
+  c.fillStyle = "#ffb020"; c.font = "bold 18px system-ui"; c.textAlign = "left"; c.fillText("KRL MERDU · Keliling Kota", 30, 24); return new THREE.CanvasTexture(cv); })();
 const KACA_KRL = new THREE.MeshStandardMaterial({ color: 0x9fc4d6, transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0.1, depthWrite: false });
 function buatKereta() {
   const g = new THREE.Group(), gerbong = [];
@@ -267,9 +271,15 @@ function buatKereta() {
       // bangku panjang menghadap lorong
       for (const [x0, x1] of [[-6.6, -4.9], [-3.5, 3.5], [4.9, 6.6]]) {
         for (let xs = x0 + 0.4; xs <= x1 - 0.35; xs += 0.75) (c.userData.kursi || (c.userData.kursi = [])).push({ lx: xs, ly: 0.49, lz: s * 1.0, rot: s > 0 ? Math.PI : 0, isi: null, lantai: 0.5 });
-        K(x1 - x0, 0.12, 0.55, 0x2e6fa8, cx + (x0 + x1) / 2, 0.95, s * 1.08);
-        K(x1 - x0, 0.6, 0.1, 0x2e6fa8, cx + (x0 + x1) / 2, 1.3, s * 1.32);
-        K(x1 - x0, 0.4, 0.45, 0x9aa0a6, cx + (x0 + x1) / 2, 0.7, s * 1.08);
+        // bangku longitudinal KRL: jok beludru per penumpang (pembatas tipis), kursi prioritas merah di ujung, alas stainless
+        const prio = x0 < -6 || x1 > 6, jok = prio ? 0xb0283a : 0x2e6fa8, jok2 = prio ? 0x8a1f2e : 0x234f84, xm = cx + (x0 + x1) / 2;
+        K(x1 - x0, 0.14, 0.52, jok, xm, 0.96, s * 1.08); K(x1 - x0, 0.62, 0.1, jok, xm, 1.32, s * 1.33);
+        for (let xs = x0 + 0.75; xs < x1 - 0.1; xs += 0.75) { K(0.03, 0.15, 0.5, jok2, cx + xs, 1.04, s * 1.08); K(0.03, 0.6, 0.06, jok2, cx + xs, 1.32, s * 1.3); }
+        K(x1 - x0, 0.4, 0.45, 0xc9ced4, xm, 0.7, s * 1.08);                  // alas stainless
+        K(0.06, 0.45, 0.5, 0xc9ced4, cx + x0, 1.15, s * 1.08); K(0.06, 0.45, 0.5, 0xc9ced4, cx + x1, 1.15, s * 1.08); // sandaran tangan ujung
+        K(x1 - x0, 0.04, 0.32, 0xc9ced4, xm, 2.95, s * 1.22);                // rak bagasi
+        for (let xs = x0; xs <= x1; xs += 0.5) K(0.02, 0.02, 0.3, 0x8a8f94, cx + xs, 2.97, s * 1.22);
+        if (!prio) { const ik = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(2, x1 - x0 - 0.4), 0.4), M([0xf2c230, 0x2e9e5b, 0xe85d75][(i + (s > 0 ? 1 : 0)) % 3])); ik.position.set(xm, 3.25, s * 1.37); ik.rotation.y = s > 0 ? Math.PI : 0; tgt.add(ik); } // panel iklan atas jendela
       }
     }
     // tiang pegangan + rel atas + gantungan tangan
@@ -277,6 +287,17 @@ function buatKereta() {
     for (const s of [-1, 1]) K(L - 0.6, 0.04, 0.04, 0xc0c4c8, cx, 3.2, s * 0.55);
     for (let h = -6; h <= 6; h += 1) for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.015, 6, 12), M(0xf2c230)); r.position.set(cx + h, 2.85, s * 0.55); tgt.add(r); }
     for (const dx of [-4.5, 0, 4.5]) { const l = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.04, 0.3), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1 })); l.position.set(cx + dx, 3.46, 0); tgt.add(l); }
+    /* lantai bermotif + garis kuning di depan pintu, peta jalur LED di atas
+       pintu, lampu indikator pintu, CCTV, saluran AC & plafon melengkung */
+    K(L - 0.3, 0.02, 2.7, 0x8a8478, cx, 0.51, 0);
+    for (const dx of [-4.2, 4.2]) for (const sz of [-1, 1]) {
+      K(1.3, 0.006, 0.12, 0xf2c230, cx + dx, 0.522, sz * 1.25);
+      const pt = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.22), new THREE.MeshBasicMaterial({ map: TEX_PETA_KRL })); pt.position.set(cx + dx, 3.18, sz * 1.36); pt.rotation.y = sz > 0 ? Math.PI : 0; tgt.add(pt);
+      const ind = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3020 })); ind.position.set(cx + dx + 0.75, 3.05, sz * 1.34); tgt.add(ind);
+    }
+    for (const sz of [-1, 1]) K(L - 0.6, 0.18, 0.5, 0xe9ecef, cx, 3.42, sz * 0.95);    // plafon samping melengkung
+    K(L - 0.6, 0.06, 0.4, 0xc9ced4, cx, 3.5, 0); for (let dx = -5.5; dx <= 5.5; dx += 1.1) K(0.5, 0.02, 0.3, 0x6b6f74, cx + dx, 3.47, 0.5); // saluran AC + kisi
+    K(0.12, 0.12, 0.12, 0x1b1d20, cx + 6.3, 3.35, 0); K(0.12, 0.12, 0.12, 0x1b1d20, cx - 6.3, 3.35, 0);           // CCTV
     // dinding ujung dengan pintu lorong (tidak untuk ujung depan gerbong 0)
     for (const e of [-1, 1]) {
       if ((i === 0 && e === 1) || (i === 3 && e === -1)) continue; // ujung rangkaian = kabin masinis
@@ -398,15 +419,47 @@ function buatBus(warna) {
   // kursi penumpang (2 baris kiri-kanan, menghadap depan)
   for (let r = 0; r < 6; r++) for (const s of [-1, 1]) {
     const z = -4.3 + r * 1.25; if (s > 0 && Math.abs(z - PINTU_BUS_Z) < 1.3) continue; // ruang depan pintu tengah
-    K(0.9, 0.12, 0.55, 0x2e6fa8, s * 0.72, 1.05, z); K(0.9, 0.65, 0.1, 0x2e6fa8, s * 0.72, 1.4, z - 0.27); K(0.08, 0.45, 0.08, 0x8a8f94, s * 0.72, 0.8, z);
+    /* kursi bus realistis: rangka baja, dudukan & sandaran empuk berlapis kain motif,
+       sandaran kepala, pegangan atas sandaran, kaki di dinding & lantai; baris
+       depan = kursi prioritas (merah) */
+    const prio = r >= 4, kain = prio ? 0xb0283a : 0x2a4f86, kain2 = prio ? 0x8a1f2e : 0x1f3c68;
+    K(0.92, 0.14, 0.52, kain, s * 0.72, 1.06, z + 0.02);                         // dudukan empuk
+    K(0.92, 0.04, 0.5, kain2, s * 0.72, 1.14, z + 0.02);                         // jahitan/lapisan atas
+    K(0.92, 0.7, 0.12, kain, s * 0.72, 1.48, z - 0.25);                          // sandaran
+    K(0.4, 0.2, 0.1, kain2, s * 0.72 - 0.22, 1.92, z - 0.26); K(0.4, 0.2, 0.1, kain2, s * 0.72 + 0.22, 1.92, z - 0.26); // sandaran kepala
+    K(0.92, 0.05, 0.05, 0xc9ced4, s * 0.72, 1.86, z - 0.33);                     // pegangan belakang sandaran
+    K(0.94, 0.1, 0.56, 0x3a3d40, s * 0.72, 0.97, z + 0.02);                      // rangka dudukan
+    K(0.06, 0.32, 0.06, 0x8a8f94, s * 0.4, 0.8, z + 0.15);                       // kaki lorong
+    K(0.3, 0.06, 0.06, 0x8a8f94, s * 1.12, 1.0, z);                              // dudukan dinding
     (g.userData.kursi || (g.userData.kursi = [])).push({ lx: s * 0.72, ly: 0.59, lz: z + 0.02, rot: 0, isi: null, lorongX: 0.15, lantai: 0.65 }); // titik duduk penumpang
   }
-  for (const z of [-3, 1.6, 3.4]) for (const s of [-1, 1]) K(0.05, 2.7, 0.05, 0xf2c230, s * 0.28, 1.95, z); // tiang kuning (tidak menghalangi pintu)
+  for (const z of [-3, 1.6, 3.4]) for (const s of [-1, 1]) { K(0.05, 2.7, 0.05, 0xf2c230, s * 0.28, 1.95, z); K(0.09, 0.06, 0.05, 0xd62828, s * 0.28, 1.6, z); } // tiang kuning + tombol STOP merah
+  /* lantai anti-selip + lis kuning, panel plafon, ventilasi AC, gantungan tangan,
+     validator kartu di pintu, monitor info, CCTV, speaker, area kursi roda */
+  K(2.3, 0.02, 10.0, 0x3d4046, 0, 0.66, 0);
+  for (let z = -4.8; z <= 4.8; z += 0.4) K(2.3, 0.005, 0.03, 0x4a4e55, 0, 0.672, z);
+  K(1.4, 0.006, 1.6, 0xf2c230, 0.55, 0.673, PINTU_BUS_Z);
+  K(2.3, 0.04, 10.0, 0xe9ecef, 0, 3.22, 0);                                    // plafon
+  for (const sx of [-1, 1]) { K(0.35, 0.08, 9.5, 0xd8dde2, sx * 0.85, 3.16, 0); for (let z = -4; z <= 4; z += 2) K(0.2, 0.02, 0.6, 0x6b6f74, sx * 0.85, 3.11, z); } // saluran AC + kisi
+  for (let z = -4.2; z <= 4.2; z += 0.6) for (const sx of [-1, 1]) { K(0.02, 0.28, 0.02, 0x8a8f94, sx * 0.3, 2.92, z); const gt = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.013, 6, 12), M(0xf2c230)); gt.position.set(sx * 0.3, 2.74, z); g.add(gt); } // gantungan tangan
+  K(0.22, 0.32, 0.12, 0x1b1d20, 0.75, 1.55, PINTU_BUS_Z + 1.0); { const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.1), new THREE.MeshBasicMaterial({ color: 0x2aff6a })); sc.position.set(0.75, 1.62, PINTU_BUS_Z + 0.935); sc.rotation.y = Math.PI; g.add(sc); } // validator kartu
+  { const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const c = cv.getContext("2d"); c.fillStyle = "#06121f"; c.fillRect(0, 0, 256, 64); c.fillStyle = "#ffb020"; c.font = "bold 22px monospace"; c.fillText("Halte berikut:", 10, 26); c.fillStyle = "#ffffff"; c.fillText("HUB TRANS MERDU", 10, 54);
+    const mon = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.25), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) })); mon.position.set(0, 2.95, 4.9); mon.rotation.y = Math.PI; g.add(mon); K(1.05, 0.3, 0.06, 0x1b1d20, 0, 2.95, 4.94); }
+  K(0.12, 0.12, 0.12, 0x1b1d20, 0, 3.12, -4.9); K(0.12, 0.12, 0.12, 0x1b1d20, 0, 3.12, 4.7);   // CCTV
+  K(1.0, 0.006, 1.2, 0x2e6fa8, 0.6, 0.674, 2.4); K(0.04, 0.6, 1.0, 0xc9ced4, 1.1, 1.2, 2.4);   // area kursi roda + sandaran
   for (const z of [-1.0, 1.0]) K(0.05, 1.0, 0.05, 0xf2c230, 0.95, 1.6, z); // pegangan pintu
   for (const s of [-1, 1]) K(0.04, 0.04, 9.5, 0xc0c4c8, s * 0.3, 3.05, 0);
   // sopir
-  K(0.6, 0.6, 0.6, 0x2b2d30, -0.7, 1.1, 4.3); K(1.6, 0.6, 0.4, 0x2b2d30, -0.3, 1.5, 4.95);
-  const setir = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 16), M(0x1b1b1d)); setir.position.set(-0.7, 1.7, 4.65); setir.rotation.x = -1.0; g.add(setir);
+  K(0.55, 0.12, 0.55, 0x1b1d20, -0.7, 1.15, 4.25); K(0.55, 0.7, 0.12, 0x1b1d20, -0.7, 1.55, 3.98); K(0.1, 0.45, 0.1, 0x55595e, -0.7, 0.87, 4.25); // kursi sopir bersandaran
+  K(2.4, 0.55, 0.5, 0x2b2d30, 0, 1.5, 4.95);                                    // dasbor
+  { const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.22), new THREE.MeshBasicMaterial({ color: 0x0a2a3a })); panel.position.set(-0.7, 1.78, 4.69); panel.rotation.x = -0.5; panel.rotation.y = Math.PI; g.add(panel);
+    for (const dx of [-0.12, 0.12]) { const jm = new THREE.Mesh(new THREE.CircleGeometry(0.07, 14), new THREE.MeshBasicMaterial({ color: 0xffffff })); jm.position.set(-0.7 + dx, 1.79, 4.685); jm.rotation.x = -0.5; jm.rotation.y = Math.PI; g.add(jm); } } // speedometer
+  K(0.06, 0.5, 0.06, 0x2b2d30, -0.25, 1.0, 4.45); K(0.1, 0.1, 0.1, 0x111111, -0.25, 1.28, 4.45);  // tuas persneling
+  K(0.4, 0.3, 0.3, 0x55595e, 0.3, 1.45, 4.55);                                  // kotak tiket/EDC
+  K(0.2, 0.06, 0.35, 0x1b1d20, -0.85, 0.75, 4.6); K(0.2, 0.06, 0.3, 0x1b1d20, -0.55, 0.75, 4.6); // pedal
+  K(0.05, 0.9, 1.2, 0xc9ced4, -0.2, 1.15, 3.8);                                 // sekat pengaman sopir
+  K(0.6, 0.18, 0.03, 0x1b1d20, -0.7, 2.95, 5.15); K(0.55, 0.13, 0.01, 0x9fc4d6, -0.7, 2.95, 5.13); // kaca spion dalam
+  const setir = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 16), M(0x1b1b1d)); setir.position.set(-0.7, 1.7, 4.62); setir.rotation.x = -1.0; g.add(setir); { const kol = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.5, 8), M(0x1b1b1d)); kol.position.set(-0.7, 1.55, 4.8); kol.rotation.x = 0.55; g.add(kol); }
   for (const dz of [-1.6, 1.6]) { const l = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })); l.position.set(0, 3.22, dz); g.add(l); }
   /* Roda simetris z ±3,4 (overhang depan = belakang), pintu di tengah di
      antara kedua as. Tiap ban berpelek & bernaung spakbor gelap. */
@@ -417,7 +470,26 @@ function buatBus(warna) {
     K(0.06, 0.16, 1.3, 0x1b1d20, sx * 1.36, 1.08, z);                           // spakbor atas
     for (const dz of [-0.62, 0.62]) K(0.06, 0.5, 0.1, 0x1b1d20, sx * 1.36, 0.82, z + dz);
   }
-  K(2.5, 0.5, 10.3, 0x2b2d30, 0, 0.3, 0);                                         // rok bawah bodi (rangka tertutup)
+  /* KOLONG BUS (dulu satu kotak hitam): rok samping sewarna bodi dengan
+     lengkung roda, pelat dasar tipis, 2 rel sasis, as roda + gardan,
+     tangki solar, tabung udara rem, knalpot, blok mesin di belakang, pegas
+     daun, aki — dengan celah tanah 0,3 m yang benar-benar kosong. */
+  for (const s of [-1, 1]) {
+    const potongR = [[-4.05, -2.75], [2.75, 4.05]].concat(s > 0 ? [[-0.8, 0.8]] : []).sort((a, b) => a[0] - b[0]);
+    let za = -5.15;
+    for (const [a, b] of potongR.concat([[5.15, 5.15]])) { if (a > za) { K(0.1, 0.28, a - za, w, s * 1.26, 0.48, (a + za) / 2); K(0.11, 0.05, a - za, 0x1b1d20, s * 1.265, 0.35, (a + za) / 2); } za = b; }
+  }
+  K(2.3, 0.04, 10.1, 0x3a3d40, 0, 0.34, 0);                                       // pelat dasar
+  for (const sx of [-0.45, 0.45]) K(0.14, 0.18, 9.8, 0x1b1d20, sx, 0.26, 0);      // rel sasis
+  for (const z of [-3.4, 3.4]) { const as = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.2, 8), M(0x2a2c30)); as.rotation.z = Math.PI / 2; as.position.set(0, 0.5, z); g.add(as); // as roda
+    for (const sx of [-0.45, 0.45]) { K(0.1, 0.06, 1.2, 0x3a3d40, sx, 0.62, z); K(0.1, 0.05, 1.0, 0x3a3d40, sx, 0.56, z); } } // pegas daun
+  { const gd = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), M(0x2a2c30)); gd.position.set(0, 0.5, -3.4); g.add(gd); }  // gardan belakang
+  K(0.08, 0.08, 6.5, 0x55595e, 0, 0.3, 0);                                         // poros propeler
+  K(0.5, 0.42, 1.4, 0x5f6b75, -0.85, 0.28, 0.6);                                   // tangki solar
+  for (const z of [-1.2, -1.8]) { const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.7, 10), M(0x8a8f94)); tb.rotation.z = Math.PI / 2; tb.position.set(0.6, 0.24, z); g.add(tb); } // tabung udara rem
+  K(0.4, 0.3, 0.5, 0x1b1d20, 0.8, 0.27, 1.8);                                      // kotak aki
+  K(1.4, 0.45, 1.5, 0x3a3d40, 0, 0.36, -4.4);                                      // blok mesin belakang
+  { const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 8), M(0x6b6f74)); kn.rotation.x = Math.PI / 2; kn.position.set(-0.7, 0.2, -3.9); g.add(kn); } // knalpot
   // tangga & ambang pintu tengah: lantai menyambung ke tepi, satu anak tangga, karet ambang
   K(0.35, 0.18, 1.5, 0x55595e, 1.15, 0.6, PINTU_BUS_Z);
   K(0.3, 0.12, 1.5, 0x8a8f94, 1.3, 0.3, PINTU_BUS_Z);

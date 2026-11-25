@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
-import { geoMobil } from "./mobilGeo.js";
+import { MAT_KACA_MOBIL, geoMobil } from "./mobilGeo.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas, persimpanganKota } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
@@ -407,7 +407,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
 
   export function bangunLaluLintasMobil() {
     // 1. Geometri bodi (diwarnai per instans via instanceColor)
-    const { badan: geoBodi, detail: geoDetail } = geoMobil(); // model sedan realistis bersama (mobilGeo.js)
+    const { badan: geoBodi, detail: geoDetail, kaca: geoKaca } = geoMobil(); // model sedan realistis bersama (mobilGeo.js)
 
     /* Mobil arteri BERKELILING rute kotak di jalan arteri (24 Nov 2026; dulu
        melaju lurus lalu "teleport" di ujung kota): lintasan jalurPoligon()
@@ -441,7 +441,8 @@ geoKepalaL.translate(1.02, 4.80, 0);
     daftar.forEach((m, i) => imBodi.setColorAt(i, c.setHex(m.warna)));
     if (imBodi.instanceColor) imBodi.instanceColor.needsUpdate = true;
 
-    scene.add(imBodi); scene.add(imDetail);
+    const imKaca = new THREE.InstancedMesh(geoKaca, MAT_KACA_MOBIL, daftar.length); imKaca.frustumCulled = false; imKaca.renderOrder = 2;
+    scene.add(imBodi); scene.add(imDetail); scene.add(imKaca); MOBIL_AKTIF.imKaca = imKaca;
     /* LAMPU KENDARAAN (24 Nov 2026): lampu depan putih selalu nyala, lampu
        belakang merah redup yang MENYALA TERANG saat mengerem/berhenti, dan
        SEIN kuning berkedip kiri/kanan sebelum & selama berbelok. Material
@@ -531,6 +532,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
       _dummyM.updateMatrix();
       imBodi.setMatrixAt(i, _dummyM.matrix);
       imDetail.setMatrixAt(i, _dummyM.matrix);
+      if (MOBIL_AKTIF.imKaca) MOBIL_AKTIF.imKaca.setMatrixAt(i, _dummyM.matrix);
       const L = MOBIL_AKTIF.lampu;
       if (L) {
         L.imDepan.setMatrixAt(i, _dummyM.matrix);

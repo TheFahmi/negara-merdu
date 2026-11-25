@@ -42,6 +42,8 @@ function ekstrusi(shape, lebar, bevel) {
   return g;
 }
 let GEO = null;
+/* kaca mobil: gelap tembus pandang (interior terlihat) — dipakai bersama semua mobil */
+export const MAT_KACA_MOBIL = new THREE.MeshStandardMaterial({ color: 0x2a4050, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.6, depthWrite: false });
 export function geoMobil() {
   if (GEO) return GEO;
   const PUTIH = 0xffffff;
@@ -56,8 +58,31 @@ export function geoMobil() {
     badan.push({ geo: new THREE.BoxGeometry(0.07, 0.6, 0.12), x: sx * 0.77, y: 1.2, z: -1.15, rx: 0.68, warna: PUTIH }); // pilar C
   }
   // ---- DETAIL (warna tetap) ----
-  const KACA = 0x1b2a35, KARET = 0x18191b, PELEK = 0xc9ced4, GELAP = 0x2a2c30;
-  const det = [{ geo: ekstrusi(profilKabin(0), 1.6, 0), warna: KACA }];
+  const KARET = 0x18191b, PELEK = 0xc9ced4, GELAP = 0x2a2c30;
+  /* INTERIOR (terlihat lewat kaca bening): 4 jok bersandaran & sandaran
+     kepala, dasbor + panel instrumen, setir, konsol tengah & tuas, plafon,
+     lantai karpet, panel pintu, kaca spion dalam. */
+  const JOK = 0x3a332e, JOK2 = 0x2a2420, DASH = 0x232528;
+  const det = [];
+  for (const [jz, depan] of [[0.15, true], [-0.95, false]]) {
+    for (const sx of depan ? [-1, 1] : [0]) {
+      const lw = depan ? 0.55 : 1.45, x = depan ? sx * 0.38 : 0;
+      det.push({ geo: new THREE.BoxGeometry(lw, 0.14, 0.5), x, y: 0.62, z: jz, warna: JOK });
+      det.push({ geo: new THREE.BoxGeometry(lw, 0.62, 0.12), x, y: 0.98, z: jz - 0.3, rx: -0.12, warna: JOK });
+      if (depan) det.push({ geo: new THREE.BoxGeometry(0.28, 0.18, 0.1), x, y: 1.36, z: jz - 0.36, warna: JOK2 });
+      else for (const hx of [-0.45, 0.45]) det.push({ geo: new THREE.BoxGeometry(0.26, 0.15, 0.1), x: hx, y: 1.33, z: jz - 0.35, warna: JOK2 });
+    }
+  }
+  det.push({ geo: new THREE.BoxGeometry(1.6, 0.3, 0.5), x: 0, y: 0.88, z: 0.85, warna: DASH });                         // dasbor
+  det.push({ geo: new THREE.BoxGeometry(0.42, 0.13, 0.03), x: -0.38, y: 1.0, z: 0.6, rx: -0.4, warna: 0x0f2a3a });         // panel instrumen
+  det.push({ geo: new THREE.TorusGeometry(0.17, 0.025, 6, 16), x: -0.38, y: 0.92, z: 0.55, rx: -0.45, warna: 0x111111 }); // setir
+  det.push({ geo: new THREE.BoxGeometry(0.22, 0.3, 0.7), x: 0, y: 0.6, z: 0.4, warna: DASH });                            // konsol tengah
+  det.push({ geo: new THREE.BoxGeometry(0.05, 0.14, 0.05), x: 0, y: 0.8, z: 0.3, warna: 0x111111 });                       // tuas transmisi
+  det.push({ geo: new THREE.BoxGeometry(1.5, 0.03, 1.4), x: 0, y: 1.43, z: -0.25, warna: 0xc9c2b4 });                      // plafon
+  det.push({ geo: new THREE.BoxGeometry(1.5, 0.02, 2.6), x: 0, y: 0.5, z: -0.2, warna: 0x1f2124 });                        // karpet
+  for (const sx of [-1, 1]) det.push({ geo: new THREE.BoxGeometry(0.04, 0.35, 2.2), x: sx * 0.84, y: 0.8, z: -0.25, warna: 0x2a2c30 }); // panel pintu
+  det.push({ geo: new THREE.BoxGeometry(0.22, 0.07, 0.02), x: 0, y: 1.35, z: 0.55, warna: 0x111111 });                     // spion dalam
+  const kaca = [{ geo: ekstrusi(profilKabin(0), 1.6, 0), warna: 0xffffff }];
   for (const [x, z] of [[-1, RODA_Z], [1, RODA_Z], [-1, -RODA_Z], [1, -RODA_Z]]) {
     const wx = x * 0.8;
     det.push({ geo: new THREE.CylinderGeometry(RODA_R, RODA_R, 0.26, 16), x: wx, y: RODA_R, z, rz: Math.PI / 2, warna: KARET });
@@ -80,7 +105,7 @@ export function geoMobil() {
   det.push({ geo: new THREE.BoxGeometry(1.86, 0.16, 0.12), x: 0, y: 0.38, z: -2.16, warna: GELAP });                                    // bumper belakang
   det.push({ geo: new THREE.BoxGeometry(0.5, 0.12, 0.03), x: 0, y: 0.38, z: 2.225, warna: 0x111111 });                                  // pelat depan
   det.push({ geo: new THREE.BoxGeometry(0.5, 0.12, 0.03), x: 0, y: 0.62, z: -2.205, warna: 0x111111 });                                 // pelat belakang
-  GEO = { badan: gabungBerwarna(badan), detail: gabungBerwarna(det) };
+  GEO = { badan: gabungBerwarna(badan), detail: gabungBerwarna(det), kaca: gabungBerwarna(kaca) };
   return GEO;
 }
 /* Mesh mobil mandiri (bukan instanced). */
@@ -89,6 +114,7 @@ export function buatMobil(warna) {
   const b = new THREE.Mesh(G.badan, new THREE.MeshStandardMaterial({ color: warna, roughness: 0.32, metalness: 0.35 }));
   const d = new THREE.Mesh(G.detail, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.15 }));
   for (const m of [b, d]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  const k = new THREE.Mesh(G.kaca, MAT_KACA_MOBIL); k.renderOrder = 2; g.add(k);
   return g;
 }
 
@@ -115,11 +141,21 @@ function kotakM(g, w, h, d, warna, x, y, z, opsi) {
 function kabinTruk(g, warna, zDepan, lebar) {
   const L = lebar, KACA = 0x1b2a35;
   kotakM(g, L, 1.15, 1.7, warna, 0, 1.35, zDepan - 0.85);                                   // badan bawah kabin
-  kotakM(g, L - 0.06, 0.95, 1.45, warna, 0, 2.38, zDepan - 0.98);                           // atap/badan atas
-  const kd = kotakM(g, L - 0.2, 0.85, 0.06, KACA, 0, 2.35, zDepan - 0.24, { roughness: 0.1, metalness: 0.5 }); kd.rotation.x = -0.18; // kaca depan
+  /* kabin atas BERONGGA: atap, pilar, dinding belakang, kaca bening + interior
+     (jok sopir & penumpang, dasbor, setir, tuas, panel instrumen) */
+  kotakM(g, L - 0.06, 0.12, 1.45, warna, 0, 2.83, zDepan - 0.98);                           // atap
+  kotakM(g, L - 0.06, 0.95, 0.08, warna, 0, 2.38, zDepan - 1.67);                           // dinding belakang kabin
+  for (const s of [-1, 1]) { kotakM(g, 0.1, 0.95, 0.1, warna, s * (L / 2 - 0.05), 2.38, zDepan - 0.3); kotakM(g, 0.1, 0.95, 0.1, warna, s * (L / 2 - 0.05), 2.38, zDepan - 1.6); kotakM(g, 0.08, 0.95, 0.1, warna, s * (L / 2 - 0.04), 2.38, zDepan - 1.05); }
+  const kd = new THREE.Mesh(new THREE.BoxGeometry(L - 0.2, 0.85, 0.04), MAT_KACA_MOBIL); kd.position.set(0, 2.35, zDepan - 0.24); kd.rotation.x = -0.18; kd.renderOrder = 2; g.add(kd); // kaca depan
+  for (const s of [-1, 1]) { const ks = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.85, 1.25), MAT_KACA_MOBIL); ks.position.set(s * (L / 2 - 0.03), 2.38, zDepan - 0.95); ks.renderOrder = 2; g.add(ks); }
+  for (const s of [-1, 1]) { kotakM(g, 0.6, 0.15, 0.55, 0x3a332e, s * 0.5, 1.98, zDepan - 1.25); kotakM(g, 0.6, 0.7, 0.12, 0x3a332e, s * 0.5, 2.38, zDepan - 1.52); } // jok
+  kotakM(g, L - 0.2, 0.35, 0.4, 0x232528, 0, 2.05, zDepan - 0.45);                             // dasbor
+  kotakM(g, 0.4, 0.12, 0.03, 0x0f2a3a, -0.5, 2.18, zDepan - 0.66);                              // panel instrumen
+  { const st = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 6, 16), new THREE.MeshStandardMaterial({ color: 0x111111 })); st.position.set(-0.5, 2.2, zDepan - 0.72); st.rotation.x = -1.0; g.add(st); }
+  kotakM(g, 0.05, 0.35, 0.05, 0x111111, 0, 1.95, zDepan - 0.95);                               // tuas persneling
   for (const s of [-1, 1]) {
-    kotakM(g, 0.05, 0.6, 0.9, KACA, s * L / 2, 2.4, zDepan - 0.85, { roughness: 0.1, metalness: 0.5 });  // jendela samping
     kotakM(g, 0.04, 1.0, 0.03, 0x2a2c30, s * (L / 2 + 0.01), 1.4, zDepan - 1.55);                       // garis pintu
+    void KACA;
     kotakM(g, 0.06, 0.4, 0.22, 0x1b1d20, s * (L / 2 + 0.25), 2.3, zDepan - 0.35);                       // spion
     kotakM(g, 0.3, 0.05, 0.05, 0x1b1d20, s * (L / 2 + 0.12), 2.5, zDepan - 0.35);
     kotakM(g, 0.4, 0.22, 0.06, 0xf4f6f0, s * (L / 2 - 0.35), 1.05, zDepan + 0.01, { emissive: 0x332a10 }); // lampu depan
@@ -166,11 +202,17 @@ export function buatJip(warna) {
   const g = new THREE.Group(), W = 1.85;
   kotakM(g, W, 0.75, 4.0, warna, 0, 1.0, 0, { roughness: 0.85, metalness: 0.05 });          // badan
   kotakM(g, W - 0.1, 0.12, 1.3, warna, 0, 1.43, 1.3, { roughness: 0.85 });                   // kap
-  kotakM(g, W - 0.15, 0.7, 0.06, 0x1b2a35, 0, 1.75, 0.62, { roughness: 0.1, metalness: 0.5 }); // kaca depan tegak
+  { const kd = new THREE.Mesh(new THREE.BoxGeometry(W - 0.15, 0.7, 0.04), MAT_KACA_MOBIL); kd.position.set(0, 1.75, 0.62); kd.renderOrder = 2; g.add(kd); } // kaca depan tegak (bening)
+  for (const [jz, sx] of [[0.0, -1], [0.0, 1], [-1.1, 0]]) { const lw = sx ? 0.6 : 1.5; kotakM(g, lw, 0.14, 0.5, 0x3b3a2e, sx * 0.45, 1.45, jz); kotakM(g, lw, 0.6, 0.1, 0x3b3a2e, sx * 0.45, 1.8, jz - 0.28); } // jok
+  kotakM(g, W - 0.2, 0.25, 0.35, 0x2b2d22, 0, 1.55, 0.42);                                     // dasbor
+  { const st = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.03, 6, 16), new THREE.MeshStandardMaterial({ color: 0x111111 })); st.position.set(-0.45, 1.75, 0.25); st.rotation.x = -1.1; g.add(st); }
+  kotakM(g, 0.25, 0.25, 0.15, 0x3b4a2b, 0.35, 1.78, 0.38);                                      // radio militer
   kotakM(g, W - 0.05, 0.08, 0.08, warna, 0, 2.12, 0.62);
-  kotakM(g, W - 0.05, 0.75, 2.3, 0x4a5236, 0, 1.78, -0.6, { roughness: 1 });                  // atap kanvas
+  kotakM(g, W - 0.05, 0.06, 2.3, 0x4a5236, 0, 2.15, -0.6, { roughness: 1 });                  // atap kanvas
+  kotakM(g, W - 0.05, 0.75, 0.05, 0x4a5236, 0, 1.78, -1.75, { roughness: 1 });                 // kanvas belakang
+  for (const s of [-1, 1]) for (const z of [0.55, -1.75]) kotakM(g, 0.05, 0.75, 0.05, 0x2b2d22, s * (W / 2 - 0.03), 1.78, z); // rangka kanvas
   for (const s of [-1, 1]) {
-    kotakM(g, 0.04, 0.4, 0.9, 0x1b2a35, s * (W / 2 - 0.01), 1.82, -0.1);                    // jendela kanvas
+    kotakM(g, 0.04, 0.3, 2.3, 0x4a5236, s * (W / 2 - 0.01), 2.0, -0.6, { roughness: 1 });       // tepi kanvas samping (sisi terbuka: interior terlihat)
     kotakM(g, 0.3, 0.12, 1.2, 0x2a2c30, s * (W / 2 + 0.05), 1.0, 1.4);                      // spakbor depan
     kotakM(g, 0.3, 0.12, 1.2, 0x2a2c30, s * (W / 2 + 0.05), 1.0, -1.4);
     kotakM(g, 0.22, 0.2, 0.05, 0xf4f6f0, s * 0.6, 1.25, 2.01, { emissive: 0x332a10 });       // lampu bulat-kotak
