@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "jaringan" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Jaringan: multiplayer WebSocket dan chat Istana Negara. */
-import { $ } from "./inti.js";
+import { SKALA_KARAKTER, $ } from "./inti.js";
 import { scene } from "./bersama.js";
 import { SUMBER_BERSAMA, animasiHidup, animasiJalan, buatKarakter, buatLabel } from "./karakter.js";
 import { diInterior, interiorKonteks } from "./rumah.js";
@@ -104,8 +104,8 @@ import { sesi } from "./ui.js";
     for (const [u, p] of urut) {
       if (!p.grup) {
         const g = buatKarakter({ baju: p.baju, kulit: p.kulit, topi: p.topi, rupa: p.rupa });
-        g.scale.setScalar(1.35);
-        const lb = buatLabel("@" + u, 4.2, p.jabatan || null); lb.position.y = 2.5; g.add(lb);
+        g.scale.setScalar(SKALA_KARAKTER);
+        const lb = buatLabel("@" + u, 4.2, p.jabatan || null); lb.position.y = 2.25; g.add(lb);
         g.position.set(p.x, 0.32, p.z);
         grupPemain.add(g); p.grup = g;
       }

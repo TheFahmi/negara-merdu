@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "rumah" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
-import { $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
+import { SKALA_KARAKTER, $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
 import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, meshPelana, plafonTerang, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
@@ -353,9 +353,9 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       dinamis.add(rumah); rumahKlik.push(rumah);
       rintanganDetail.push({ minX: pos.x - 4.6, maxX: pos.x + 4.6, minZ: pos.z - 4.2, maxZ: pos.z + 4.2 }); // tapak detail — cakupan tabrakan kavling ini
       const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi, rupa: w.rupa });
-      kar.scale.setScalar(1.35);
+      kar.scale.setScalar(SKALA_KARAKTER);
       kar.userData.username = w.username; // dipakai multiplayer: NPC disembunyikan saat orangnya online
-      const lb = buatLabel("@" + w.username, 4.2, w.jabatan || null); lb.position.y = 2.5; kar.add(lb);
+      const lb = buatLabel("@" + w.username, 4.2, w.jabatan || null); lb.position.y = 2.25; kar.add(lb);
       kar.userData.fase = (i / Math.max(1, Math.min(30, wargaTerbaru.length))) * PANJANG_JALUR + i * 5.3;
       /* Aktivitas prosedural (Paket 1 ?v=15): peran dari LOGIKA AKTIVITAS
          NPC — pembawa membawa properti di depan dada, pengobrol & yang
@@ -381,7 +381,7 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       } else if (akt.jenis === "ngobrol") {
         kar.position.set(akt.x, 0.3, akt.z); kar.rotation.y = akt.hadap;
       } else if (akt.jenis === "duduk") {
-        kar.position.set(akt.x, 0.37, akt.z); kar.rotation.y = akt.rot;
+        kar.position.set(akt.x, 0.95 - 0.52 * SKALA_KARAKTER, akt.z); kar.rotation.y = akt.rot; // pinggul (0,52 lokal) di dudukan bangku plaza ±0,95
         kar.userData.kakiK.rotation.x = -1.25; kar.userData.kakiR.rotation.x = -1.25;
       }
       dinamis.add(kar); npcList.push(kar);

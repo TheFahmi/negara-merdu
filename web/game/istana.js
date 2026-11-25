@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "istana" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Istana: pohon pot plaza dan kompleks Istana Negara (pusatKota) + karakter Pak Presiden. */
 import { LAMPU_TAMAN, M, MAT_JENDELA, buatTeksturProsedural, kotak, scene } from "./bersama.js";
-import { PLAZA_D, PLAZA_W, POS_KADES, PUSAT_X, PUSAT_Z, SKALA_ISTANA, Z_ISTANA, hashInt } from "./inti.js";
+import { SKALA_KARAKTER, PLAZA_D, PLAZA_W, POS_KADES, PUSAT_X, PUSAT_Z, SKALA_ISTANA, Z_ISTANA, hashInt } from "./inti.js";
 import { bangkuTaman, teksturBenderaMerdu } from "./fasilitas.js";
 import { bangunPagarPlaza } from "./plazaPagar.js";
 import { bangunPlazaRamai } from "./plazaRamai.js";
@@ -368,8 +368,8 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     rintanganIstana({ minX: -28.2, maxX: -27.6, minZ: -29.4, maxZ: -3.1 });  // pagar barat
     rintanganIstana({ minX: 27.6, maxX: 28.2, minZ: -29.4, maxZ: -3.1 });    // pagar timur
     const kades = buatKarakter({ baju: "#6e4525", kulit: "#f1c27d", topi: "peci" });
-    kades.scale.setScalar(1.5); kades.position.set(POS_KADES.x, 0.34 * SKALA_ISTANA, POS_KADES.z); pusat.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
-    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(POS_KADES.x, 3.9, POS_KADES.z); pusat.add(lk);
+    kades.scale.setScalar(SKALA_KARAKTER); kades.position.set(POS_KADES.x, 0.34 * SKALA_ISTANA, POS_KADES.z); pusat.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
+    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(POS_KADES.x, 2.9, POS_KADES.z); pusat.add(lk);
     // tugu — palet diseragamkan dengan balai: badan krem 0xfdf3d8 + sabuk terakota 0xb5533c
     const tugu = new THREE.Group();
     const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.4, 5.4, 4), M(0xfdf3d8));

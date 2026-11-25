@@ -6,6 +6,7 @@
    air mancur & pohon di tengah atrium, langit-langit kaca bercahaya,
    layar LED gantung, food court, pintu bioskop, kios, bangku, pengunjung.
    Nama toko fiktif (bukan merek nyata). */
+import { SKALA_KARAKTER } from "./inti.js";
 import { M, kotak } from "./bersama.js";
 import { buatKarakter } from "./karakter.js";
 
@@ -156,7 +157,7 @@ export function bangunInteriorMall(halang) {
   K(3, 1.1, 1.2, 0x2f3b45, 14, 0.55, 11); K(3.2, 0.08, 1.4, EMAS, 14, 1.14, 11); halang(12.4, 15.6, 10.3, 11.7); // meja informasi (di samping, jalur masuk lega)
   // pengunjung (diam, bergaya)
   const PENGUNJUNG = [["#e14b6f", -2, 6, 2.6], ["#3f6fb5", 14, 2, -1.2], ["#f2c230", -16, 12.2, 0.3], ["#2e9e5b", 9, 8, 3.4], ["#7b2ff7", -12, -6, 1.6]];
-  for (const [baju, x, z, ry] of PENGUNJUNG) { const k = buatKarakter({ baju, kulit: "#c68642", topi: "tanpa" }); k.position.set(x, 0, z); k.rotation.y = ry; k.scale.setScalar(1.35); g.add(k); }
+  for (const [baju, x, z, ry] of PENGUNJUNG) { const k = buatKarakter({ baju, kulit: "#c68642", topi: "tanpa" }); k.position.set(x, 0, z); k.rotation.y = ry; k.scale.setScalar(SKALA_KARAKTER); g.add(k); }
   // cahaya
   g.add(new THREE.HemisphereLight(0xffffff, 0xb8a888, 0.75));
   for (const [x, z] of [[-12, 0], [12, 0], [0, -8]]) { const l = new THREE.PointLight(0xfff1dc, 0.7, 50, 2); l.position.set(x, T - 2, z); g.add(l); }

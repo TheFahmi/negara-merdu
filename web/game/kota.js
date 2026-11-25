@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
-import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
+import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas, persimpanganKota } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
@@ -257,6 +257,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
        kepadatan kualitas (tidak masuk IM_LINGKUNGAN) dan tidak ditabrak
        (tiang di trotoar, sama seperti lampu jalan). */
     const tiangLL = tiangLaluLintas(persimpanganKota_);
+    LL_AKTIF.simpang = new Set(persimpanganKota().filter(persimpanganKota_).map((q) => q.kol + "," + q.bar)); // persimpangan berlampu (kendaraan berhenti di garis henti)
     /* Desain lampu lalu lintas (perbaikan): dulu tiang hitam pendek dengan
        kotak lampu di pucuknya — dari kamera Orbit terbaca sebagai "tongkat".
        Kini tiang galvanis model LENGAN (mast arm) seperti persimpangan
@@ -482,26 +483,53 @@ geoKepalaL.translate(1.02, 4.80, 0);
   }
 
   const _cLampu = new THREE.Color(), NOL = new THREE.Matrix4().makeScale(0, 0, 0);
+  /* ---------- BERHENTI DI LAMPU MERAH (mobil & bus) ----------
+     Garis henti 5,25 m sebelum tepi kotak persimpangan; zebra cross 0,7..4,3 m.
+     Kendaraan menghitung jarak moncongnya ke garis henti persimpangan
+     BERLAMPU di depannya dan mengerem mulus (v = √(2·a·d)) sehingga
+     berhenti 0,4 m di belakang garis, tidak pernah di atas zebra cross.
+     Kuning: berhenti bila masih sempat mengerem, kalau tidak terus jalan.
+     Moncong yang sudah melewati garis tetap jalan (tidak berhenti di tengah).
+     LL_AKTIF.fase & .simpang diisi kota.js (fase terakhir & set persimpangan
+     yang benar-benar berlampu). */
+  const GARIS_HENTI = 5.25, REM = 4.0;
+  export function batasLampuMerah(x, z, hx, hz, moncong, v) {
+    const fase = LL_AKTIF.fase, simpang = LL_AKTIF.simpang;
+    if (!fase || !simpang) return Infinity;
+    const l = Math.hypot(hx, hz) || 1, ux = hx / l, uz = hz / l;
+    const us = Math.abs(uz) > 0.9, tb = Math.abs(ux) > 0.9;
+    if (!us && !tb) return Infinity; // sedang menikung
+    const arah = us ? Math.sign(uz) : Math.sign(ux), pos = us ? z : x, lain = us ? x : z;
+    const asal = us ? KOTA_D / 2 : KOTA_W / 2, asalLain = us ? KOTA_W / 2 : KOTA_D / 2;
+    const iLain = Math.floor((lain + asalLain) / PITCH);
+    // tepi dekat kotak persimpangan berikutnya di depan
+    const u = (pos + asal) / PITCH;
+    let iDepan = arah > 0 ? Math.floor(u) + 1 : Math.floor(u);
+    let tepi = arah > 0 ? iDepan * PITCH - asal : iDepan * PITCH - asal + JALAN;
+    // bila moncong masih di dalam kotak saat ini (arah -1 dengan pos di antara x0..x0+JALAN), ambil kotak berikutnya
+    if (arah < 0 && pos - tepi < 0) { iDepan -= 1; tepi -= PITCH; }
+    const kunci = us ? iLain + "," + iDepan : iDepan + "," + iLain;
+    if (!simpang.has(kunci)) return Infinity;
+    const keGaris = Math.abs(tepi - pos) - moncong - GARIS_HENTI - 0.4; // jarak moncong ke titik berhenti
+    if (keGaris < -0.6) return Infinity; // sudah melewati garis
+    const f = fase[us ? "us" : "tb"];
+    if (f === "hijau") return Infinity;
+    if (f === "kuning" && v * v / (2 * REM) > keGaris + 0.5) return Infinity; // tak sempat berhenti
+    return keGaris > 60 ? Infinity : Math.sqrt(2 * REM * Math.max(0, keGaris));
+  }
   export function perbaruiMobil(dt, t) {
     const { imBodi, imDetail, daftar } = MOBIL_AKTIF;
     if (!imBodi || !daftar.length) return;
-    const fase = faseLaluLintas(t);
-    const halfW = KOTA_W / 2, halfD = KOTA_D / 2;
+    LL_AKTIF.fase = faseLaluLintas(t);
     for (let i = 0; i < daftar.length; i++) {
       const m = daftar[i];
       let vMaks = m.kec;
       // tikungan di depan: melambat (lintasan bulat r ±9 -> ±8 m/s)
       const dB = jarakKeBelok(m.J, m.s + 3, 30);
       if (dB < 30) vMaks = Math.min(vMaks, 7 + dB * 0.4);
-      // lampu lalu lintas (hanya di ruas lurus): sumbu & arah dari arah hadap
+      // lampu lalu lintas: berhenti dengan moncong DI BELAKANG garis henti (sebelum zebra cross)
       const p = posJalur(m.J, m.s);
-      if (!p.belok) {
-        const us = Math.abs(p.hz) > Math.abs(p.hx), arah = us ? Math.sign(p.hz) : Math.sign(p.hx);
-        const pos = us ? p.z : p.x, batas = us ? halfD : halfW;
-        const relatif = ((pos + batas) % PITCH + PITCH) % PITCH;
-        const dekat = arah === 1 ? (relatif > PITCH - 10.5 && relatif < PITCH - 6.2) : (relatif > JALAN + 6.2 && relatif < JALAN + 10.5); // moncong di belakang garis henti
-        if (dekat && fase[us ? "us" : "tb"] !== "hijau") vMaks = 0;
-      }
+      vMaks = Math.min(vMaks, batasLampuMerah(p.x, p.z, p.hx, p.hz, 2.13 * SKALA_MOBIL, m.v));
       // antre: mobil lain di depan pada lajur yang sama (semua rute)
       const fl = Math.hypot(p.hx, p.hz) || 1, fx = p.hx / fl, fz = p.hz / fl;
       for (let j = 0; j < daftar.length; j++) {

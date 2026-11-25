@@ -18,6 +18,10 @@
      ±4,2 m: dunia game berskala besar (lajur 7, rumah 8,6, pintu ±3), jadi
      mobil 1:1 tampak kerdil di samping rumah. Satu konstanta untuk keduanya. */
   export const SKALA_MOBIL = 1.35;
+  /* Skala SEMUA karakter (pemain sendiri, pemain lain, warga di rumah, NPC
+     plaza/pasar/mall/penumpang): satu angka supaya tinggi badan sama
+     (±1,75 m, sebanding mata 1st Person 1,6 & interior bus/KRL/rumah). */
+  export const SKALA_KARAKTER = 1.0;
   /* Warna aspal: SATU sumber untuk tekstur jalan (buatKanvasTanah) dan
      tutup marka persimpangan (kota.js) — dulu dua nilai terpisah sehingga
      persimpangan tampak sebagai tambalan berbentuk salib. */

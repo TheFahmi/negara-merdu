@@ -20,6 +20,7 @@ import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
+import { batasLampuMerah } from "./kota.js";
 
 export const BLOK_STASIUN = { kol: 44, bar: 36 };
 const RZ = sudutBlok(0, 36).z + JALAN / 2;        // as jalan di bawah rel (z 931)
@@ -251,7 +252,7 @@ function buatKereta() {
     const layar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 0.5), new THREE.MeshStandardMaterial({ color: 0x0a2a3a, emissive: 0x2a9fd6, emissiveIntensity: 0.8 })); layar.position.set(a * 7.2, 2.1, -0.4); layar.rotation.z = a * 0.4; tgt.add(layar);
     K(0.5, 0.12, 0.5, 0x2e6fa8, a * 6.55, 1.45, -0.45); K(0.1, 0.7, 0.5, 0x2e6fa8, a * 6.3, 1.85, -0.45);
     const masinis = buatKarakter({ baju: "#1d3a5f", kulit: "#c68642", topi: "tanpa" });
-    masinis.position.set(a * 6.75, 0.95, -0.45); masinis.rotation.y = a * Math.PI / 2; masinis.scale.setScalar(0.95); tgt.add(masinis);
+    masinis.position.set(a * 6.75, 0.95, -0.45); masinis.rotation.y = a * Math.PI / 2; tgt.add(masinis);
     const topi = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.12, 12), M(0x1d3a5f)); topi.position.set(0, 1.62, 0); masinis.add(topi);
     for (const sz of [-1, 1]) {
       // ujung depan (a=+1, rangkaian selalu melaju ke +x lokal): lampu utama putih; ujung belakang: lampu merah
@@ -531,7 +532,8 @@ export function perbaruiTransportasi(t, dt) {
       let dHenti = Infinity, sumbuHenti = null;
       for (const th of r.henti) { const d = ((th.s - b.s) % r.R.total + r.R.total) % r.R.total; if (d > 0.01 && d < dHenti) { dHenti = d; sumbuHenti = th.sumbu; } }
       if (sumbuHenti && (sumbuHenti === "tb" ? fase.tb : fase.us) !== "hijau" && dHenti < 34) vM = Math.min(vM, dHenti < 0.5 ? 0 : Math.max(0.9, dHenti * 0.55));
-      b.v += Math.sign(vM - b.v) * Math.min(Math.abs(vM - b.v), 4 * dt);
+      { const q = posJalur(r.R, b.s); vM = Math.min(vM, batasLampuMerah(q.x, q.z, q.hx, q.hz, 5.3, b.v)); } // lampu merah: berhenti di belakang garis henti
+      b.v += Math.sign(vM - b.v) * Math.min(Math.abs(vM - b.v), (vM < b.v ? 8 : 4) * dt);
       b.s = (b.s + b.v * dt) % r.R.total;
       r.halte.forEach((h, i) => { if (i !== b.halteTerakhir && Math.abs(((b.s - h.s) % r.R.total + r.R.total) % r.R.total) < 0.6) { b.tunggu = 7; b.halteTerakhir = i; b.halteKini = h; peristiwaBusBerhenti(b, h.entri); } });
     }

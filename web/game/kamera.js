@@ -1,6 +1,6 @@
 /* Negara Merdu — modul game "kamera" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kamera: mode orbit/1st person/3rd person/drone, gerak pemain, tabrakan, joystick & sentuh. */
-import { $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, wilayahLengkap, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
+import { SKALA_KARAKTER, $, BLOK_BARIS, BLOK_KOLOM, IK, JALAN, KAV_PITCH, KOTA_D, KOTA_W, PITCH, PUSAT_X, PUSAT_Z, RESERVASI, wilayahLengkap, SISI, TAMAN, posisiKavling, sudutBlok } from "./inti.js";
 import { OFSET_MATAHARI, aturJangkauBayangan, camera, kanvas, matahari, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { INT, dekatPintuKeluar, diInterior, jepitInteriorUmum, keluarInterior, masukApartemen, masukInterior, masukIstana, masukMall, pulihInterior, rintangan, rintanganDetail, rintanganFasilitas, rintanganInterior, rumahKlik, setPulihInterior } from "./rumah.js";
@@ -319,13 +319,13 @@ import { waktuLalu } from "./main.js";
     return a + d * t;
   }
   /* Posisi kamera 3rd Person (murni): menggantung `jarak` di belakang
-     karakter; titik pijak = dada karakter (y 1,5); pitch > 0 menaikkan
+     karakter; titik pijak = dada karakter (y 1,2); pitch > 0 menaikkan
      kamera. Arah dari karakter ke kamera = kebalikan arah pandang yaw. */
   export function posisiKameraKetiga(px, pz, yaw, pitch, jarak) {
     const cp = Math.cos(pitch);
     return {
       x: px + Math.sin(yaw) * cp * jarak,
-      y: 1.5 + Math.sin(pitch) * jarak,
+      y: 1.2 + Math.sin(pitch) * jarak, // dada karakter (SKALA_KARAKTER 1,0)
       z: pz + Math.cos(yaw) * cp * jarak,
     };
   }
@@ -382,7 +382,7 @@ import { waktuLalu } from "./main.js";
     if (karSaya) { scene.remove(karSaya); buangGrup(karSaya); karSaya = null; }
     kunciRupaSaya = kunci;
     karSaya = buatKarakter(r);
-    karSaya.scale.setScalar(1.35); // skala sama seperti pemain lain & NPC
+    karSaya.scale.setScalar(SKALA_KARAKTER); // skala sama seperti pemain lain & NPC
     karSaya.visible = false; // visibilitas diatur per frame di animasi()
     scene.add(karSaya);
   }
