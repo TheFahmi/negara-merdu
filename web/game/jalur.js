@@ -72,3 +72,17 @@ export function sTerdekatJalur(J, x, z) {
   for (let i = 0; i < J.n; i++) { const d = (J.xs[i] - x) ** 2 + (J.zs[i] - z) ** 2; if (d < dMin) { dMin = d; terbaik = i; } }
   return J.kum[terbaik];
 }
+
+/* Arah sein: +1 belok KIRI, -1 belok KANAN, 0 lurus — dilihat dari arah
+   hadap di s ke arah hadap `depan` meter di depan (menyalakan sein sebelum
+   & selama tikungan). Kiri kendaraan yang menghadap (hx,hz) = (hz,-hx). */
+export function arahSein(J, s, depan) {
+  const a = posJalur(J, s), b = posJalur(J, s + (depan || 22));
+  if (!a.belok && !b.belok) return 0;
+  const la = Math.hypot(a.hx, a.hz) || 1, lb = Math.hypot(b.hx, b.hz) || 1;
+  const silang = (a.hx / la) * (b.hz / lb) - (a.hz / la) * (b.hx / lb); // >0: belok ke kanan pada sistem x timur/z selatan
+  if (Math.abs(silang) < 0.15) return 0;
+  return silang > 0 ? -1 : 1;
+}
+/* Kedip sein ±1,5 Hz (nyala 55%). */
+export function kedip(t, geser) { return ((t + (geser || 0)) * 1.5) % 1 < 0.55; }

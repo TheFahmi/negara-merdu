@@ -18,7 +18,7 @@ import { JALAN, PITCH, PUSAT_X, faseLaluLintas, persimpanganKota, sudutBlok } fr
 import { M, camera, gabungBerwarna, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
-import { arahHalus, jalurPoligon, jarakKeBelok, posJalur, sTerdekatJalur } from "./jalur.js";
+import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 
 export const BLOK_STASIUN = { kol: 44, bar: 36 };
@@ -45,9 +45,12 @@ export const rintanganTransportasi = [];
 function teksturBus(warna) {
   const cv = document.createElement("canvas"); cv.width = 512; cv.height = 128;
   const c = cv.getContext("2d");
+  /* tulisan saja di atas warna bodi (dulu ada pita hitam bekas "jendela"
+     di atas tulisan yang terlihat seperti blok hitam menutupi) */
   c.fillStyle = warna; c.fillRect(0, 0, 512, 128);
-  c.fillStyle = "#1f2a33"; c.fillRect(10, 18, 492, 46);
-  c.fillStyle = "#ffffff"; c.font = "bold 30px system-ui"; c.fillText("TRANS MERDU", 150, 104);
+  c.fillStyle = "#ffffff"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = "bold 78px system-ui";
+  c.fillText("TRANS MERDU", 256, 66);
+  c.fillStyle = "#f2c230"; c.fillRect(20, 112, 472, 8);
   return new THREE.CanvasTexture(cv);
 }
 
@@ -251,8 +254,10 @@ function buatKereta() {
     masinis.position.set(a * 6.75, 0.95, -0.45); masinis.rotation.y = a * Math.PI / 2; masinis.scale.setScalar(0.95); tgt.add(masinis);
     const topi = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.12, 12), M(0x1d3a5f)); topi.position.set(0, 1.62, 0); masinis.add(topi);
     for (const sz of [-1, 1]) {
-      const l = new THREE.Mesh(new THREE.CircleGeometry(0.17, 14), matLampu); l.rotation.y = a * Math.PI / 2; l.position.set(a * 8.11, 0.95, sz * 0.95); tgt.add(l);
-      const lr = new THREE.Mesh(new THREE.CircleGeometry(0.1, 10), matLampuR); lr.rotation.y = a * Math.PI / 2; lr.position.set(a * 8.11, 0.95, sz * 1.25); tgt.add(lr);
+      // ujung depan (a=+1, rangkaian selalu melaju ke +x lokal): lampu utama putih; ujung belakang: lampu merah
+      const l = new THREE.Mesh(new THREE.CircleGeometry(0.17, 14), a > 0 ? matLampu : M(0x5a5a5a)); l.rotation.y = a * Math.PI / 2; l.position.set(a * 8.11, 0.95, sz * 0.95); tgt.add(l);
+      const lr = new THREE.Mesh(new THREE.CircleGeometry(a > 0 ? 0.1 : 0.15, 12), a > 0 ? M(0x4a1010) : matLampuR); lr.rotation.y = a * Math.PI / 2; lr.position.set(a * 8.11, 0.95, sz * 1.25); tgt.add(lr);
+      if (a > 0 && sz > 0) { const lu = new THREE.Mesh(new THREE.CircleGeometry(0.13, 12), matLampu); lu.rotation.y = Math.PI / 2; lu.position.set(8.12, 3.15, 0); tgt.add(lu); } // lampu sorot atas
     }
     const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("KRL MERDU", "Keliling Kota") }));
     papan.rotation.y = a * Math.PI / 2; papan.position.set(a * 8.16, 3.42, 0); tgt.add(papan);
@@ -272,6 +277,7 @@ function buatKereta() {
 }
 /* ---------- bus (BERONGGA ber-interior, bisa dinaiki) — hadap +z ----------
    Lantai y 0,55, atap 3,3; pintu di sisi KIRI (+x, ke trotoar, lajur kiri). */
+const PINTU_BUS_Z = 0; // pintu bus di TENGAH bodi (z lokal)
 function buatBus(warna) {
   const g = new THREE.Group(), w = parseInt(warna.slice(1), 16), tex = teksturBus(warna);
   const K = (l, t, d, c, x, y, z) => { const m = kotak(l, t, d, c, x, y, z); m.castShadow = false; g.add(m); return m; };
@@ -279,22 +285,24 @@ function buatBus(warna) {
   K(2.5, 0.3, 10.3, 0x55595e, 0, 0.5, 0);                     // lantai
   K(2.6, 0.2, 10.5, 0xf4f4f2, 0, 3.35, 0);                    // atap
   for (const s of [-1, 1]) {
-    // dinding bawah berwarna (sisi +x punya bukaan pintu z 2,6..4,2)
-    /* dinding bawah: penuh y 0,6..1,7 kecuali lengkung roda (z ±0,65 di as)
-       & bukaan pintu (sisi +x, z 2,6..4,2); di atas lengkung roda tetap ada. */
-    const potong = [[-4.05, -2.75], [0.85, 2.15]].concat(s > 0 ? [[2.6, 4.2]] : []);
+    /* PINTU DI TENGAH (sisi kiri +x, bukaan z -0,8..0,8) & roda simetris
+       z ±3,4 -> overhang depan = belakang. Dinding bawah penuh y 0,6..1,7
+       kecuali lengkung roda & bukaan pintu; di atas lengkung roda tetap ada. */
+    const potong = [[-4.05, -2.75]].concat(s > 0 ? [[-0.8, 0.8]] : [], [[2.75, 4.05]]);
     let z0 = -5.15;
     for (const [a, b] of potong.concat([[5.15, 5.15]])) { if (a > z0) K(0.12, 1.1, a - z0, w, s * 1.27, 1.15, (a + z0) / 2); z0 = b; }
-    for (const [a, b] of potong.slice(0, 2)) K(0.12, 0.62, b - a, w, s * 1.27, 1.39, (a + b) / 2);
-    const sisi = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 0.9), new THREE.MeshStandardMaterial({ map: tex, transparent: true }));
-    sisi.rotation.y = s * Math.PI / 2; sisi.position.set(s * 1.34, 1.15, -1.4); g.add(sisi);
-    if (s > 0) { kaca(0.05, 1.3, 7.75, 1.27, 2.35, -1.275); kaca(0.05, 1.3, 0.95, 1.27, 2.35, 4.675); } // jendela kiri: belakang & depan pintu
+    for (const [a, b] of [[-4.05, -2.75], [2.75, 4.05]]) K(0.12, 0.62, b - a, w, s * 1.27, 1.39, (a + b) / 2);
+    for (const lz of s > 0 ? [-1.75] : [-1.4]) { // tulisan TRANS MERDU di antara lengkung roda (tidak tertutup spakbor / pintu)
+      const sisi = new THREE.Mesh(new THREE.PlaneGeometry(s > 0 ? 1.9 : 2.6, s > 0 ? 0.47 : 0.65), new THREE.MeshStandardMaterial({ map: tex, transparent: true }));
+      sisi.rotation.y = s * Math.PI / 2; sisi.position.set(s * 1.34, 1.3, lz); g.add(sisi);
+    }
+    if (s > 0) { kaca(0.05, 1.3, 4.35, 1.27, 2.35, -2.975); kaca(0.05, 1.3, 4.35, 1.27, 2.35, 2.975); } // jendela kiri: belakang & depan pintu
     else kaca(0.05, 1.3, 10.3, -1.27, 2.35, 0);                 // jendela kanan utuh
     K(0.12, 0.3, 10.3, w, s * 1.27, 3.15, 0);                  // pita atas
-    for (let z = -4.6; z <= 3.0; z += 1.6) if (!(s > 0 && z > 2.5)) K(0.14, 1.3, 0.1, w, s * 1.27, 2.35, z); // tiang jendela
-    if (s > 0) for (const z of [2.6, 4.2]) K(0.14, 2.75, 0.12, w, 1.27, 1.95, z); // kusen pintu
+    for (const z of [-4.4, -2.6, 2.6, 4.4].concat(s > 0 ? [] : [-0.9, 0.9])) K(0.14, 1.3, 0.1, w, s * 1.27, 2.35, z); // tiang jendela
+    if (s > 0) for (const z of [-0.8, 0.8]) K(0.14, 2.75, 0.12, w, 1.27, 1.95, z); // kusen pintu
   }
-  kaca(0.05, 0.5, 1.5, 1.27, 3.05, 3.4);                      // kaca di atas bukaan pintu
+  kaca(0.05, 0.5, 1.5, 1.27, 3.05, PINTU_BUS_Z);              // kaca di atas bukaan pintu
   /* pintu bus 2 daun geser (kaca berbingkai) di bukaan z 2,6..4,2 — digeser
      keluar ke depan/belakang di luar dinding saat bus berhenti di halte */
   g.userData.pintu = [];
@@ -306,7 +314,7 @@ function buatBus(warna) {
     daun.add(kotak(0.06, 0.12, 0.78, w, 0, 1.14, 0));           // bingkai atas
     for (const dz of [-0.35, 0.35]) daun.add(kotak(0.06, 1.73, 0.08, w, 0, 0.215, dz)); // bingkai samping
     const kc = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.73, 0.62), KACA_KRL); kc.position.y = 0.215; daun.add(kc);
-    const z0 = 3.4 + arah * 0.4;
+    const z0 = PINTU_BUS_Z + arah * 0.4;
     daun.position.set(1.36, 1.85, z0); g.add(daun);
     g.userData.pintu.push({ daun, z0, arah });
   }
@@ -316,20 +324,20 @@ function buatBus(warna) {
   for (const s of [-1, 1]) { const l = new THREE.Mesh(new THREE.CircleGeometry(0.15, 12), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4d0, emissiveIntensity: 1 })); l.position.set(s * 0.9, 0.95, 5.27); g.add(l); }
   // kursi penumpang (2 baris kiri-kanan, menghadap depan)
   for (let r = 0; r < 6; r++) for (const s of [-1, 1]) {
-    const z = -4.3 + r * 1.25; if (s > 0 && z > 2.2) continue;
+    const z = -4.3 + r * 1.25; if (s > 0 && Math.abs(z - PINTU_BUS_Z) < 1.3) continue; // ruang depan pintu tengah
     K(0.9, 0.12, 0.55, 0x2e6fa8, s * 0.72, 1.05, z); K(0.9, 0.65, 0.1, 0x2e6fa8, s * 0.72, 1.4, z - 0.27); K(0.08, 0.45, 0.08, 0x8a8f94, s * 0.72, 0.8, z);
     (g.userData.kursi || (g.userData.kursi = [])).push({ lx: s * 0.72, ly: 0.59, lz: z + 0.02, rot: 0, isi: null, lorongX: 0.15, lantai: 0.65 }); // titik duduk penumpang
   }
-  for (const z of [-3, -0.5, 2]) for (const s of [-1, 1]) K(0.05, 2.7, 0.05, 0xf2c230, s * 0.28, 1.95, z); // tiang kuning
+  for (const z of [-3, 1.6, 3.4]) for (const s of [-1, 1]) K(0.05, 2.7, 0.05, 0xf2c230, s * 0.28, 1.95, z); // tiang kuning (tidak menghalangi pintu)
+  for (const z of [-1.0, 1.0]) K(0.05, 1.0, 0.05, 0xf2c230, 0.95, 1.6, z); // pegangan pintu
   for (const s of [-1, 1]) K(0.04, 0.04, 9.5, 0xc0c4c8, s * 0.3, 3.05, 0);
   // sopir
   K(0.6, 0.6, 0.6, 0x2b2d30, -0.7, 1.1, 4.3); K(1.6, 0.6, 0.4, 0x2b2d30, -0.3, 1.5, 4.95);
   const setir = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 16), M(0x1b1b1d)); setir.position.set(-0.7, 1.7, 4.65); setir.rotation.x = -1.0; g.add(setir);
   for (const dz of [-1.6, 1.6]) { const l = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })); l.position.set(0, 3.22, dz); g.add(l); }
-  /* Roda: as depan DI BELAKANG pintu (z 1,5; dulu z 3,4 tepat di bawah
-     bukaan pintu sehingga ban kelihatan di ambang pintu) & as belakang z -3,4.
-     Tiap ban berpelek dan bernaung spakbor (lengkung roda gelap) di bodi. */
-  for (const [x, z] of [[-1.2, 1.5], [1.2, 1.5], [-1.2, -3.4], [1.2, -3.4]]) {
+  /* Roda simetris z ±3,4 (overhang depan = belakang), pintu di tengah di
+     antara kedua as. Tiap ban berpelek & bernaung spakbor gelap. */
+  for (const [x, z] of [[-1.2, 3.4], [1.2, 3.4], [-1.2, -3.4], [1.2, -3.4]]) {
     const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 16), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.5, z); g.add(r);
     const pelek = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.37, 12), M(0xb8bcc2)); pelek.rotation.z = Math.PI / 2; pelek.position.set(x, 0.5, z); g.add(pelek);
     const sx = Math.sign(x);
@@ -337,12 +345,25 @@ function buatBus(warna) {
     for (const dz of [-0.62, 0.62]) K(0.06, 0.5, 0.1, 0x1b1d20, sx * 1.36, 0.82, z + dz);
   }
   K(2.5, 0.5, 10.3, 0x2b2d30, 0, 0.3, 0);                                         // rok bawah bodi (rangka tertutup)
-  // tangga & ambang pintu (bukaan z 2,6..4,2): lantai menyambung ke tepi, satu anak tangga, karet ambang
-  K(0.35, 0.18, 1.5, 0x55595e, 1.15, 0.6, 3.4);
-  K(0.3, 0.12, 1.5, 0x8a8f94, 1.3, 0.3, 3.4);
-  K(0.04, 0.04, 1.55, 0xf2c230, 1.32, 0.69, 3.4);
+  // tangga & ambang pintu tengah: lantai menyambung ke tepi, satu anak tangga, karet ambang
+  K(0.35, 0.18, 1.5, 0x55595e, 1.15, 0.6, PINTU_BUS_Z);
+  K(0.3, 0.12, 1.5, 0x8a8f94, 1.3, 0.3, PINTU_BUS_Z);
+  K(0.04, 0.04, 1.55, 0xf2c230, 1.32, 0.69, PINTU_BUS_Z);
   const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("TRANS MERDU", "Keliling Kota") }));
   papan.position.set(0, 3.0, 5.27); g.add(papan);
+  /* lampu: rem merah (terang saat berhenti/melambat), sein kuning kiri (+x)
+     & kanan (-x) di 4 sudut + samping, lampu mundur/kabut tidak perlu */
+  const matRem = new THREE.MeshBasicMaterial({ color: 0x8a1212 });
+  for (const sx of [-1, 1]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.06), matRem); r.position.set(sx * 0.95, 1.0, -5.24); g.add(r);
+    const d = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.06), new THREE.MeshBasicMaterial({ color: 0xfff6d8 })); d.position.set(sx * 0.9, 0.95, 5.24); g.add(d);
+  }
+  const lampuRem3 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.06), matRem); lampuRem3.position.set(0, 3.2, -5.24); g.add(lampuRem3);
+  const sein = { 1: [], "-1": [] }, matSein = new THREE.MeshBasicMaterial({ color: 0xffb020 });
+  for (const sx of [-1, 1]) for (const [x, y, z, w, h, d] of [[sx * 1.15, 0.95, 5.24, 0.2, 0.18, 0.06], [sx * 1.15, 1.45, -5.24, 0.2, 0.3, 0.06], [sx * 1.36, 1.0, 4.6, 0.04, 0.14, 0.35]]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matSein); m.position.set(x, y, z); m.visible = false; g.add(m); sein[sx].push(m);
+  }
+  g.userData.lampu = { matRem, sein };
   return g;
 }
 /* ================= RUTE BUS (jalur halus) =================
@@ -521,6 +542,17 @@ export function perbaruiTransportasi(t, dt) {
       const e = b.buka * b.buka * (3 - 2 * b.buka);
       for (const pt of b.g.userData.pintu) pt.daun.position.z = pt.z0 + pt.arah * e * 0.8;
     }
+    { // lampu rem & sein bus (sein juga menyala saat keluar dari halte = menepi/ masuk lajur)
+      const L = b.g.userData.lampu, tNow = performance.now() / 1000;
+      const rem = b.tunggu > 0 || b.v < 0.5 || (b.vLalu !== undefined && b.v < b.vLalu - 0.01);
+      b.vLalu = b.v;
+      L.matRem.color.setHex(rem ? 0xff2a2a : 0x8a1212);
+      let arah = arahSein(r.R, b.s, 20);
+      if (!arah && b.tunggu > 0 && b.tunggu < 2.5) arah = -1; // mau berangkat dari halte: sein kanan
+      const nyala = arah !== 0 && kedip(tNow, b.s * 0.01);
+      for (const m of L.sein[1]) m.visible = nyala && arah > 0;
+      for (const m of L.sein[-1]) m.visible = nyala && arah < 0;
+    }
     const p = posJalur(r.R, b.s);
     b.g.position.set(p.x, tinggiBus(p.x, p.z), p.z); b.g.rotation.y = arahHalus(r.R, b.s, 2.5);
   }
@@ -651,18 +683,18 @@ function naikkan(w, pintuLuar, pintuDalam, induk, pintuLx, pintuLz, bus, tunda, 
   };
 }
 function peristiwaBusBerhenti(b, entri) {
-  const pintuLuar = duniaDari(b.g, 2.2, 0, 3.4).clone(), pintuDalam = duniaDari(b.g, 0.9, 0.65, 3.4).clone();
+  const pintuLuar = duniaDari(b.g, 2.2, 0, PINTU_BUS_Z).clone(), pintuDalam = duniaDari(b.g, 0.9, 0.65, PINTU_BUS_Z).clone();
   const y0 = entri.y + 0.02; pintuLuar.y = y0;
   const duduk = (b.g.userData.kursi || []).filter((k) => k.isi).map((k) => k.isi);
   const nTurun = Math.min(duduk.length, Math.floor(Math.random() * 3));
   duduk.sort(() => Math.random() - 0.5);
   for (let i = 0; i < nTurun; i++) {
     const tujuan = { x: pintuLuar.x + entri.normal.x * 2 + (i - 0.5) * 1.2 * entri.normal.z, y: y0, z: pintuLuar.z + entri.normal.z * 2 - (i - 0.5) * 1.2 * entri.normal.x };
-    turunkan(duduk[i], 0.9, 3.4, true, [{ x: pintuLuar.x, y: y0, z: pintuLuar.z }, tujuan, { x: tujuan.x + entri.normal.x * 9, y: y0, z: tujuan.z + entri.normal.z * 9 }], 0.3 + i * 1.2, b);
+    turunkan(duduk[i], 0.9, PINTU_BUS_Z, true, [{ x: pintuLuar.x, y: y0, z: pintuLuar.z }, tujuan, { x: tujuan.x + entri.normal.x * 9, y: y0, z: tujuan.z + entri.normal.z * 9 }], 0.3 + i * 1.2, b);
   }
   entri.tunggu.h.forEach((w, i) => {
     if (!w.kar.visible || w.pergi) return;
-    naikkan(w, pintuLuar, pintuDalam, b.g, 0.9, 3.4, true, 1.0 + nTurun * 1.6 + i * 0.9, b);
+    naikkan(w, pintuLuar, pintuDalam, b.g, 0.9, PINTU_BUS_Z, true, 1.0 + nTurun * 1.6 + i * 0.9, b);
   });
 }
 function peristiwaKeretaBerhenti(k, idx) {
@@ -720,7 +752,7 @@ export function aksiTransportasi(fp) {
   }
   for (const b of bus) {
     if (!(b.tunggu > 0)) continue;
-    const d = duniaDari(b.g, 2.6, 0, 3.4);
+    const d = duniaDari(b.g, 2.6, 0, PINTU_BUS_Z);
     if (Math.hypot(fp.x - d.x, fp.z - d.z) < 5.5) return { teks: "Bus Trans Merdu di halte", tombol: "Naik Bus", aksi: () => naik("bus", b) };
   }
   for (let i = 0; i < STASIUN.length; i++) {
@@ -738,7 +770,7 @@ export function setKaitNaik(k) { kaitNaik = k; }
 function naik(jenis, obj) {
   Object.assign(NAIK, { aktif: true, jenis, obj });
   const fp = kaitNaik.fp;
-  if (jenis === "bus") { NAIK.lx = 0.2; NAIK.lz = 3.0; NAIK.lantaiY = 0.65; fp.yaw = Math.PI; }
+  if (jenis === "bus") { NAIK.lx = 0.2; NAIK.lz = PINTU_BUS_Z; NAIK.lantaiY = 0.65; fp.yaw = Math.PI; }
   else { NAIK.lx = -18.4; NAIK.lz = 0; NAIK.lantaiY = 0.5; fp.yaw = -Math.PI / 2; }
   fp.pitch = 0;
   kaitNaik.petunjuk(jenis === "bus" ? "Menumpang bus Trans Merdu · jalan di lorong · turun saat bus berhenti di halte"
@@ -746,7 +778,7 @@ function naik(jenis, obj) {
 }
 function turun() {
   const fp = kaitNaik.fp, o = NAIK.obj;
-  if (NAIK.jenis === "bus") { const h = (o.halteKini && o.halteKini.pos) || duniaDari(o.g, 4, 0, 3.4); fp.x = h.x; fp.z = h.z; if (h.yaw !== undefined) fp.yaw = h.yaw; fp.pitch = 0; }
+  if (NAIK.jenis === "bus") { const h = (o.halteKini && o.halteKini.pos) || duniaDari(o.g, 4, 0, PINTU_BUS_Z); fp.x = h.x; fp.z = h.z; if (h.yaw !== undefined) fp.yaw = h.yaw; fp.pitch = 0; }
   else { const p = STASIUN[Math.max(0, o.stasiunKini)].pintu; fp.x = p.x; fp.z = p.z; fp.yaw = 0; }
   Object.assign(NAIK, { aktif: false, jenis: null, obj: null });
   kaitNaik.selesai();

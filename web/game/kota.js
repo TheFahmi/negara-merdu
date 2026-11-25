@@ -2,7 +2,7 @@
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
-import { arahHalus, jalurPoligon, jarakKeBelok, posJalur } from "./jalur.js";
+import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, plafonTerang, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
@@ -461,10 +461,27 @@ geoKepalaL.translate(1.02, 4.80, 0);
     if (imBodi.instanceColor) imBodi.instanceColor.needsUpdate = true;
 
     scene.add(imBodi); scene.add(imDetail);
+    /* LAMPU KENDARAAN (24 Nov 2026): lampu depan putih selalu nyala, lampu
+       belakang merah redup yang MENYALA TERANG saat mengerem/berhenti, dan
+       SEIN kuning berkedip kiri/kanan sebelum & selama berbelok. Material
+       Basic (tidak terpengaruh cahaya) + instanceColor; sein mati = skala 0. */
+    const lampu = (bag) => gabungGeometri(bag.map(([x, y, z, w, h, d]) => ({ geo: new THREE.BoxGeometry(w, h, d), x, y, z })));
+    const geoDepan = lampu([[-0.66, 0.72, 2.16, 0.4, 0.17, 0.05], [0.66, 0.72, 2.16, 0.4, 0.17, 0.05]]);
+    const geoRem = lampu([[-0.66, 0.78, -2.16, 0.42, 0.16, 0.05], [0.66, 0.78, -2.16, 0.42, 0.16, 0.05], [0, 1.6, -1.33, 0.5, 0.06, 0.04]]);
+    const seinSisi = (sx) => lampu([[sx * 0.9, 0.72, 2.15, 0.16, 0.14, 0.05], [sx * 0.9, 0.78, -2.15, 0.16, 0.14, 0.05], [sx * 0.97, 0.75, 1.75, 0.04, 0.1, 0.3]]);
+    const MAT_L = () => new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const imDepan = new THREE.InstancedMesh(geoDepan, new THREE.MeshBasicMaterial({ color: 0xfff6d8 }), daftar.length);
+    const imRem = new THREE.InstancedMesh(geoRem, MAT_L(), daftar.length);
+    const imSeinK = new THREE.InstancedMesh(seinSisi(1), new THREE.MeshBasicMaterial({ color: 0xffb020 }), daftar.length);   // kiri = +x lokal
+    const imSeinR = new THREE.InstancedMesh(seinSisi(-1), new THREE.MeshBasicMaterial({ color: 0xffb020 }), daftar.length);
+    daftar.forEach((m, i) => imRem.setColorAt(i, c.setHex(0x8a1212)));
+    for (const im of [imDepan, imRem, imSeinK, imSeinR]) { im.frustumCulled = false; scene.add(im); }
+    MOBIL_AKTIF.lampu = { imDepan, imRem, imSeinK, imSeinR };
     MOBIL_AKTIF.imBodi = imBodi; MOBIL_AKTIF.imDetail = imDetail; MOBIL_AKTIF.daftar = daftar;
     perbaruiMobil(0, 0);
   }
 
+  const _cLampu = new THREE.Color(), NOL = new THREE.Matrix4().makeScale(0, 0, 0);
   export function perbaruiMobil(dt, t) {
     const { imBodi, imDetail, daftar } = MOBIL_AKTIF;
     if (!imBodi || !daftar.length) return;
@@ -506,6 +523,21 @@ geoKepalaL.translate(1.02, 4.80, 0);
       _dummyM.updateMatrix();
       imBodi.setMatrixAt(i, _dummyM.matrix);
       imDetail.setMatrixAt(i, _dummyM.matrix);
+      const L = MOBIL_AKTIF.lampu;
+      if (L) {
+        L.imDepan.setMatrixAt(i, _dummyM.matrix);
+        L.imRem.setMatrixAt(i, _dummyM.matrix);
+        const rem = m.v < 0.5 || vMaks < m.v - 0.3; // berhenti / melambat
+        if (m.remNyala !== rem) { m.remNyala = rem; L.imRem.setColorAt(i, _cLampu.setHex(rem ? 0xff2a2a : 0x8a1212)); L.remBerubah = true; }
+        const sein = arahSein(m.J, m.s, 24), nyala = sein !== 0 && kedip(t, i * 0.13);
+        L.imSeinK.setMatrixAt(i, nyala && sein > 0 ? _dummyM.matrix : NOL);
+        L.imSeinR.setMatrixAt(i, nyala && sein < 0 ? _dummyM.matrix : NOL);
+      }
+    }
+    if (MOBIL_AKTIF.lampu) {
+      const L = MOBIL_AKTIF.lampu;
+      for (const im of [L.imDepan, L.imRem, L.imSeinK, L.imSeinR]) im.instanceMatrix.needsUpdate = true;
+      if (L.remBerubah && L.imRem.instanceColor) { L.imRem.instanceColor.needsUpdate = true; L.remBerubah = false; }
     }
     imBodi.instanceMatrix.needsUpdate = true;
     imDetail.instanceMatrix.needsUpdate = true;
