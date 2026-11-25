@@ -278,8 +278,12 @@ function buatBus(warna) {
   K(2.6, 0.2, 10.5, 0xf4f4f2, 0, 3.35, 0);                    // atap
   for (const s of [-1, 1]) {
     // dinding bawah berwarna (sisi +x punya bukaan pintu z 2,6..4,2)
-    if (s > 0) { K(0.12, 1.1, 7.75, w, 1.27, 1.15, -1.275); K(0.12, 1.1, 0.95, w, 1.27, 1.15, 4.675); } // rapat ke bukaan pintu z 2,6..4,2
-    else K(0.12, 1.1, 10.3, w, -1.27, 1.15, 0);
+    /* dinding bawah: penuh y 0,6..1,7 kecuali lengkung roda (z ±0,65 di as)
+       & bukaan pintu (sisi +x, z 2,6..4,2); di atas lengkung roda tetap ada. */
+    const potong = [[-4.05, -2.75], [0.85, 2.15]].concat(s > 0 ? [[2.6, 4.2]] : []);
+    let z0 = -5.15;
+    for (const [a, b] of potong.concat([[5.15, 5.15]])) { if (a > z0) K(0.12, 1.1, a - z0, w, s * 1.27, 1.15, (a + z0) / 2); z0 = b; }
+    for (const [a, b] of potong.slice(0, 2)) K(0.12, 0.62, b - a, w, s * 1.27, 1.39, (a + b) / 2);
     const sisi = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 0.9), new THREE.MeshStandardMaterial({ map: tex, transparent: true }));
     sisi.rotation.y = s * Math.PI / 2; sisi.position.set(s * 1.34, 1.15, -1.4); g.add(sisi);
     if (s > 0) { kaca(0.05, 1.3, 7.75, 1.27, 2.35, -1.275); kaca(0.05, 1.3, 0.95, 1.27, 2.35, 4.675); } // jendela kiri: belakang & depan pintu
@@ -316,9 +320,21 @@ function buatBus(warna) {
   K(0.6, 0.6, 0.6, 0x2b2d30, -0.7, 1.1, 4.3); K(1.6, 0.6, 0.4, 0x2b2d30, -0.3, 1.5, 4.95);
   const setir = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 16), M(0x1b1b1d)); setir.position.set(-0.7, 1.7, 4.65); setir.rotation.x = -1.0; g.add(setir);
   for (const dz of [-1.6, 1.6]) { const l = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })); l.position.set(0, 3.22, dz); g.add(l); }
-  for (const [x, z] of [[-1.2, 3.4], [1.2, 3.4], [-1.2, -3.4], [1.2, -3.4]]) {
-    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 14), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.5, z); g.add(r);
+  /* Roda: as depan DI BELAKANG pintu (z 1,5; dulu z 3,4 tepat di bawah
+     bukaan pintu sehingga ban kelihatan di ambang pintu) & as belakang z -3,4.
+     Tiap ban berpelek dan bernaung spakbor (lengkung roda gelap) di bodi. */
+  for (const [x, z] of [[-1.2, 1.5], [1.2, 1.5], [-1.2, -3.4], [1.2, -3.4]]) {
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 16), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.5, z); g.add(r);
+    const pelek = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.37, 12), M(0xb8bcc2)); pelek.rotation.z = Math.PI / 2; pelek.position.set(x, 0.5, z); g.add(pelek);
+    const sx = Math.sign(x);
+    K(0.06, 0.16, 1.3, 0x1b1d20, sx * 1.36, 1.08, z);                           // spakbor atas
+    for (const dz of [-0.62, 0.62]) K(0.06, 0.5, 0.1, 0x1b1d20, sx * 1.36, 0.82, z + dz);
   }
+  K(2.5, 0.5, 10.3, 0x2b2d30, 0, 0.3, 0);                                         // rok bawah bodi (rangka tertutup)
+  // tangga & ambang pintu (bukaan z 2,6..4,2): lantai menyambung ke tepi, satu anak tangga, karet ambang
+  K(0.35, 0.18, 1.5, 0x55595e, 1.15, 0.6, 3.4);
+  K(0.3, 0.12, 1.5, 0x8a8f94, 1.3, 0.3, 3.4);
+  K(0.04, 0.04, 1.55, 0xf2c230, 1.32, 0.69, 3.4);
   const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("TRANS MERDU", "Keliling Kota") }));
   papan.position.set(0, 3.0, 5.27); g.add(papan);
   return g;
