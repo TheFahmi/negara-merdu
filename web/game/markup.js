@@ -6,24 +6,33 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
 
 <div id="hud" hidden>
   <div id="zona-atas">
-    <div class="baris-kepala">
-      <div class="info">
-        <b>Negara Merdu</b>
-        <span id="info-sub">@negaramerdu</span>
+    <div class="bar-atas">
+      <div class="merek-atas">
+        <svg class="logo-atas" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#7a1f1f"/><path d="M32 11 L52 28 L46 28 L46 50 L37 50 L37 39 L27 39 L27 50 L18 50 L18 28 L12 28 Z" fill="#f2c230"/></svg>
+        <div class="merek-teks">
+          <b>Negara Merdu</b>
+          <div class="baris-stat">
+            <span class="chip-stat" title="Warga terdaftar"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg><b id="stat-warga">0</b><span class="lbl-stat"> warga</span></span>
+            <span class="titik-stat">·</span>
+            <span class="chip-stat" title="Kavling terisi"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg><b id="stat-rumah">0 / 100.000</b></span>
+          </div>
+          <span id="info-sub" hidden>@negaramerdu</span>
+        </div>
       </div>
       <div class="tombol-atas">
         <button id="tombol-chat" type="button" aria-label="Buka chat Istana Negara"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><span id="lencana-chat" hidden>0</span></button>
-        <button id="tombol-menu" type="button" aria-label="Buka menu">☰</button>
-        <button id="tombol-akun" type="button">Masuk / Daftar</button>
+        <button id="tombol-menu" type="button" aria-label="Buka menu"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+        <button id="tombol-akun" type="button" aria-haspopup="true"><span class="akun-teks">Masuk</span></button>
       </div>
     </div>
-    <div class="baris-stat">
-      <span class="chip-stat"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> <b id="stat-warga">0</b> warga</span>
-      <span class="chip-stat"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg> <b id="stat-rumah">0 / 100.000</b></span>
-    </div>
-    <div id="chip-saya" hidden>
-      <span id="chip-saya-teks"></span>
-      <button id="tombol-keluar" type="button">Keluar</button>
+    <div id="chip-saya" hidden role="menu">
+      <div class="profil-kepala">
+        <span class="avatar-besar" id="avatar-besar">?</span>
+        <div class="profil-teks"><b id="profil-nama">@warga</b><span id="chip-saya-teks"></span></div>
+      </div>
+      <button id="btn-kartu-saya" type="button" role="menuitem"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="6" y1="10" x2="12" y2="10"/><line x1="6" y1="14" x2="15" y2="14"/></svg> Kartu Saya</button>
+      <button id="btn-rumah-saya" type="button" role="menuitem"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg> Lihat Rumah Saya</button>
+      <button id="tombol-keluar" type="button" role="menuitem" class="keluar"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Keluar Akun</button>
     </div>
     <div id="panel-chat" hidden>
       <div class="pc-judul"><b><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Istana Negara</b><button id="tombol-tutup-chat" type="button" aria-label="Tutup chat">✕</button></div>
@@ -76,7 +85,7 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
         <p>Ketuk rumah di Distrik Pusat untuk melihat pemiliknya.</p>
         <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2.5 22h19"/><circle cx="13.2" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg> <b>Masuk rumah</b> — dekati pintu rumah di Distrik Pusat pada mode 1st Person lalu ketuk, atau pakai tombol Masuk Rumah di kartu pemilik. Rumahmu sendiri bisa dimasuki dari Kartu Saya. Di dalam rumah kamu tetap jalan dengan kontrol 1st Person; keluar lewat pintu selatan atau tombol Keluar Rumah. Selama di dalam, warga lain melihat karaktermu menunggu di depan pintu.</p>
         <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> <b>Chat Istana Negara</b> — tombol chat di kanan atas. Warga lain yang sedang online tampil langsung di negara; karaktermu bergerak saat kamu jalan di mode 1st Person atau 3rd Person.</p>
-        <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5.4 17c.6-1.6 1.4-2.4 2.6-2.4s2 .8 2.6 2.4"/><path d="M14 9.5h5M14 13h5"/></svg> <b>KTP</b> — buka Kartu Saya (tombol kanan atas) lalu ketuk Lihat KTP. Di sana KTP-mu bisa dilihat dan diunduh sebagai gambar PNG.</p>
+        <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5.4 17c.6-1.6 1.4-2.4 2.6-2.4s2 .8 2.6 2.4"/><path d="M14 9.5h5M14 13h5"/></svg> <b>KTP</b> — ketuk avatar profil di kanan atas → Kartu Saya, lalu ketuk Lihat KTP. Di sana KTP-mu bisa dilihat dan diunduh sebagai gambar PNG.</p>
         <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20.5v-2A4.5 4.5 0 0 1 7 14h4a4.5 4.5 0 0 1 4.5 4.5v2"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 14.4a4.5 4.5 0 0 1 5.5 4.4v1.7"/></svg> <b>Kartu Keluarga</b> — tiap warga otomatis digabungkan server ke satu keluarga acak (maks 5 orang): yang mendirikan keluarga jadi Kepala Keluarga, sisanya Anggota. Lihat keluargamu dan unduh Kartu Keluarganya dari tombol Keluarga Saya di menu ini.</p>
         <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V12"/><path d="M10.3 7.6l1.2 1.2 2-2.3"/><rect x="3" y="12" width="18" height="8" rx="1.5"/><path d="M3 16h18"/></svg> <b>Pemilu</b> — dari tombol Pemilu di menu ini: pemilu pertama dibuka setelah <b>10.000 warga</b> terdaftar; sesudah itu, saat Pak Presiden membuka periode, warga bisa mencalonkan diri jadi Ketua RT, Ketua RW, atau Presiden (wajib isi visi & misi) dan memilih kandidat di wilayah rumahnya. Pemenangnya memegang jabatan dan jabatannya tampil di label karakter serta KTP.</p>
         <p><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 22V4"/><path d="M7 4h13"/><path d="M7 9l6.5-5"/><path d="M17 4v5"/><rect x="15.4" y="9" width="3.2" height="3.2"/><path d="M3.5 22h10"/></svg> <b>Pembangunan negara</b> — negara ini mulai hanya dari Istana Negara. Fasilitas lain (taman, pasar, masjid, sekolah, dan lainnya) berdiri satu per satu dari usulan warga di komentar Instagram @negaramerdu; yang memutuskan Pak Presiden. Daftar fasilitas, biaya kas negaranya, dan yang sudah berdiri bisa dilihat dari tombol Pembangunan di menu ini.</p>

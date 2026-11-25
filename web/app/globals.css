@@ -901,3 +901,90 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .seg.seg-wrap { flex-wrap: wrap; }
 .seg.seg-wrap button { flex: 1 1 30%; }
 #gerbang .kartu-form { max-height: calc(100dvh - 28px); overflow-y: auto; }
+
+/* ========== HUD ATAS — redesign 26 Nov 2026 ==========
+   Satu bar kaca: [logo + Negara Merdu + statistik ringkas] ... [chat] [menu] [pil profil].
+   Pil profil (masuk): avatar huruf berwarna baju + @username + Blok·Kav;
+   ketuk -> menu tarik (Kartu Saya, Lihat Rumah Saya, Keluar Akun).
+   Menggantikan baris chip gelap "@user · Blok … Keluar" yang memakan layar. */
+#zona-atas { gap: 8px; }
+.bar-atas {
+  display: flex; align-items: center; gap: 10px; min-width: 0; pointer-events: auto;
+  background: rgba(255, 252, 244, .82); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,.7); border-radius: 18px; padding: 6px 6px 6px 8px;
+  box-shadow: 0 6px 22px rgba(33,51,42,.18);
+}
+.merek-atas { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
+.logo-atas { width: 34px; height: 34px; flex: none; filter: drop-shadow(0 2px 4px rgba(122,31,31,.3)); }
+.merek-teks { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.merek-teks > b { font-size: 15.5px; font-weight: 850; letter-spacing: -.02em; color: #1f2d25; white-space: nowrap; }
+#hud .baris-stat { flex-basis: auto; display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; margin-top: 1px; }
+#hud .chip-stat { -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: none; border: 0; box-shadow: none; padding: 0; font-size: 11.5px; font-weight: 600; color: #4b5f53;
+  display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+}
+#hud .chip-stat .ik { width: 12px; height: 12px; }
+#hud .chip-stat b { color: #1f2d25; font-weight: 750; }
+.titik-stat { color: #a3b3a8; font-size: 11px; }
+#hud .tombol-atas { margin-left: auto; display: flex; gap: 6px; align-items: center; flex: none; }
+#hud .tombol-atas button {
+  min-height: 40px; height: 40px; border-radius: 13px; border: 1px solid rgba(33,51,42,.08);
+  background: rgba(255,255,255,.75); box-shadow: none; color: #21332a; display: inline-flex; align-items: center; justify-content: center;
+}
+#hud #tombol-chat, #hud #tombol-menu { width: 40px; padding: 0; }
+#hud #tombol-chat .ik, #hud #tombol-menu .ik { width: 19px; height: 19px; }
+#hud #tombol-akun { padding: 0 14px; background: linear-gradient(180deg, #35ad67, #278a4f); color: #fff; font-weight: 700; font-size: 14px; border: 0; }
+#hud #tombol-akun.masuk {
+  background: rgba(255,255,255,.85); color: #1f2d25; padding: 0 10px 0 4px; gap: 7px; max-width: 46vw; border: 1px solid rgba(46,158,91,.35);
+}
+#tombol-akun .avatar, .avatar-besar {
+  flex: none; width: 32px; height: 32px; border-radius: 10px; color: #fff; font-weight: 800; font-size: 15px;
+  display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 -2px 0 rgba(0,0,0,.15);
+}
+#tombol-akun .akun-teks { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.1; }
+#tombol-akun.masuk .akun-teks b { font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#tombol-akun.masuk .akun-teks small { font-size: 10.5px; color: #5b7263; font-weight: 600; white-space: nowrap; }
+#lencana-chat { top: -4px; right: -4px; }
+/* menu tarik profil */
+#hud #chip-saya {
+  align-self: flex-end; display: flex; flex-direction: column; gap: 4px; width: min(86vw, 280px);
+  background: rgba(255, 252, 244, .96); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  color: #1f2d25; border-radius: 16px; padding: 10px; box-shadow: 0 14px 36px rgba(33,51,42,.28);
+  border: 1px solid rgba(255,255,255,.8); pointer-events: auto; animation: tarikTurun .18s ease-out;
+}
+#hud #chip-saya[hidden] { display: none; }
+.profil-kepala { display: flex; gap: 10px; align-items: center; padding: 4px 4px 10px; border-bottom: 1px solid rgba(33,51,42,.08); margin-bottom: 4px; }
+.avatar-besar { width: 42px; height: 42px; border-radius: 13px; font-size: 19px; }
+.profil-teks { display: flex; flex-direction: column; min-width: 0; }
+.profil-teks b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hud #chip-saya-teks { font-size: 12.5px; color: #5b7263; white-space: nowrap; }
+#hud #chip-saya button {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; min-height: 42px;
+  background: none; border: 0; border-radius: 11px; padding: 8px 10px; font-size: 14px; font-weight: 600; color: #1f2d25; box-shadow: none; cursor: pointer;
+}
+#hud #chip-saya button:hover, #hud #chip-saya button:active { background: rgba(46,158,91,.1); }
+#hud #chip-saya button.keluar { color: #b3261e; }
+#hud #chip-saya button.keluar:hover { background: rgba(179,38,30,.08); }
+@keyframes tarikTurun { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 560px) {
+  .bar-atas { gap: 6px; padding: 5px 5px 5px 6px; border-radius: 16px; }
+  .logo-atas { width: 30px; height: 30px; }
+  .merek-teks > b { font-size: 14px; }
+  .lbl-stat { display: none; }
+  #hud .tombol-atas { gap: 5px; }
+  #hud #tombol-chat, #hud #tombol-menu { width: 38px; height: 38px; min-height: 38px; }
+  #hud #tombol-akun { height: 38px; min-height: 38px; padding: 0 12px; font-size: 13px; }
+  #hud #tombol-akun.masuk { padding: 0 4px; max-width: none; }
+  #hud #tombol-akun.masuk .akun-teks { display: none; } /* HP: cukup avatar */
+}
+/* Desktop: jangan bentang selebar layar — pecah jadi 2 pil kaca kecil (kiri: merek, kanan: tombol). */
+@media (min-width: 561px) {
+  .bar-atas { background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; pointer-events: none; }
+  .merek-atas, #hud .tombol-atas {
+    pointer-events: auto; background: rgba(255, 252, 244, .82); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,.7); border-radius: 16px; box-shadow: 0 6px 22px rgba(33,51,42,.18);
+  }
+  .merek-atas { flex: 0 0 auto; padding: 6px 14px 6px 7px; }
+  #hud .tombol-atas { padding: 5px; }
+  #hud #tombol-akun.masuk { max-width: 220px; }
+}

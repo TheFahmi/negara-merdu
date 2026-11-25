@@ -22,11 +22,18 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
   $("#tombol-menu").addEventListener("click", () => { $("#panel-menu").hidden = !$("#panel-menu").hidden; });
   $("#tombol-tutup-menu").addEventListener("click", () => { $("#panel-menu").hidden = true; });
   $("#tutup-petunjuk").addEventListener("click", () => { setPetunjukDitutup(true); $("#petunjuk").hidden = true; });
-  $("#tombol-akun").addEventListener("click", () => {
-    if (sesi.saya) { fokusRumahSaya(); return; }
+  /* HUD atas (redesign 26 Nov): tombol akun = pil profil; ketuk -> menu tarik
+     (Kartu Saya, Lihat Rumah Saya, Keluar Akun). Tamu: tombol Masuk. */
+  $("#tombol-akun").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (sesi.saya) { const c = $("#chip-saya"); c.hidden = !c.hidden; $("#panel-menu").hidden = true; return; }
     $("#gerbang").hidden = false; tampilLangkah("nama");
   });
+  document.addEventListener("click", (e) => { const c = $("#chip-saya"); if (!c.hidden && !c.contains(e.target)) c.hidden = true; });
+  $("#btn-rumah-saya").addEventListener("click", () => { $("#chip-saya").hidden = true; fokusRumahSaya(); });
+  $("#btn-kartu-saya").addEventListener("click", () => { $("#chip-saya").hidden = true; fokusRumahSaya(); });
   $("#tombol-keluar").addEventListener("click", async () => {
+    $("#chip-saya").hidden = true;
     if (diInterior) keluarInterior(); // keluar rumah dulu sebelum sesi ditutup
     try { await fetch("/api/logout", { method: "POST", headers: { Authorization: "Bearer " + sesi.token } }); } catch (e) {}
     sesi.token = null; sesi.saya = null; dataKeluarga = null;
@@ -65,14 +72,25 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
       " · Kel. " + wl.nama_kelurahan + " · Kec. " + wl.nama_kecamatan + " · " + (wl.nama_kota || "Kota Merdu");
   }
   export function perbaruiChipSaya() {
-    const chip = $("#chip-saya");
+    const chip = $("#chip-saya"), akun = $("#tombol-akun");
+    chip.hidden = true;
     if (sesi.saya) {
-      chip.hidden = false;
-      $("#chip-saya-teks").textContent = "@" + sesi.saya.username + " · Blok " + sesi.saya.blok + " Kav. " + sesi.saya.kavling;
-      $("#tombol-akun").textContent = "Kartu Saya";
+      const u = sesi.saya.username || "warga", huruf = u.slice(0, 1).toUpperCase(), warna = sesi.saya.warna_baju || "#2e9e5b";
+      $("#profil-nama").textContent = "@" + u;
+      $("#chip-saya-teks").textContent = "Blok " + sesi.saya.blok + " · Kavling " + sesi.saya.kavling;
+      $("#avatar-besar").textContent = huruf; $("#avatar-besar").style.background = warna;
+      akun.classList.add("masuk");
+      akun.innerHTML = "";
+      const av = document.createElement("span"); av.className = "avatar"; av.textContent = huruf; av.style.background = warna;
+      const t = document.createElement("span"); t.className = "akun-teks";
+      const n = document.createElement("b"); n.textContent = "@" + u;
+      const l = document.createElement("small"); l.textContent = "Blok " + sesi.saya.blok + " · Kav. " + sesi.saya.kavling;
+      t.append(n, l); akun.append(av, t);
+      akun.setAttribute("aria-label", "Akun @" + u);
     } else {
-      chip.hidden = true;
-      $("#tombol-akun").textContent = "Masuk / Daftar";
+      akun.classList.remove("masuk");
+      akun.innerHTML = '<span class="akun-teks">Masuk</span>';
+      akun.setAttribute("aria-label", "Masuk atau daftar");
     }
     segarkanKarakterSaya(); // penampilan berubah (masuk/keluar) -> karakter 3rd Person mengikuti
     perbaruiStatusChat();
