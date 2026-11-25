@@ -1,5 +1,6 @@
 /* Negara Merdu — modul game "rumah" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
+import { buatJam } from "./jam.js";
 import { SKALA_KARAKTER, $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
 import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, meshPelana, plafonTerang, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
@@ -641,18 +642,8 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
     const bungaVas = new THREE.Mesh(new THREE.IcosahedronGeometry(0.17, 0), M(0xe07a9f));
     bungaVas.position.set(1.0, 2.78, -6.22); g.add(bungaVas);
     halang(0.3, 2.9, -6.5, -5.9);
-    // jam dinding di dinding barat di atas kasur (± pukul 10:10)
-    const rimJam = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.07, 20), M(0x7a4a21));
-    rimJam.rotation.z = Math.PI / 2; rimJam.position.set(-INT.sw + 0.06, 3.15, -3.2); g.add(rimJam);
-    const mukaJam = new THREE.Mesh(new THREE.CircleGeometry(0.38, 20),
-      new THREE.MeshStandardMaterial({ color: 0xfffaf0, roughness: 0.9 }));
-    mukaJam.rotation.y = Math.PI / 2; mukaJam.position.set(-INT.sw + 0.1, 3.15, -3.2); g.add(mukaJam);
-    const jarumPanjang = K(0.02, 0.3, 0.045, 0x2a2320, -INT.sw + 0.11, 3.24, -3.29);
-    jarumPanjang.rotation.x = -0.785;
-    const jarumPendek = K(0.02, 0.2, 0.045, 0x2a2320, -INT.sw + 0.11, 3.21, -3.14);
-    jarumPendek.rotation.x = 0.785;
-    const titikJam = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), M(0xb5533c));
-    titikJam.position.set(-INT.sw + 0.11, 3.15, -3.2); g.add(titikJam);
+    // jam dinding REAL TIME di dinding barat di atas kasur (jam.js)
+    const jd = buatJam(0.38, 0x7a4a21); jd.rotation.y = Math.PI / 2; jd.position.set(-INT.sw + 0.1, 3.15, -3.2); g.add(jd);
     // sudut tidur (barat laut): sandaran selebar rangka di ujung kepala (utara),
     // rangka -> kasur (atas y=0,74) -> selimut duduk tepat di atasnya, ujung
     // rata kaki kasur -> lipatan di atas selimut -> dua bantal berjajar di kepala

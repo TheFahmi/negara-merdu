@@ -6,6 +6,7 @@
    air mancur & pohon di tengah atrium, langit-langit kaca bercahaya,
    layar LED gantung, food court, pintu bioskop, kios, bangku, pengunjung.
    Nama toko fiktif (bukan merek nyata). */
+import { buatJam } from "./jam.js";
 import { SKALA_KARAKTER } from "./inti.js";
 import { M, kotak } from "./bersama.js";
 import { buatKarakter } from "./karakter.js";
@@ -41,6 +42,7 @@ export function bangunInteriorMall(halang) {
   const { sw, sd, tinggi: T } = UKURAN_MALL_DALAM;
   const g = new THREE.Group(); ESKALATOR.length = 0;
   const K = (l, t, d, w, x, y, z) => { const m = kotak(l, t, d, w, x, y, z); m.castShadow = false; g.add(m); return m; };
+  const jamM = buatJam(1.2, 0xd4a73a); jamM.position.set(0, T - 3, -sd + 0.2); g.add(jamM); // jam real time di dinding utara atrium
   const KREM = 0xf1ece2, EMAS = 0xd9a441, KACA = 0xbfe2ee;
   // lantai marmer + plafon + dinding (selatan berpintu kaca 3,2)
   const lantai = new THREE.Mesh(new THREE.BoxGeometry(sw * 2 + 0.8, 0.3, sd * 2 + 0.8), new THREE.MeshStandardMaterial({ map: teksturMarmer(), roughness: 0.18, metalness: 0.05 }));

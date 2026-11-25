@@ -20,6 +20,7 @@ import { perbaruiMall } from "./mallDalam.js";
 import { perbaruiPasar } from "./fasilitasBaru.js";
 import { bangunPegunungan } from "./ragam.js";
 import { perbaruiPlazaRamai } from "./plazaRamai.js";
+import { perbaruiJam } from "./jam.js";
 import { bangunGedungKaca, perbaruiGedungKaca, rintanganGedung } from "./gedungKaca.js";
 import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
 
@@ -92,7 +93,8 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     if (diInterior) perbaruiMall(dt); // anak tangga eskalator mall
     perbaruiPasar(dt, t); // pedagang & pembeli Pasar Desa
     perbaruiPlazaRamai(dt, t);
-    perbaruiGedungKaca(dt, t); // band, penonton, air mancur menari, umbul-umbul, merpati
+    perbaruiGedungKaca(dt, t);
+    perbaruiJam(); // semua jam analog real time // band, penonton, air mancur menari, umbul-umbul, merpati
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);

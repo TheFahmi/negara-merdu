@@ -14,6 +14,7 @@
    Performa: semua benda statis interior digabung per gedung (gabungBerwarna)
    -> beberapa draw call per gedung; kaca 1 mesh transparan; layar & lampu 1
    mesh Basic. Interior + orang disembunyikan bila kamera jauh (> 320 m). */
+import { buatJam } from "./jam.js";
 import { GEDUNG_KACA_BLOK, JALAN, PITCH, SKALA_KARAKTER, sudutBlok } from "./inti.js";
 import { M, camera, gabungBerwarna, kotak, scene } from "./bersama.js";
 import { buatKarakter, animasiHidup, animasiJalan } from "./karakter.js";
@@ -44,11 +45,12 @@ function Kumpul() {
   };
 }
 function duduk(kar) { const u = kar.userData; if (u.kakiK) { u.kakiK.rotation.x = -1.4; u.kakiR.rotation.x = -1.4; } }
-function orang(G, g, i, x, y, z, ry, sit) {
-  const k = buatKarakter({ baju: BAJU[i % BAJU.length], kulit: ["#f1c27d", "#c68642", "#e0ac69", "#8d5524"][(i * 5) % 4], topi: i % 5 === 2 ? "hijab" : "tanpa" });
-  k.scale.setScalar(SKALA_KARAKTER); k.position.set(x, y, z); k.rotation.y = ry; k.userData.geserHidup = i * 0.7;
+function orang(G, g, i, x, y, z, ry, sit, opsi) {
+  const o = opsi || {};
+  const k = buatKarakter({ baju: o.baju || BAJU[i % BAJU.length], kulit: ["#f1c27d", "#c68642", "#e0ac69", "#8d5524"][(i * 5) % 4], topi: i % 5 === 2 ? "hijab" : "tanpa", rupa: o.celana ? { warna_celana: o.celana } : undefined });
+  k.scale.setScalar(SKALA_KARAKTER * (o.skala || 1)); k.position.set(x, y, z); k.rotation.y = ry; k.userData.geserHidup = i * 0.7;
   if (sit) duduk(k);
-  g.add(k); G.orang.push({ kar: k, sit, fase: i * 0.9 });
+  g.add(k); G.orang.push({ kar: k, sit, fase: i * 0.9, aksi: o.aksi, x0: x, z0: z, rentang: o.rentang || 0 });
   return k;
 }
 
@@ -117,12 +119,22 @@ function kantor(G, g, data) {
     dalam.k(0.06, 2.8, 6, 9, lantai + 1.4, -3); dalam.k(6, 2.8, 0.06, 12, lantai + 1.4, 0);
     dalam.b(4, 0.08, 2, 0x7a4a21, 12, lantai + 0.75, -4); for (const dx of [-1.2, 0, 1.2]) for (const dz of [-1.4, 1.4]) dalam.b(0.5, 0.5, 0.5, 0x1d5a8f, 12 + dx, lantai + 0.3, -4 + dz);
     dalam.n(2.4, 1.3, 0.05, 0xffffff, 12, lantai + 1.8, -7.2);
-    if (f % 2) { orang(G, g, f * 10 + 7, 11.2, lantai, -2.6, Math.PI, true); orang(G, g, f * 10 + 8, 12.8, lantai, -5.4, 0, true); }
+    if (f % 2) { // rapat: peserta duduk + presenter di depan layar
+      orang(G, g, f * 10 + 7, 11.2, lantai, -2.6, Math.PI, true); orang(G, g, f * 10 + 8, 12.8, lantai, -5.4, 0, true);
+      const pr = orang(G, g, f * 10 + 9, 13.6, lantai, -6.5, 0, false, { aksi: "presentasi" }); G.orang[G.orang.length - 1].ry0 = -0.6; void pr;
+    }
+    // aktivitas: pegawai berjalan di lorong dekat jendela depan & belakang, ngobrol di dispenser
+    pejalan(G, g, 800 + f * 3 + data.kol, { x: -12.5, z: 9.4 }, { x: 12.5, z: 9.4 }, lantai);
+    if (f % 2 === 0) pejalan(G, g, 801 + f * 3 + data.kol, { x: 13, z: -9.8 }, { x: -13, z: -9.8 }, lantai);
+    dalam.b(0.4, 1.2, 0.4, 0xdfe3e6, -14, lantai + 0.6, 1.5); dalam.b(0.35, 0.4, 0.35, 0x6fc3ff, -14, lantai + 1.4, 1.5); // dispenser air
+    orang(G, g, 802 + f * 3 + data.kol, -13.1, lantai, 1.5, -Math.PI / 2, false, { aksi: "presentasi" }); G.orang[G.orang.length - 1].ry0 = -Math.PI / 2;
     for (const [x, z] of [[-14, 10], [14, 10], [-14, -10]]) { dalam.c(0.35, 0.5, 0xb5533c, x, lantai + 0.25, z); dalam.s(0.75, 0x3f8a3a, x, lantai + 1.0, z); }
   }
   // papan nama di atap & pintu masuk
   const papan = new THREE.Mesh(new THREE.BoxGeometry(14, 2.2, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(data.nama, "Gedung Perkantoran"), roughness: 0.8 }));
   papan.position.set(0, L * H + 3.2, D / 2 + 0.3); g.add(papan);
+  const jk = buatJam(1.0); jk.position.set(9, L * H + 3.2, D / 2 + 0.35); g.add(jk);
+  const jl = buatJam(0.5); jl.position.set(0, 3.7, 0.6); g.add(jl); // jam lobi di atas logo
   K.b(6, 0.3, 4, 0x5f6b75, 0, 3.6, D / 2 + 2); for (const x of [-2.8, 2.8]) K.b(0.25, 3.4, 0.25, 0x5f6b75, x, 1.9, D / 2 + 3.8); // kanopi pintu
   K.b(10, 0.1, 22, 0xcfc6b0, 0, 0.06, D / 2 + 11);                                   // jalan masuk
   /* HALAMAN KANTOR: parkir mobil & motor, air mancur, taman berbangku, pos
@@ -153,6 +165,12 @@ function kantor(G, g, data) {
 }
 
 /* ===================== SEKOLAH ===================== */
+/* Seragam per jenjang (baju putih, celana/rok sesuai jenjang). */
+const JENJANG = [
+  { nama: "SD", celana: "#c8102e", skala: 0.78 },
+  { nama: "SMP", celana: "#1d3a8f", skala: 0.9 },
+  { nama: "SMA", celana: "#7a7f86", skala: 0.98 },
+];
 function sekolah(G, g, data) {
   const L = 3, H = 3.8, W = 52, D = 11, K = Kumpul(), dalam = Kumpul();
   const z0 = -14; // gedung di utara lahan, halaman di selatan
@@ -165,6 +183,7 @@ function sekolah(G, g, data) {
   for (const sx of [-1, 1]) K.b(0.3, L * H, D, 0xfdf3d8, sx * W / 2, L * H / 2 + 0.4, z0);
   const nKelas = 4, lebar = W / nKelas;
   for (let f = 0; f < L; f++) {
+    const J = JENJANG[f]; // lantai 1 SD, 2 SMP, 3 SMA
     const lantai = f * H + 0.57, y0 = f * H + 0.55, hh = H - 0.2;
     for (let c = 1; c < nKelas; c++) K.b(0.25, hh, D, 0xfdf3d8, -W / 2 + c * lebar, y0 + hh / 2, z0); // sekat antarkelas
     // dinding depan (ke selasar): ambang bawah bata + jendela kaca lebar + pintu
@@ -178,6 +197,7 @@ function sekolah(G, g, data) {
       // isi kelas: papan tulis di dinding barat kelas, meja guru, 4x5 meja siswa menghadap barat
       const xPapan = cx - lebar / 2 + 0.3;
       dalam.b(0.08, 1.3, 4.5, 0x1f3d2b, xPapan, lantai + 1.6, z0); dalam.b(0.12, 1.45, 4.7, 0x7a4a21, xPapan - 0.03, lantai + 1.6, z0);
+      if (f === 0) { const jc = buatJam(0.28); jc.rotation.y = Math.PI / 2; jc.position.set(xPapan + 0.08, lantai + 2.75, z0); g.add(jc); } // jam kelas (lantai dasar)
       dalam.b(1.4, 0.8, 0.8, 0x7a4a21, xPapan + 1.6, lantai + 0.4, z0 + 2.6);
       dalam.n(0.08, 0.06, 2.4, 0xfffbe8, cx, (f + 1) * H + 0.2, z0 - 2); dalam.n(0.08, 0.06, 2.4, 0xfffbe8, cx, (f + 1) * H + 0.2, z0 + 2);
       dalam.b(lebar - 0.5, 0.03, D - 0.6, 0xd8cfc0, cx, lantai, z0);
@@ -187,12 +207,14 @@ function sekolah(G, g, data) {
         if (x > cx + lebar / 2 - 1) continue;
         dalam.b(1.1, 0.06, 0.7, 0xc9a26a, x, lantai + 0.72, z); dalam.b(0.06, 0.7, 0.6, 0x5f6b75, x - 0.5, lantai + 0.36, z); dalam.b(0.06, 0.7, 0.6, 0x5f6b75, x + 0.5, lantai + 0.36, z);
         dalam.b(0.5, 0.06, 0.5, 0x2e6fa8, x + 0.55, lantai + 0.45, z); dalam.b(0.06, 0.5, 0.5, 0x2e6fa8, x + 0.8, lantai + 0.7, z);
-        if ((n++ + c + f) % 2 === 0) orang(G, g, 200 + f * 40 + c * 10 + n, x + 0.55, lantai - 0.06, z, -Math.PI / 2, true); // siswa duduk menghadap papan
+        if ((n++ + c + f) % 2 === 0) orang(G, g, 200 + f * 40 + c * 10 + n, x + 0.55, lantai - 0.06 + (1 - J.skala) * 0.45, z, -Math.PI / 2, true, { baju: "#ffffff", celana: J.celana, skala: J.skala, aksi: n % 3 === 0 ? "angkat" : "tulis" }); // siswa (seragam jenjang) duduk menghadap papan
       }
-      orang(G, g, 300 + f * 4 + c, xPapan + 0.9, lantai, z0 + 0.8, Math.PI / 2, false);   // guru di depan papan
+      orang(G, g, 300 + f * 4 + c, xPapan + 0.9, lantai, z0 + 0.8, Math.PI / 2, false, { aksi: "guru", rentang: 2.0 });   // guru mondar-mandir di depan papan sambil menerangkan
     }
-    // selasar: tiang
+    // selasar: tiang + papan jenjang di pagar selasar
     for (let x = -W / 2; x <= W / 2; x += lebar / 2) K.b(0.35, hh, 0.35, 0xfdf3d8, x, y0 + hh / 2, z0 + D / 2 + 3);
+    const pj = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.8), new THREE.MeshBasicMaterial({ map: teksturPapanNama(J.nama, ["Kelas 1-6", "Kelas 7-9", "Kelas 10-12"][f]) }));
+    pj.position.set(-W / 2 + 3, (f + 1) * H + 0.95, z0 + D / 2 + 3.1); g.add(pj);
   }
   // tangga ujung timur
   for (let t = 0; t < 12; t++) K.b(2, 0.3, 0.9, 0xd8d2c4, W / 2 + 1.5, 0.4 + t * 0.32, z0 + D / 2 + 2 - t * 0.9);
@@ -202,25 +224,51 @@ function sekolah(G, g, data) {
   K.c(0.1, 10, 0xdddddd, 16, 5.3, 12); const bdr = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.2), new THREE.MeshStandardMaterial({ color: 0xc8102e, side: THREE.DoubleSide })); bdr.position.set(16.9, 9.6, 12); g.add(bdr);
   const bdr2 = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide })); bdr2.position.set(16.9, 9.0, 12); g.add(bdr2);
   for (const x of [-5, 5]) K.b(1.2, 4.2, 1.2, 0xb5533c, x, 2.4, 33); K.b(11.2, 1.2, 0.8, 0xfdf3d8, 0, 4.9, 33);
-  const papan = new THREE.Mesh(new THREE.BoxGeometry(10, 1.1, 0.25), new THREE.MeshStandardMaterial({ map: teksturPapanNama(data.nama, "Sekolah Negeri Merdu"), roughness: 0.8 }));
+  const papan = new THREE.Mesh(new THREE.BoxGeometry(10, 1.1, 0.25), new THREE.MeshStandardMaterial({ map: teksturPapanNama(data.nama, "TK · SD · SMP · SMA"), roughness: 0.8 }));
   papan.position.set(0, 4.9, 33.45); g.add(papan);
+  const js = buatJam(1.0, 0xb5533c); js.position.set(0, L * H + 1.2, z0 + D / 2 + 3.3); g.add(js); // jam sekolah di selasar atas
   /* HALAMAN SEKOLAH: kantin & gerobak jajanan, parkir motor guru & sepeda
      siswa, bangku di bawah pohon, orang tua menjemput di gerbang, siswa
      berjalan & bermain, satpam, mobil guru. */
+  /* GEDUNG TK (barat daya): 1 lantai warna-warni berkaca, kelas TK dengan
+     meja bundar & anak kecil, taman bermain (perosotan, ayunan, jungkat-jungkit). */
+  const tx = -21, tz = 14;
+  K.b(14, 0.3, 9, 0xe9e2d3, tx, 0.45, tz);
+  for (const [w, x] of [[0xf2c230, -7], [0x3aa6b9, 7]]) K.b(0.3, 3.2, 9, w, tx + x, 2.2, tz);
+  K.b(14, 3.2, 0.3, 0xe85d75, tx, 2.2, tz - 4.5);
+  K.b(14, 0.9, 0.25, 0x2e9e5b, tx, 1.05, tz + 4.5); K.k(13.5, 2.0, 0.06, tx, 2.5, tz + 4.5);
+  const atapTK = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4), M(0xc8102e)); atapTK.scale.set(11, 2.4, 7.5); atapTK.rotation.y = Math.PI / 4; atapTK.position.set(tx, 5.0, tz); g.add(atapTK);
+  const pTK = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.8), new THREE.MeshBasicMaterial({ map: teksturPapanNama("TK MERDU CERIA", "Taman Kanak-kanak") })); pTK.position.set(tx, 3.4, tz + 4.65); g.add(pTK);
+  for (const dx of [-4, 0, 4]) {
+    dalam.c(0.9, 0.06, [0xf2c230, 0x3aa6b9, 0xe85d75][(dx + 4) / 4], tx + dx, 1.05, tz);
+    dalam.c(0.07, 0.45, 0x8a8f94, tx + dx, 0.8, tz);
+    for (let a = 0; a < 4; a++) { const ax = Math.cos(a * Math.PI / 2) * 1.2, az = Math.sin(a * Math.PI / 2) * 1.2; dalam.b(0.35, 0.06, 0.35, 0x2e9e5b, tx + dx + ax, 0.85, tz + az); if ((a + dx) % 2 === 0) orang(G, g, 700 + dx * 4 + a, tx + dx + ax, 0.6, tz + az, Math.atan2(-ax, -az), true, { skala: 0.62, aksi: "angkat" }); }
+  }
+  orang(G, g, 720, tx - 5.5, 0.6, tz - 2, 0, false, { aksi: "guru", rentang: 3 });
+  dalam.n(0.06, 1.2, 3, 0xffffff, tx - 6.8, 2.2, tz - 1);                                 // papan gambar
+  // taman bermain
+  const ox = -22, oz = 27;
+  K.b(12, 0.08, 7, 0xd8c690, ox, 0.3, oz);
+  K.b(0.15, 2.4, 0.15, 0xc8102e, ox - 4, 1.5, oz - 1); K.b(0.15, 2.4, 0.15, 0xc8102e, ox - 4, 1.5, oz + 1); K.b(1.2, 0.12, 1.2, 0xf2c230, ox - 4, 2.6, oz);
+  const peros = new THREE.Mesh(new THREE.BoxGeometry(1, 0.12, 3.6), M(0x3aa6b9)); peros.position.set(ox - 4, 1.4, oz + 2.3); peros.rotation.x = 0.65; g.add(peros);
+  for (const x of [ox + 1, ox + 3.4]) K.b(0.15, 2.6, 0.15, 0x7b8086, x, 1.6, oz - 1.2); for (const x of [ox + 1, ox + 3.4]) K.b(0.15, 2.6, 0.15, 0x7b8086, x, 1.6, oz + 1.2);
+  K.b(0.12, 0.12, 2.6, 0x7b8086, ox + 1, 2.9, oz); K.b(0.12, 0.12, 2.6, 0x7b8086, ox + 3.4, 2.9, oz);
+  K.b(4, 0.1, 0.5, 0xe85d75, ox + 3.5, 0.7, oz + 3); K.b(0.3, 0.4, 0.3, 0x5f6b75, ox + 3.5, 0.5, oz + 3);
+  for (let i = 0; i < 4; i++) orang(G, g, 730 + i, ox - 2 + i * 1.8, 0.35, oz + (i % 2 ? 1 : -1.5), i, false, { skala: 0.62, aksi: "lompat" });
   gerobak(K, g, "Kantin Sekolah", 22, 9, 0x2e9e5b); gerobak(K, g, "Es Teh", 27, 14, 0xe8943a);
   orang(G, g, 600 + data.kol, 22, 0.3, 7.8, 0, false); orang(G, g, 601 + data.kol, 27, 0.3, 12.8, 0, false);
   for (let i = 0; i < 3; i++) orang(G, g, 602 + i + data.kol, 20.6 + i * 1.5, 0.3, 11.2, Math.PI, false);
-  for (let i = 0; i < 6; i++) motor(g, -26 + i * 1.1, 10, 0, [0xc8102e, 0x1d1d1f, 0x3f6fb5][i % 3]);
-  for (let i = 0; i < 8; i++) { K.b(0.06, 0.9, 1.5, 0x2e6fa8, -26 + i * 0.7, 0.75, 24); K.b(0.05, 0.05, 1.5, 0x8a8f94, -26 + i * 0.7, 1.15, 24); }  // rak sepeda
-  K.b(6, 0.1, 0.1, 0x8a8f94, -23.5, 0.6, 24);
-  for (const [x, z] of [[18, 26], [-20, 18]]) { bangku(K, x, z, Math.PI); orang(G, g, 610 + x + data.kol, x, 0.3, z - 0.25, Math.PI, true); }
+  for (let i = 0; i < 6; i++) motor(g, 24 + (i % 3) * 1.1, 20 + Math.floor(i / 3) * 2.3, 0, [0xc8102e, 0x1d1d1f, 0x3f6fb5][i % 3]);
+  for (let i = 0; i < 8; i++) { K.b(0.06, 0.9, 1.5, 0x2e6fa8, 8 + i * 0.7, 0.75, 31); K.b(0.05, 0.05, 1.5, 0x8a8f94, 8 + i * 0.7, 1.15, 31); }  // rak sepeda
+  K.b(6, 0.1, 0.1, 0x8a8f94, 10.5, 0.6, 31);
+  for (const [x, z] of [[18, 26], [10, 22]]) { bangku(K, x, z, Math.PI); orang(G, g, 610 + x + data.kol, x, 0.3, z - 0.25, Math.PI, true); }
   for (let i = 0; i < 5; i++) orang(G, g, 620 + i + data.kol, -8 + i * 2.2, 0.3, 36.5, Math.PI, false);    // orang tua menunggu di luar gerbang
   mobilParkir(g, 26, 31, 0, 0x3f6fb5); mobilParkir(g, -27, 31, 0, 0xe8c268);
   orang(G, g, 630 + data.kol, 6.5, 0.3, 32, -Math.PI / 2, false);                      // satpam gerbang
   pejalan(G, g, 640 + data.kol, { x: -1, z: 32 }, { x: -1, z: -3 });
   pejalan(G, g, 641 + data.kol, { x: 1.5, z: -3 }, { x: 1.5, z: 30 });
-  pejalan(G, g, 642 + data.kol, { x: -24, z: 2 }, { x: 24, z: 2 });
-  pejalan(G, g, 643 + data.kol, { x: 24, z: 4 }, { x: -24, z: 4 });
+  pejalan(G, g, 642 + data.kol, { x: -10, z: 2 }, { x: 24, z: 2 });
+  pejalan(G, g, 643 + data.kol, { x: 24, z: 4 }, { x: -10, z: 4 });
   pejalan(G, g, 644 + data.kol, { x: 10, z: 22 }, { x: 18, z: 4 });
   const statis = K.jadi(g), isi = dalam.jadi(g);
   G.dalam.push(isi.o, isi.nl, isi.kc);
@@ -230,13 +278,99 @@ function sekolah(G, g, data) {
   return { W, D: D + 6, z0: z0 + 1.5, statis };
 }
 
+/* ===================== UNIVERSITAS ===================== */
+function kampus(G, g, data) {
+  const L = 3, H = 4.4, W = 44, D = 16, z0 = -15, K = Kumpul(), dalam = Kumpul();
+  K.b(W + 4, 0.4, D + 4, 0x9aa0a6, 0, 0.2, z0);
+  for (let f = 0; f <= L; f++) K.b(W, 0.35, D, 0xe9e2d3, 0, f * H + 0.4, z0);
+  K.b(W + 0.6, 1.0, D + 0.6, 0x7a1f1f, 0, L * H + 0.9, z0);                                   // lis atap marun
+  const kubah = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), M(0x2e5d43)); kubah.position.set(0, L * H + 1.4, z0); kubah.castShadow = true; g.add(kubah);
+  K.b(9, 1.6, 9, 0xfdf3d8, 0, L * H + 1.2, z0);
+  for (const x of [-W / 2, W / 2]) for (const z of [z0 - D / 2, z0 + D / 2]) K.b(0.7, L * H, 0.7, 0xfdf3d8, x, L * H / 2 + 0.4, z);
+  K.b(W, L * H, 0.3, 0xfdf3d8, 0, L * H / 2 + 0.4, z0 - D / 2);                              // dinding belakang
+  for (const sx of [-1, 1]) K.b(0.3, L * H, D, 0xfdf3d8, sx * W / 2, L * H / 2 + 0.4, z0);
+  // portico depan: 6 kolom + pedimen
+  for (let i = 0; i < 6; i++) K.c(0.55, L * H, 0xfdf3d8, -10 + i * 4, L * H / 2 + 0.4, z0 + D / 2 + 2.6);
+  K.b(24, 0.8, 4, 0xfdf3d8, 0, L * H + 0.6, z0 + D / 2 + 2.4);
+  const shp = new THREE.Shape(); shp.moveTo(-13, 0); shp.lineTo(13, 0); shp.lineTo(0, 3.4); shp.lineTo(-13, 0); // pedimen segitiga
+  const geoPed = new THREE.ExtrudeGeometry(shp, { depth: 3.6, bevelEnabled: false }); geoPed.translate(0, 0, -1.8);
+  const ped = new THREE.Mesh(geoPed, M(0xfdf3d8)); ped.position.set(0, L * H + 1.0, z0 + D / 2 + 2.4); ped.castShadow = true; g.add(ped);
+  const papan = new THREE.Mesh(new THREE.BoxGeometry(16, 1.6, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(data.nama, "Kampus Negara Merdu"), roughness: 0.8 }));
+  papan.position.set(0, L * H + 0.6, z0 + D / 2 + 4.45); g.add(papan);
+  const jk = buatJam(0.9, 0xd4a73a); jk.position.set(0, L * H + 2.3, z0 + D / 2 + 4.25); g.add(jk);
+  for (let f = 0; f < L; f++) {
+    const lantai = f * H + 0.58, y0 = f * H + 0.6, hh = H - 0.25, zD = z0 + D / 2;
+    K.k(W, hh, 0.06, 0, y0 + hh / 2, zD);                                                     // fasad depan kaca bening
+    for (let x = -W / 2 + 2.75; x < W / 2; x += 2.75) K.b(0.12, hh, 0.14, 0x7a1f1f, x, y0 + hh / 2, zD);
+    K.b(W, 0.3, 0.2, 0x7a1f1f, 0, (f + 1) * H + 0.4, zD);
+    dalam.b(W - 0.6, 0.04, D - 0.6, [0xc9b896, 0x5b4b6b, 0x4b5b6b][f], 0, lantai, z0);
+    for (let x = -18; x <= 18; x += 6) dalam.n(2.4, 0.06, 0.6, 0xfffbe8, x, (f + 1) * H + 0.18, z0);
+    if (f === 0) { // PERPUSTAKAAN: rak buku + meja baca + mahasiswa membaca
+      for (let r = 0; r < 4; r++) {
+        const x = -18 + r * 4.5;
+        dalam.b(0.6, 2.4, 9, 0x7a4a21, x, lantai + 1.2, z0 - 1.5);
+        for (let k = 0; k < 4; k++) for (let b = 0; b < 8; b++) dalam.b(0.62, 0.42, 0.9, [0xc8102e, 0x1d5a8f, 0x2e9e5b, 0xf2c230, 0x7b2ff7][(b + k + r) % 5], x, lantai + 0.4 + k * 0.58, z0 - 5.4 + b * 1.1);
+      }
+      for (const x of [4, 10, 16]) {
+        dalam.b(3, 0.08, 1.4, 0xc9a26a, x, lantai + 0.78, z0 + 3); dalam.b(0.1, 0.75, 1.2, 0x5f6b75, x - 1.3, lantai + 0.38, z0 + 3); dalam.b(0.1, 0.75, 1.2, 0x5f6b75, x + 1.3, lantai + 0.38, z0 + 3);
+        for (const dz of [-1.1, 1.1]) { dalam.b(0.5, 0.08, 0.5, 0x2e6fa8, x, lantai + 0.48, z0 + 3 + dz); orang(G, g, 900 + x + (dz > 0 ? 1 : 0), x, lantai, z0 + 3 + dz, dz > 0 ? Math.PI : 0, true, { aksi: "tulis" }); }
+      }
+      const pPerpus = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.8), new THREE.MeshBasicMaterial({ map: teksturPapanNama("PERPUSTAKAAN", "Lantai 1") })); pPerpus.position.set(-14, H - 0.2, zD + 0.1); g.add(pPerpus);
+      orang(G, g, 950, -6, lantai, z0 + 5, Math.PI / 2, false); G.orang[G.orang.length - 1].jalur = { a: { x: -20, z: z0 + 5 }, b: { x: 0, z: z0 + 5 } }; Object.assign(G.orang[G.orang.length - 1], { s: 4, arah: 1 });
+    } else if (f === 1) { // RUANG KULIAH: kursi bertingkat menghadap papan/layar di barat, dosen menerangkan
+      for (const [x0, x1] of [[-W / 2 + 0.5, -0.5], [0.5, W / 2 - 0.5]]) {
+        dalam.b(0.25, hh, D - 0.6, 0xfdf3d8, x1 + 0.4, y0 + hh / 2, z0);
+        dalam.n(0.08, 2.0, 5, 0xf4f8ff, x0 + 0.2, lantai + 2.2, z0);                                  // layar proyektor
+        dalam.b(1.6, 0.9, 0.8, 0x7a4a21, x0 + 2, lantai + 0.45, z0 + 4);                              // meja dosen
+        orang(G, g, 960 + x0, x0 + 1.4, lantai, z0, Math.PI / 2, false, { aksi: "guru", rentang: 2.4 });
+        for (let col = 0; col < 6; col++) {
+          const x = x0 + 5 + col * 2.6, naik = col * 0.22;
+          dalam.b(1.8, naik + 0.05, D - 2, 0x6b5b4b, x, lantai + naik / 2, z0);                        // undakan
+          for (let row = 0; row < 4; row++) {
+            const z = z0 - 5 + row * 3.1; dalam.b(0.6, 0.08, 2.4, 0xc9a26a, x - 0.4, lantai + naik + 0.75, z); dalam.b(0.5, 0.06, 0.5, 0x2e6fa8, x + 0.2, lantai + naik + 0.45, z);
+            if ((row + col + x0) % 2 === 0) orang(G, g, 970 + col * 7 + row + (x0 > 0 ? 50 : 0), x + 0.2, lantai + naik - 0.05, z, -Math.PI / 2, true, { aksi: (row + col) % 4 === 0 ? "angkat" : "tulis" });
+          }
+        }
+      }
+    } else { // LAB KOMPUTER
+      for (let row = 0; row < 3; row++) for (let i = 0; i < 9; i++) {
+        const x = -18 + i * 4.4, z = z0 - 4.5 + row * 4;
+        dalam.b(1.6, 0.08, 0.9, 0xe8e2d6, x, lantai + 0.75, z); dalam.b(0.08, 0.7, 0.8, 0x8a8f94, x - 0.7, lantai + 0.38, z); dalam.b(0.08, 0.7, 0.8, 0x8a8f94, x + 0.7, lantai + 0.38, z);
+        dalam.n(0.8, 0.5, 0.05, (i + row) % 3 ? 0x6fc3ff : 0x9fe0b0, x, lantai + 1.1, z - 0.3); dalam.b(0.85, 0.55, 0.04, 0x1b1d20, x, lantai + 1.1, z - 0.33);
+        dalam.b(0.55, 0.08, 0.55, 0x2b2d30, x, lantai + 0.5, z + 0.7);
+        if ((i + row) % 2 === 0) orang(G, g, 1100 + row * 10 + i, x, lantai, z + 0.7, Math.PI, true, { aksi: "tulis" });
+      }
+      const pLab = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.8), new THREE.MeshBasicMaterial({ map: teksturPapanNama("LAB KOMPUTER", "Lantai 3") })); pLab.position.set(-14, 3 * H - 0.2 - H + H, zD + 0.1); g.add(pLab);
+      pejalan(G, g, 1190, { x: -20, z: z0 + 6 }, { x: 20, z: z0 + 6 }, lantai);
+    }
+  }
+  // HALAMAN KAMPUS: taman luas, jalan setapak, tugu, mahasiswa bergerombol di rumput, kantin, parkir motor, gerbang
+  K.b(10, 0.08, 34, 0xcfc6b0, 0, 0.3, 17); K.b(60, 0.08, 6, 0xcfc6b0, 0, 0.3, 12);
+  K.c(1.6, 0.8, 0xd8d2c4, 0, 0.7, 12); K.b(1, 6, 1, 0xfdf3d8, 0, 4, 12); K.s(0.9, 0xd4a73a, 0, 7.5, 12);               // tugu kampus
+  for (const [cx, cz] of [[-16, 22], [16, 22], [-22, 4], [20, 4]]) {                                                     // mahasiswa duduk melingkar di rumput
+    for (let a = 0; a < 4; a++) { const ang = a / 4 * Math.PI * 2; orang(G, g, 1200 + cx + cz + a, cx + Math.cos(ang) * 1.4, 0.0, cz + Math.sin(ang) * 1.4, Math.atan2(-Math.cos(ang), -Math.sin(ang)), true, { aksi: a % 2 ? "presentasi" : "tulis" }); G.orang[G.orang.length - 1].ry0 = Math.atan2(-Math.cos(ang), -Math.sin(ang)); }
+  }
+  gerobak(K, g, "Kantin Kampus", 26, 26, 0x7a1f1f); orang(G, g, 1290, 26, 0.12, 24.8, 0, false);
+  for (let i = 0; i < 3; i++) orang(G, g, 1291 + i, 24.6 + i * 1.4, 0.12, 27.8, Math.PI, false);
+  for (let i = 0; i < 10; i++) motor(g, -28 + (i % 5) * 1.1, 26 + Math.floor(i / 5) * 2.4, 0, [0xc8102e, 0x1d1d1f, 0x3f6fb5, 0xf2f2ee][i % 4]);
+  for (const [x, z] of [[-10, 28], [10, 28], [-12, 16], [12, 16]]) bangku(K, x, z, 0);
+  for (const x of [-6, 6]) K.b(1.4, 5, 1.4, 0x7a1f1f, x, 2.5, 33); K.b(13.4, 1.3, 1, 0xfdf3d8, 0, 5.6, 33);
+  const pg = new THREE.Mesh(new THREE.PlaneGeometry(11, 1), new THREE.MeshBasicMaterial({ map: teksturPapanNama(data.nama, "Selamat Datang") })); pg.position.set(0, 5.6, 33.55); g.add(pg);
+  for (let i = 0; i < 6; i++) pejalan(G, g, 1300 + i, { x: -2 + (i % 2) * 4, z: 32 - (i % 3) }, { x: -2 + (i % 2) * 4, z: z0 + D / 2 + 5 }, 0.36);
+  pejalan(G, g, 1310, { x: -28, z: 12 }, { x: 28, z: 12 }, 0.36); pejalan(G, g, 1311, { x: 28, z: 11 }, { x: -28, z: 11 }, 0.36);
+  const statis = K.jadi(g), isi = dalam.jadi(g);
+  G.dalam.push(isi.o, isi.nl, isi.kc);
+  for (const [x, z] of [[-28, 32], [28, 32], [-28, 16], [28, 16], [-6, 22], [6, 22]]) g.add(pohonKecil(x, z, 1.2));
+  return { W: W + 2, D: D + 6, z0: z0 + 2, statis };
+}
+
 export function bangunGedungKaca() {
   const grup = new THREE.Group();
   for (const data of GEDUNG_KACA_BLOK) {
     const s = sudutBlok(data.kol, data.bar), cx = s.x + JALAN + (PITCH - JALAN) / 2, cz = s.z + JALAN + (PITCH - JALAN) / 2;
     const g = new THREE.Group(); g.position.set(cx, 0.245, cz); grup.add(g);
     const G = { g, dalam: [], orang: [], cx, cz };
-    const r = data.jenis === "kantor" ? kantor(G, g, data) : sekolah(G, g, data);
+    const r = data.jenis === "kantor" ? kantor(G, g, data) : data.jenis === "kampus" ? kampus(G, g, data) : sekolah(G, g, data);
     const zc = r.z0 || 0;
     rintanganGedung.push({ minX: cx - r.W / 2 - 0.5, maxX: cx + r.W / 2 + 0.5, minZ: cz + zc - r.D / 2 - 0.5, maxZ: cz + zc + r.D / 2 + 0.5 });
     GEDUNG.push(G);
@@ -262,7 +396,19 @@ export function perbaruiGedungKaca(dt, t) {
     if (!G.dekat) continue;
     for (const p of G.orang) {
       animasiHidup(p.kar, t, true);
-      if (p.sit) { const u = p.kar.userData; if (u.lenganK) { u.lenganK.rotation.x = -1.0 + Math.sin(t * 6 + p.fase) * 0.08; u.lenganR.rotation.x = -1.0 + Math.sin(t * 6 + p.fase + 1) * 0.08; } }
+      const u = p.kar.userData;
+      if (p.sit && u.lenganK) { u.lenganK.rotation.x = -1.0 + Math.sin(t * 6 + p.fase) * 0.08; u.lenganR.rotation.x = -1.0 + Math.sin(t * 6 + p.fase + 1) * 0.08; } // mengetik/menulis
+      if (p.aksi === "angkat" && u.lenganR) { const c = (t * 0.25 + p.fase * 0.37) % 1; if (c < 0.18) u.lenganR.rotation.x = -2.9 + Math.sin(t * 9) * 0.15; } // mengacungkan tangan bertanya
+      if (p.aksi === "guru") { // mondar-mandir di depan papan sambil menerangkan / menunjuk papan
+        const ph = Math.sin(t * 0.45 + p.fase), dz = ph * p.rentang;
+        const zLama = p.kar.position.z; p.kar.position.z = p.z0 + dz;
+        const gerak = Math.abs(p.kar.position.z - zLama);
+        animasiJalan(p.kar, gerak, dt);
+        if (gerak > 0.002) p.kar.rotation.y = p.kar.position.z > zLama ? 0 : Math.PI; else p.kar.rotation.y = Math.PI / 2;
+        if (u.lenganR) u.lenganR.rotation.x = -1.6 + Math.sin(t * 2.3 + p.fase) * 0.5;
+      }
+      if (p.aksi === "presentasi" && u.lenganR) { u.lenganR.rotation.x = -1.4 + Math.sin(t * 1.7 + p.fase) * 0.6; p.kar.rotation.y = p.ry0 + Math.sin(t * 0.6) * 0.5; }
+      if (p.aksi === "lompat") { p.kar.position.y = 0.35 + Math.abs(Math.sin(t * 3.2 + p.fase)) * 0.5; if (u.lenganK) { u.lenganK.rotation.x = -2.6; u.lenganR.rotation.x = -2.6; } }
       if (p.kar.userData.main) { const vx = Math.sin(t * 1.3 + p.fase) * 2.2; p.kar.position.x += vx * dt; p.kar.rotation.y = vx > 0 ? Math.PI / 2 : -Math.PI / 2; animasiJalan(p.kar, Math.abs(vx) * dt, dt); }
       if (p.jalur) { // pejalan bolak-balik di halaman
         const J = p.jalur, L = Math.hypot(J.b.x - J.a.x, J.b.z - J.a.z);

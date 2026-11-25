@@ -11,6 +11,7 @@
    - Bus & KRL BERONGGA ber-interior dan BISA DINAIKI pemain (lihat
      bagian NAIK BUS / KRL di bawah); pintu bus geser membuka di halte.
    - Bus tetap menjaga HEADWAY per koridor dan PATUH LAMPU LALU LINTAS
+import { buatJam } from "./jam.js";
      (titik henti per persimpangan, fase sama dengan tiang kota).
    - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri),
      berhenti 3 detik di tiap halte (halte berkanopi di trotoar). */
@@ -179,6 +180,7 @@ function bangunStasiunUtara(grup) {
   grup.add(kotak(6, 3.4, 3.4, 0x1d5a8f, x, 1.7, z + 24.5));
   const papan = new THREE.Mesh(new THREE.BoxGeometry(18, 2, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama("STASIUN MERDU UTARA", "KRL Keliling Kota"), roughness: 0.8 }));
   papan.position.set(x, YD + 3.2, z + 8.2); grup.add(papan);
+  const jamU = buatJam(0.9); jamU.position.set(x + 12, YD + 3.2, z + 8.2); grup.add(jamU);
   rintanganTransportasi.push({ minX: x - 2.6, maxX: x + 2.6, minZ: z + 7.8, maxZ: z + 22 });
 }
 
@@ -200,7 +202,7 @@ function bangunStasiun(grup, st) {
   grup.add(kotak(60.6, 0.6, 16.6, 0x1d5a8f, XST, YD + 1.4, zb + 9));
   const papan = new THREE.Mesh(new THREE.BoxGeometry(24, 2.4, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(st.nama, st.sub), roughness: 0.8 }));
   papan.position.set(XST, YD + 3.0, zb + 17.2); grup.add(papan);
-  const jam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.2, 24), M(0xffffff)); jam.rotation.x = Math.PI / 2; jam.position.set(XST + 16, YD + 3, zb + 17.3); grup.add(jam);
+  const jam = buatJam(1.1); jam.position.set(XST + 16, YD + 3, zb + 17.35); grup.add(jam); // jam stasiun real time
   for (let t = 0; t < 14; t++) grup.add(kotak(4, 0.4, 0.9, 0xd8d2c6, XST - 6, 0.2 + t * 0.6, zb + 30 - t * 0.85)); // tangga
   const esk = kotak(1.6, 0.3, 14, 0x8a8f94, XST + 6, YD / 2, zb + 24); esk.rotation.x = -Math.atan2(YD, 12); grup.add(esk); // eskalator
   grup.add(kotak(4.4, 3.6, 3.2, 0x2e5a73, XST, 1.8, zb + 18.6)); // pintu masuk bawah
@@ -450,6 +452,7 @@ function bangunGedungHub(grup, z) {
     grup.add(kotak(x1 - x0, 0.15, 5.2, 0xd8d2c4, (x0 + x1) / 2, 0.08, zk));            // lantai peron
     const papan = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 0.25), new THREE.MeshStandardMaterial({ map: teksturPapanNama("HUB TRANS MERDU", sisi > 0 ? "Koridor 1 · 2B · KRL" : "Koridor 2A · KRL"), roughness: 0.8 }));
     papan.position.set(XHUB, 5.7, zk); if (sisi < 0) papan.rotation.y = Math.PI; grup.add(papan);
+    const jh = buatJam(0.8); jh.position.set(XHUB + 10, 5.7, zk + sisi * 0.2); if (sisi < 0) jh.rotation.y = Math.PI; grup.add(jh);
     // papan info transit (peta koridor)
     const cv = document.createElement("canvas"); cv.width = 512; cv.height = 256; const c = cv.getContext("2d");
     c.fillStyle = "#0f2f4f"; c.fillRect(0, 0, 512, 256); c.fillStyle = "#f2c230"; c.font = "bold 34px system-ui"; c.fillText("INFO TRANSIT", 20, 46);

@@ -102,8 +102,8 @@
   export const GEDUNG_KACA_BLOK = [
     { kol: 52, bar: 36, jenis: "kantor", nama: "MENARA MERDU", lantai: 9 },
     { kol: 28, bar: 36, jenis: "kantor", nama: "GRAHA NIAGA", lantai: 6 },
-    { kol: 60, bar: 28, jenis: "sekolah", nama: "SMA NEGERI 1 MERDU" },
-    { kol: 20, bar: 28, jenis: "sekolah", nama: "SMP NEGERI 1 MERDU" },
+    { kol: 60, bar: 28, jenis: "sekolah", nama: "SEKOLAH TERPADU MERDU" },  // TK · SD · SMP · SMA
+    { kol: 20, bar: 28, jenis: "kampus", nama: "UNIVERSITAS MERDU" },
   ];
   export const APARTEMEN_BLOK = [
     { kol: 36, bar: 20, nama: "Merdu Residence" }, { kol: 44, bar: 20, nama: "Taman Sari Tower" },

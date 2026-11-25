@@ -9,6 +9,7 @@
    - papan STRUKTUR PEMERINTAHAN (Presiden, Wali Kota, Camat, Lurah, Ketua
      RW/RT) — diisi dari /api/pemilu (pejabat aktif)
    - meja rapat kabinet + kursi di sayap timur, bangku tamu di sayap barat */
+import { buatJam } from "./jam.js";
 import { M, kotak } from "./bersama.js";
 import { teksturBenderaMerdu } from "./fasilitas.js";
 import { NAMA_KECAMATAN, NAMA_KELURAHAN } from "./inti.js";
@@ -196,6 +197,7 @@ export function bangunInteriorIstana(halang) {
   const papan = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5.0),
     new THREE.MeshStandardMaterial({ map: texStruktur, roughness: 0.8 }));
   papan.rotation.y = Math.PI / 2; papan.position.set(-sw + 0.16, 4.4, -2.6); g.add(papan);
+  const jamI = buatJam(0.6, 0xd4a73a); jamI.rotation.y = Math.PI / 2; jamI.position.set(-sw + 0.16, 7.6, -2.6); g.add(jamI); // jam real time
   g.userData.isiStruktur = (pejabat) => { gambarStruktur(cvStruktur, pejabat); texStruktur.needsUpdate = true; };
   // bangku tamu (sayap barat)
   for (const z of [3, 7.5]) {
