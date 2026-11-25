@@ -187,39 +187,43 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
     }
     // pos palang di as busway (median) + 2 palang: lajur utara mengarah -z, lajur selatan +z
     gg.add(kotak(0.9, 1.3, 0.9, 0xf2c230, 0, 0.65, BUSWAY_Z));
-    const lampu = [];
     const palang = [];
     for (const arah of [-1, 1]) {
       const pivot = new THREE.Group(); pivot.position.set(0, 1.1, BUSWAY_Z + arah * 0.45); gg.add(pivot);
       const lengan = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, BW - 0.8), new THREE.MeshStandardMaterial({ map: texPalang, roughness: 0.6 }));
       lengan.position.z = arah * (BW - 0.8) / 2; lengan.castShadow = true; pivot.add(lengan);
-      palang.push({ pivot, arah });
-      for (const s of [-1, 1]) { // lampu di pos, menghadap bus yang datang dari dua sisi
+      const pl = { pivot, arah, buka: 0, lampu: [] }; palang.push(pl);
+      for (const s of [-1, 1]) { // lampu di pos, milik palang lajur ini
         const l = new THREE.Mesh(new THREE.CircleGeometry(0.14, 12), matMerah);
-        l.rotation.y = s * Math.PI / 2; l.position.set(s * 0.46, 1.05, BUSWAY_Z + arah * 0.22); gg.add(l); lampu.push(l);
+        l.rotation.y = s * Math.PI / 2; l.position.set(s * 0.46, 1.05, BUSWAY_Z + arah * 0.22); gg.add(l); pl.lampu.push(l);
       }
     }
     // lampu lalu lintas mini di portal (atas, dua arah)
     for (const s of [-1, 1]) {
       const l = new THREE.Mesh(new THREE.CircleGeometry(0.28, 14), matMerah);
-      l.rotation.y = s * Math.PI / 2; l.position.set(s * 0.37, 5.45, BUSWAY_Z); gg.add(l); lampu.push(l);
+      // lampu menghadap +x (s=1) dilihat bus dari timur = lajur selatan (arah +1); s=-1 -> lajur utara
+      l.rotation.y = s * Math.PI / 2; l.position.set(s * 0.37, 5.45, BUSWAY_Z + s * 2.2); gg.add(l); palang.find((p) => p.arah === s).lampu.push(l);
     }
-    GERBANG.push({ x: x + PUSAT_X, palang, lampu, buka: 0 });
+    GERBANG.push({ x: x + PUSAT_X, palang });
   }
   return g;
 }
 
-/* Gerbang membuka bila ada bus dalam 32 m dari portal di busway (lokal
-   |z - BUSWAY_Z| < 10); palang naik ~1,6 dtk, turun lagi sesudah bus lewat. */
+/* Tiap PALANG (satu per lajur) membuka sendiri: hanya bila ada bus di
+   lajurnya (utara z<as = arah -1, selatan = +1) dalam 32 m dari portal.
+   Bus masuk -> palang lajur masuk saja; bus keluar -> palang lajur keluar
+   saja (dulu kedua palang terangkat bersamaan). */
 export function perbaruiGerbangBus(dt, daftarBus) {
-  for (const gt of GERBANG) {
+  for (const gt of GERBANG) for (const pl of gt.palang) {
     let dekat = false;
-    for (const p of daftarBus) if (Math.abs(p.z - BUSWAY_Z_DUNIA) < 10 && Math.abs(p.x - gt.x) < 32) { dekat = true; break; }
-    gt.buka = Math.max(0, Math.min(1, gt.buka + (dekat ? 1 : -1) * dt / 1.6));
-    const sudut = (gt.buka * gt.buka * (3 - 2 * gt.buka)) * 1.45;
-    for (const { pivot, arah } of gt.palang) pivot.rotation.x = -arah * sudut;
-    const m = gt.buka > 0.95 ? matHijau : matMerah;
-    for (const l of gt.lampu) if (l.material !== m) l.material = m;
+    for (const p of daftarBus) {
+      const dz = p.z - BUSWAY_Z_DUNIA;
+      if (Math.abs(dz) < 10 && Math.sign(dz || 1) === pl.arah && Math.abs(p.x - gt.x) < 32) { dekat = true; break; }
+    }
+    pl.buka = Math.max(0, Math.min(1, pl.buka + (dekat ? 1 : -1) * dt / 1.6));
+    pl.pivot.rotation.x = -pl.arah * (pl.buka * pl.buka * (3 - 2 * pl.buka)) * 1.45;
+    const m = pl.buka > 0.95 ? matHijau : matMerah;
+    for (const l of pl.lampu) if (l.material !== m) l.material = m;
   }
 }
 /* Tinggi lantai bus: 0,34 di atas slab plaza, landai 8 m di luar tepi plaza. */
