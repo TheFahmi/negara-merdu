@@ -73,9 +73,9 @@ function bangunRel(grup) {
   /* LAA (Listrik Aliran Atas): kawat kontak & kawat pemikul di atas tiap
      jalur, menerus mengikuti potongan dek. */
   for (const zj of [-2.2, 2.2]) {
-    bag.push({ geo: new THREE.BoxGeometry(8.6, 0.04, 0.04), y: 5.78, z: zj, warna: 0x3a3226 });    // kawat kontak
-    bag.push({ geo: new THREE.BoxGeometry(8.6, 0.04, 0.04), y: 6.45, z: zj, warna: 0x3a3226 });    // kawat pemikul
-    bag.push({ geo: new THREE.BoxGeometry(0.03, 0.67, 0.03), x: 0, y: 6.12, z: zj, warna: 0x3a3226 }); // penggantung
+    bag.push({ geo: new THREE.BoxGeometry(8.6, 0.04, 0.04), y: 6.27, z: zj, warna: 0x3a3226 });    // kawat kontak (disentuh pantograf)
+    bag.push({ geo: new THREE.BoxGeometry(8.6, 0.04, 0.04), y: 6.85, z: zj, warna: 0x3a3226 });    // kawat pemikul
+    bag.push({ geo: new THREE.BoxGeometry(0.03, 0.58, 0.03), x: 0, y: 6.56, z: zj, warna: 0x3a3226 }); // penggantung
   }
   const geoDek = gabungBerwarna(bag);
   const imDek = new THREE.InstancedMesh(geoDek, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), potong.length);
@@ -284,7 +284,15 @@ function buatKereta() {
       K(0.12, 0.8, 1.1, 0xe6e8ea, cx + e * 6.8, 3.2, 0);
     }
     if (i < 3) { K(0.9, 0.25, 1.1, 0x55595e, cx - 7.1, 0.4, 0); for (const s of [-1, 1]) K(0.9, 2.8, 0.06, 0x2b2d30, cx - 7.1, 1.9, s * 0.58); } // sambungan lorong
-    K(L - 0.4, 0.35, 2.6, 0x37474f, cx, 0.05, 0);              // rangka bawah/bogie
+    K(L - 0.4, 0.3, 2.6, 0x37474f, cx, 0.1, 0);               // rangka bawah
+    /* 2 bogie per gerbong: rangka + 4 roda baja + pegas; peralatan bawah lantai; 2 unit AC atap */
+    for (const bz of [-4.6, 4.6]) {
+      K(2.6, 0.35, 2.2, 0x2b2d30, cx + bz, -0.2, 0);
+      for (const dx of [-0.8, 0.8]) for (const sz of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.14, 14), M(0x55595e)); r.rotation.x = Math.PI / 2; r.position.set(cx + bz + dx, -0.08, sz * 0.75); tgt.add(r); }
+      for (const sz of [-1, 1]) { const pg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.32, 8), M(0x8a3a30)); pg.position.set(cx + bz, 0.0, sz * 1.0); tgt.add(pg); }
+    }
+    K(4.5, 0.5, 1.8, 0x3a3d40, cx, -0.2, 0);                   // kotak peralatan bawah lantai
+    for (const ax of [-3.3, 3.3]) { K(2.6, 0.4, 1.8, 0xc9ced4, cx + ax, 4.3, 0); K(1.6, 0.05, 1.2, 0x5f6b75, cx + ax, 4.53, 0); }
     const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("KRL MERDU", "Gerbong " + (i + 1)) }));
     papan.rotation.y = -Math.PI / 2; papan.position.set(cx + 6.72, 3.0, 0); tgt.add(papan);
   }
@@ -323,6 +331,9 @@ function buatKereta() {
     }
     const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("KRL MERDU", "Keliling Kota") }));
     papan.rotation.y = a * Math.PI / 2; papan.position.set(a * 8.16, 3.42, 0); tgt.add(papan);
+    K(0.5, 0.6, 2.7, 0x2b2d30, a * 8.1, 0.05, 0);                                     // rok depan / pembersih rel
+    K(0.6, 0.25, 0.35, 0x55595e, a * 8.5, 0.45, 0);                                    // kopler
+    for (const sz of [-1, 1]) { const wp = K(0.03, 0.8, 0.03, 0x111111, a * 8.06, 2.3, sz * 0.6); wp.rotation.x = sz * 0.6; } // wiper
   }
   /* Pantograf (LAA) di atap gerbong 2 & 3 — menyentuh kawat kontak di atas rel. */
   for (const c of [gerbong[1], gerbong[2]]) {
@@ -411,8 +422,23 @@ function buatBus(warna) {
   K(0.35, 0.18, 1.5, 0x55595e, 1.15, 0.6, PINTU_BUS_Z);
   K(0.3, 0.12, 1.5, 0x8a8f94, 1.3, 0.3, PINTU_BUS_Z);
   K(0.04, 0.04, 1.55, 0xf2c230, 1.32, 0.69, PINTU_BUS_Z);
+  /* detail realistis: papan tujuan LED, bumper, gril, spion bertangkai,
+     wiper, AC atap, pelat nomor, lis atap membulat, kaca belakang mesin */
+  const cvLed = document.createElement("canvas"); cvLed.width = 256; cvLed.height = 48; const cl = cvLed.getContext("2d");
+  cl.fillStyle = "#111"; cl.fillRect(0, 0, 256, 48); cl.fillStyle = "#ffb020"; cl.font = "bold 30px monospace"; cl.textAlign = "center"; cl.fillText("TRANS MERDU", 128, 35);
+  const led = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.34), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cvLed) })); led.position.set(0, 3.12, 5.28); g.add(led);
+  K(2.62, 0.3, 0.2, 0x2b2d30, 0, 0.55, 5.32); K(2.62, 0.3, 0.2, 0x2b2d30, 0, 0.55, -5.32);   // bumper
+  K(1.3, 0.4, 0.05, 0x1d1f22, 0, 0.95, 5.27);                                                  // gril
+  K(0.6, 0.14, 0.03, 0x111111, 0, 0.55, 5.43); K(0.6, 0.14, 0.03, 0x111111, 0, 0.75, -5.4);  // pelat nomor
+  for (const sx of [-1, 1]) {
+    K(0.05, 0.05, 0.5, 0x1b1d20, sx * 1.42, 2.75, 5.35); K(0.07, 0.5, 0.2, 0x1b1d20, sx * 1.62, 2.4, 5.55); // spion bertangkai
+    const wp = K(0.03, 0.9, 0.03, 0x111111, sx * 0.55, 1.95, 5.24); wp.rotation.z = sx * 0.9;  // wiper
+  }
+  K(1.6, 0.35, 2.4, 0xdfe3e6, 0, 3.6, -1.5); K(1.4, 0.06, 2.2, 0x8a8f94, 0, 3.8, -1.5);        // AC atap
+  for (const sx of [-1, 1]) K(0.16, 0.16, 10.5, w, sx * 1.22, 3.42, 0);                        // lis atap membulat
+  for (let i = 0; i < 5; i++) K(2.2, 0.05, 0.08, 0x1b1d20, 0, 0.95 + i * 0.12, -5.27);         // kisi mesin belakang
   const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("TRANS MERDU", "Keliling Kota") }));
-  papan.position.set(0, 3.0, 5.27); g.add(papan);
+  papan.position.set(0, 3.0, -5.28); papan.rotation.y = Math.PI; g.add(papan);
   /* lampu: rem merah (terang saat berhenti/melambat), sein kuning kiri (+x)
      & kanan (-x) di 4 sudut + samping, lampu mundur/kabut tidak perlu */
   const matRem = new THREE.MeshBasicMaterial({ color: 0x8a1212 });
@@ -581,7 +607,7 @@ function perbaruiPintuKrl(k) {
 function aturGerbong(k) {
   k.mobil.forEach((c, i) => {
     const sc = k.s - i * 14.2, a = posJalur(k.J, sc + 5), b = posJalur(k.J, sc - 5);
-    c.position.set((a.x + b.x) / 2, YD + 0.2, (a.z + b.z) / 2);
+    c.position.set((a.x + b.x) / 2, YD + 0.7, (a.z + b.z) / 2); // roda bogie di atas rel, lantai sejajar peron
     c.rotation.y = Math.atan2(-(a.z - b.z), a.x - b.x);
   });
 }

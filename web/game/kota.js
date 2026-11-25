@@ -1,5 +1,6 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
+import { geoMobil } from "./mobilGeo.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas, persimpanganKota } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
@@ -406,28 +407,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
 
   export function bangunLaluLintasMobil() {
     // 1. Geometri bodi (diwarnai per instans via instanceColor)
-    const geoBodi = gabungGeometri([
-      { geo: new THREE.BoxGeometry(1.92, 0.62, 4.25), x: 0, y: 0.68, z: 0 },
-      { geo: new THREE.BoxGeometry(1.66, 0.60, 2.15), x: 0, y: 1.28, z: -0.2 },
-    ]);
-
-    // 2. Geometri detail statis (kaca, bumper, lampu, 4 roda + velg) via vertexColors
-    const bagianDet = [
-      { geo: new THREE.BoxGeometry(1.96, 0.22, 0.24), x: 0, y: 0.44, z: 2.10, warna: 0x2b2f33 },  // bumper depan
-      { geo: new THREE.BoxGeometry(1.96, 0.22, 0.24), x: 0, y: 0.44, z: -2.10, warna: 0x2b2f33 }, // bumper belakang
-      { geo: new THREE.BoxGeometry(1.56, 0.50, 0.08), x: 0, y: 1.26, z: 0.90, rx: -0.22, warna: 0x1e2c36 }, // kaca depan
-      { geo: new THREE.BoxGeometry(1.56, 0.46, 0.08), x: 0, y: 1.26, z: -1.30, rx: 0.22, warna: 0x1e2c36 }, // kaca belakang
-      { geo: new THREE.BoxGeometry(1.70, 0.42, 1.80), x: 0, y: 1.28, z: -0.20, warna: 0x1e2c36 }, // kaca samping
-    ];
-    for (const s of [-1, 1]) {
-      bagianDet.push({ geo: new THREE.BoxGeometry(0.36, 0.16, 0.08), x: s * 0.66, y: 0.72, z: 2.13, warna: 0xfff3c4 });  // lampu depan
-      bagianDet.push({ geo: new THREE.BoxGeometry(0.36, 0.15, 0.08), x: s * 0.66, y: 0.72, z: -2.13, warna: 0xd62828 }); // lampu rem
-    }
-    for (const [wx, wz] of [[-0.95, 1.3], [0.95, 1.3], [-0.95, -1.3], [0.95, -1.3]]) {
-      bagianDet.push({ geo: new THREE.CylinderGeometry(0.38, 0.38, 0.28, 12), x: wx, y: 0.38, z: wz, rz: Math.PI / 2, warna: 0x1e2024 });
-      bagianDet.push({ geo: new THREE.CylinderGeometry(0.21, 0.21, 0.30, 10), x: wx, y: 0.38, z: wz, rz: Math.PI / 2, warna: 0xcfd4dc });
-    }
-    const geoDetail = gabungBerwarna(bagianDet);
+    const { badan: geoBodi, detail: geoDetail } = geoMobil(); // model sedan realistis bersama (mobilGeo.js)
 
     /* Mobil arteri BERKELILING rute kotak di jalan arteri (24 Nov 2026; dulu
        melaju lurus lalu "teleport" di ujung kota): lintasan jalurPoligon()
@@ -451,7 +431,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
     });
 
     const imBodi = new THREE.InstancedMesh(geoBodi,
-      new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.18 }), daftar.length);
+      new THREE.MeshStandardMaterial({ roughness: 0.32, metalness: 0.35 }), daftar.length);
     const imDetail = new THREE.InstancedMesh(geoDetail,
       new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.2 }), daftar.length);
     imBodi.castShadow = true; imBodi.receiveShadow = true;
@@ -467,9 +447,9 @@ geoKepalaL.translate(1.02, 4.80, 0);
        SEIN kuning berkedip kiri/kanan sebelum & selama berbelok. Material
        Basic (tidak terpengaruh cahaya) + instanceColor; sein mati = skala 0. */
     const lampu = (bag) => gabungGeometri(bag.map(([x, y, z, w, h, d]) => ({ geo: new THREE.BoxGeometry(w, h, d), x, y, z })));
-    const geoDepan = lampu([[-0.66, 0.72, 2.16, 0.4, 0.17, 0.05], [0.66, 0.72, 2.16, 0.4, 0.17, 0.05]]);
-    const geoRem = lampu([[-0.66, 0.78, -2.16, 0.42, 0.16, 0.05], [0.66, 0.78, -2.16, 0.42, 0.16, 0.05], [0, 1.6, -1.33, 0.5, 0.06, 0.04]]);
-    const seinSisi = (sx) => lampu([[sx * 0.9, 0.72, 2.15, 0.16, 0.14, 0.05], [sx * 0.9, 0.78, -2.15, 0.16, 0.14, 0.05], [sx * 0.97, 0.75, 1.75, 0.04, 0.1, 0.3]]);
+    const geoDepan = lampu([[-0.63, 0.74, 2.2, 0.4, 0.13, 0.04], [0.63, 0.74, 2.2, 0.4, 0.13, 0.04]]); // menempel di lampu model mobilGeo
+    const geoRem = lampu([[-0.62, 0.8, -2.205, 0.44, 0.15, 0.04], [0.62, 0.8, -2.205, 0.44, 0.15, 0.04], [0, 1.43, -1.38, 0.5, 0.05, 0.04]]);
+    const seinSisi = (sx) => lampu([[sx * 0.88, 0.72, 2.17, 0.14, 0.1, 0.04], [sx * 0.86, 0.8, -2.2, 0.08, 0.15, 0.04], [sx * 1.0, 1.0, 0.95, 0.04, 0.05, 0.16]]); // depan, belakang, di spion
     const MAT_L = () => new THREE.MeshBasicMaterial({ color: 0xffffff });
     const imDepan = new THREE.InstancedMesh(geoDepan, new THREE.MeshBasicMaterial({ color: 0xfff6d8 }), daftar.length);
     const imRem = new THREE.InstancedMesh(geoRem, MAT_L(), daftar.length);

@@ -14,6 +14,7 @@
    Performa: semua benda statis interior digabung per gedung (gabungBerwarna)
    -> beberapa draw call per gedung; kaca 1 mesh transparan; layar & lampu 1
    mesh Basic. Interior + orang disembunyikan bila kamera jauh (> 320 m). */
+import { buatMobil } from "./mobilGeo.js";
 import { buatJam } from "./jam.js";
 import { buatPetugas } from "./keamanan.js";
 import { GEDUNG_KACA_BLOK, JALAN, PITCH, SKALA_KARAKTER, sudutBlok } from "./inti.js";
@@ -60,11 +61,7 @@ function atapLimas() { const c = new THREE.ConeGeometry(Math.SQRT2, 1, 4, 1); c.
 /* ---------- isi halaman (biar tidak sepi) ---------- */
 function pejalan(G, g, i, a, b, y, opsi) { const k = orang(G, g, i, a.x, y === undefined ? 0.3 : y, a.z, 0, false, opsi); const p = G.orang[G.orang.length - 1]; p.jalur = { a, b }; p.s = hashInt(i * 7) * Math.hypot(b.x - a.x, b.z - a.z); p.arah = i % 2 ? 1 : -1; return k; }
 function mobilParkir(g, x, z, ry, warna) {
-  const m = new THREE.Group();
-  m.add(kotak(1.9, 0.62, 4.2, warna, 0, 0.68, 0)); m.add(kotak(1.74, 0.62, 2.3, warna, 0, 1.3, -0.25)); m.add(kotak(1.78, 0.5, 2.0, 0x24323d, 0, 1.32, -0.25));
-  for (const [wx, wz] of [[-0.92, 1.35], [0.92, 1.35], [-0.92, -1.35], [0.92, -1.35]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.37, wz); m.add(r); }
-  for (const sx of [-0.62, 0.62]) { m.add(kotak(0.42, 0.16, 0.06, 0xfff3c8, sx, 0.78, 2.11)); m.add(kotak(0.42, 0.14, 0.06, 0xc0281d, sx, 0.8, -2.11)); }
-  m.position.set(x, 0.3, z); m.rotation.y = ry; m.scale.setScalar(SKALA_MOBIL); g.add(m);
+  const m = buatMobil(warna); m.position.set(x, 0.3, z); m.rotation.y = ry; m.scale.setScalar(SKALA_MOBIL); g.add(m);
 }
 function motor(g, x, z, ry, warna) {
   const m = new THREE.Group(); m.add(kotak(0.35, 0.45, 1.5, warna, 0, 0.75, 0)); m.add(kotak(0.3, 0.15, 0.7, 0x1d1d1f, 0, 1.05, -0.2));

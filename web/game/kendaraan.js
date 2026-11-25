@@ -8,6 +8,7 @@
       jarak dengan mobil di depan, dan berbelok acak di persimpangan.
    Semua mobil = 2 InstancedMesh (badan berwarna per instans + detail
    kaca/lampu/roda berwarna verteks) per kelompok -> murah di HP. */
+import { geoMobil } from "./mobilGeo.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, SKALA_MOBIL, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
 import { M, PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { rintanganFasilitas } from "./rumah.js";
@@ -39,8 +40,7 @@ function geometriDetail() {
     { geo: new THREE.BoxGeometry(0.42, 0.14, 0.06), x: 0.62, y: 0.8, z: -2.11, warna: 0xc0281d },
   ]);
 }
-let GEO = null;
-function geo() { return GEO || (GEO = { badan: geometriBadan(), detail: geometriDetail() }); }
+function geo() { return geoMobil(); } // model sedan realistis bersama (mobilGeo.js); geometriBadan/Detail lama tak dipakai
 function buatInstans(n) {
   const g = geo();
   const badan = new THREE.InstancedMesh(g.badan, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.25 }), Math.max(1, n));

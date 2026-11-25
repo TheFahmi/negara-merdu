@@ -9,6 +9,7 @@
      bersudut bulat, lajur kiri, mematuhi lampu merah & berhenti di garis
      henti), lampu rotator merah-biru berkedip, sein saat berbelok.
    Markas polisi & tentara ada di gedungKaca.js (jenis "polisi"/"tentara"). */
+import { buatMobil } from "./mobilGeo.js";
 import { JALAN, PUSAT_X, PUSAT_Z, SKALA_KARAKTER, SKALA_MOBIL, Z_ISTANA, SKALA_ISTANA, sudutBlok } from "./inti.js";
 import { M, kotak, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
@@ -70,12 +71,13 @@ function posJaga(grup, x, z) {
 export function bangunKeamananIstana() {
   const grup = new THREE.Group(); scene.add(grup);
   const S = SKALA_ISTANA, X = PUSAT_X, zGerbang = PUSAT_Z + Z_ISTANA + (-3.4 + 34) * S; // ±1,4 (tepi selatan pagar pelataran)
-  const zTangga = PUSAT_Z + Z_ISTANA + 15.2 * S;
   // gerbang: pos jaga + 2 tentara siaga menghadap selatan
   posJaga(grup, X - 13, zGerbang + 5.5); posJaga(grup, X + 13, zGerbang + 5.5);
   siaga("tentara", 1, X - 7.4, zGerbang + 1.6, 0, grup); siaga("tentara", 2, X + 7.4, zGerbang + 1.6, 0, grup);
   // kaki tangga istana: mengapit karpet merah
-  siaga("tentara", 3, X - 4.4, zTangga, 0, grup); siaga("tentara", 4, X + 4.4, zTangga, 0, grup);
+  // berdiri di lantai pelataran (y 0,34·S) DI DEPAN anak tangga, bukan di atas tangga (dulu terbenam di undakan)
+  const zDepanTangga = PUSAT_Z + Z_ISTANA + 19.2 * S, yPel = 0.34 * S + 0.02;
+  siaga("tentara", 3, X - 4.6, zDepanTangga, 0, grup).position.y = yPel; siaga("tentara", 4, X + 4.6, zDepanTangga, 0, grup).position.y = yPel;
   // polisi di sudut pagar pelataran
   siaga("polisi", 5, X - 42.5, zGerbang + 1.8, 0.4, grup); siaga("polisi", 6, X + 42.5, zGerbang + 1.8, -0.4, grup);
   // regu patroli di depan pagar istana (bolak-balik), berpasangan
@@ -92,25 +94,23 @@ export function bangunKeamananIstana() {
 /* ---------- mobil patroli polisi ---------- */
 const PATROLI = [];
 function buatMobilPolisi() {
-  const g = new THREE.Group(), K = (w, h, d, c, x, y, z) => { const m = kotak(w, h, d, c, x, y, z); m.castShadow = false; g.add(m); return m; };
-  K(1.9, 0.62, 4.3, 0xf4f4f2, 0, 0.68, 0); K(1.74, 0.6, 2.3, 0xf4f4f2, 0, 1.28, -0.25);
-  K(1.78, 0.48, 2.0, 0x1e2c36, 0, 1.3, -0.25);
-  for (const sx of [-1, 1]) { K(0.04, 0.2, 4.0, 0x1d3a8f, sx * 0.96, 0.74, 0); K(0.04, 0.08, 4.0, 0xf28c28, sx * 0.965, 0.6, 0); } // strip biru-oranye
+  const g = buatMobil(0xf4f4f2); // sedan realistis bersama + livery polisi
+  const K = (w, h, d, c, x, y, z) => { const m = kotak(w, h, d, c, x, y, z); m.castShadow = false; g.add(m); return m; };
+  for (const sx of [-1, 1]) { K(0.02, 0.16, 3.6, 0x1d3a8f, sx * 0.935, 0.66, 0.05); K(0.02, 0.06, 3.6, 0xf28c28, sx * 0.94, 0.55, 0.05); } // strip biru-oranye
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64; const c = cv.getContext("2d");
   c.fillStyle = "#f4f4f2"; c.fillRect(0, 0, 256, 64); c.fillStyle = "#1d3a8f"; c.font = "bold 44px system-ui"; c.textAlign = "center"; c.fillText("POLISI", 128, 48);
   const tex = new THREE.CanvasTexture(cv);
-  for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.45), new THREE.MeshBasicMaterial({ map: tex })); p.rotation.y = sx * Math.PI / 2; p.position.set(sx * 0.97, 0.95, 0.4); g.add(p); }
-  const pk = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.33), new THREE.MeshBasicMaterial({ map: tex })); pk.rotation.x = -Math.PI / 2; pk.position.set(0, 1.01, 1.45); g.add(pk);
-  K(1.2, 0.12, 0.4, 0x222222, 0, 1.64, -0.1);                                                  // dudukan rotator
-  const merah = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.36), new THREE.MeshBasicMaterial({ color: 0x550000 })); merah.position.set(-0.3, 1.78, -0.1); g.add(merah);
-  const biru = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.36), new THREE.MeshBasicMaterial({ color: 0x000055 })); biru.position.set(0.3, 1.78, -0.1); g.add(biru);
-  for (const [x, z] of [[-0.92, 1.35], [0.92, 1.35], [-0.92, -1.35], [0.92, -1.35]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.37, z); g.add(r); }
+  for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.3), new THREE.MeshBasicMaterial({ map: tex })); p.rotation.y = sx * Math.PI / 2; p.position.set(sx * 0.945, 0.84, 0.35); g.add(p); }
+  const pk = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.26), new THREE.MeshBasicMaterial({ map: tex })); pk.rotation.x = -Math.PI / 2 + 0.11; pk.position.set(0, 0.96, 1.5); g.add(pk);
+  K(1.2, 0.1, 0.36, 0x222222, 0, 1.55, -0.2);                                                   // dudukan rotator di atap
+  const merah = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.15, 0.32), new THREE.MeshBasicMaterial({ color: 0x550000 })); merah.position.set(-0.3, 1.68, -0.2); g.add(merah);
+  const biru = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.15, 0.32), new THREE.MeshBasicMaterial({ color: 0x000055 })); biru.position.set(0.3, 1.68, -0.2); g.add(biru);
   const lampuDepan = new THREE.MeshBasicMaterial({ color: 0xfff6d8 }), rem = new THREE.MeshBasicMaterial({ color: 0x8a1212 }), sein = new THREE.MeshBasicMaterial({ color: 0xffb020 });
   const seinM = { 1: [], "-1": [] };
   for (const sx of [-1, 1]) {
-    const d = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.16, 0.05), lampuDepan); d.position.set(sx * 0.62, 0.74, 2.16); g.add(d);
-    const r = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.05), rem); r.position.set(sx * 0.62, 0.8, -2.16); g.add(r);
-    for (const z of [2.15, -2.15]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.05), sein); s.position.set(sx * 0.9, 0.75, z); s.visible = false; g.add(s); seinM[sx].push(s); }
+    const d = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.16, 0.05), lampuDepan); d.position.set(sx * 0.63, 0.74, 2.19); g.add(d);
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.05), rem); r.position.set(sx * 0.62, 0.8, -2.2); g.add(r);
+    for (const z of [2.15, -2.15]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.05), sein); s.position.set(sx * 0.86, 0.72, z * 1.012); s.visible = false; g.add(s); seinM[sx].push(s); }
   }
   g.scale.setScalar(SKALA_MOBIL);
   g.userData = { merah, biru, rem, seinM };

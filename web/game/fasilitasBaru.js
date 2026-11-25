@@ -7,6 +7,7 @@
    pohon peneduh, lampu taman. Semua elemen di dalam blok (±34 lokal).
    Depan bangunan menghadap +z (selatan). Grup: y=0 = muka alas blok.
    TAPAK_BARU = AABB tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok. */
+import { buatMobil } from "./mobilGeo.js";
 import { SKALA_MOBIL } from "./inti.js";
 import { LAMPU_TAMAN, M, geometriAtapPelana, meshPelana, kotak } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
@@ -105,14 +106,8 @@ function parkir(g, x, z, n, arahX) { // deret garis parkir di atas aspal
   }
 }
 function mobil(g, x, z, ry, warna) {
-  const m = new THREE.Group();
-  m.add(kotak(1.9, 0.8, 4.2, warna, 0, 0.75, 0));
-  m.add(kotak(1.7, 0.7, 2.3, warna, 0, 1.5, -0.2));
-  m.add(kotak(1.75, 0.55, 2.0, 0x2a3a46, 0, 1.52, -0.2));
-  for (const [wx, wz] of [[-0.95, 1.3], [0.95, 1.3], [-0.95, -1.3], [0.95, -1.3]]) {
-    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12), M(0x222222)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.38, wz); m.add(r);
-  }
-  m.position.set(x, 0, z); m.rotation.y = ry || 0; m.scale.setScalar(SKALA_MOBIL); g.add(m); // skala sama dengan mobil kota
+  const m = buatMobil(warna); // model sedan realistis bersama (mobilGeo.js)
+  m.position.set(x, 0, z); m.rotation.y = ry || 0; m.scale.setScalar(SKALA_MOBIL); g.add(m);
   return m;
 }
 function tiangBendera(g, x, z) {

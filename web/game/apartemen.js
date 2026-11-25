@@ -11,6 +11,7 @@
      UNIT   : kamar apartemen — ruang tamu, dapur, kamar tidur bersekat,
               jendela kaca besar berpemandangan kota, balkon
    Keluar gedung hanya dari lobi (pintu selatan) atau tombol Keluar. */
+import { buatMobil } from "./mobilGeo.js";
 import { SKALA_MOBIL, $, APARTEMEN_BLOK, hashInt, sudutBlok, JALAN, PITCH } from "./inti.js";
 import { M, kotak, scene, wkt } from "./bersama.js";
 import { bangkuTaman, pagarSemak, pohonKecil, teksturPapanNama } from "./fasilitas.js";
@@ -96,15 +97,7 @@ export function bangunApartemen() {
     for (let i = 0; i < 6; i++) {
       g.add(kotak(5.9, 0.1, 0.15, 0xf4f1e6, -23, 0.07, 4.2 + i * 3.6)); g.add(kotak(5.9, 0.1, 0.15, 0xf4f1e6, -17, 0.07, 4.2 + i * 3.6));
       if (hashInt(data.kol * 7 + i) > 0.3) { // mobil penghuni
-        const m = new THREE.Group(), w = WARNA_MOBIL[(i + data.kol) % WARNA_MOBIL.length];
-        m.add(kotak(4.2, 0.7, 1.9, w, 0, 0.7, 0)); m.add(kotak(2.3, 0.65, 1.7, w, -0.2, 1.35, 0)); m.add(kotak(2.0, 0.5, 1.75, 0x24323d, -0.2, 1.37, 0));
-        // 4 ban + velg (dulu tidak ada: mobil apartemen melayang tanpa roda), bumper & lampu
-        for (const [wx, wz] of [[-1.35, -0.92], [1.35, -0.92], [-1.35, 0.92], [1.35, 0.92]]) {
-          const ban = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 14), M(0x1c1c1e)); ban.rotation.x = Math.PI / 2; ban.position.set(wx, 0.38, wz); m.add(ban);
-          const velg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.32, 10), M(0xb8bcc2)); velg.rotation.x = Math.PI / 2; velg.position.set(wx, 0.38, wz); m.add(velg);
-        }
-        for (const s of [-1, 1]) m.add(kotak(0.14, 0.22, 1.95, 0x3a3d40, s * 2.12, 0.5, 0));
-        for (const z of [-0.62, 0.62]) { m.add(kotak(0.06, 0.16, 0.42, 0xfff3c8, 2.11, 0.78, z)); m.add(kotak(0.06, 0.14, 0.42, 0xc0281d, -2.11, 0.8, z)); }
+        const m = buatMobil(WARNA_MOBIL[(i + data.kol) % WARNA_MOBIL.length]); m.rotation.y = i % 2 ? Math.PI / 2 : -Math.PI / 2; // model realistis, moncong ke lorong
         m.position.set(i % 2 ? -23 : -17, 0, 6 + i * 3.6); m.scale.setScalar(SKALA_MOBIL); g.add(m); // skala sama dengan mobil kota
       }
     }
