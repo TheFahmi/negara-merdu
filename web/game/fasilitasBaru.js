@@ -7,7 +7,7 @@
    pohon peneduh, lampu taman. Semua elemen di dalam blok (±34 lokal).
    Depan bangunan menghadap +z (selatan). Grup: y=0 = muka alas blok.
    TAPAK_BARU = AABB tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok. */
-import { buatMobil } from "./mobilGeo.js";
+import { buatJip, buatMobil, buatTruk } from "./mobilGeo.js";
 import { SKALA_MOBIL } from "./inti.js";
 import { LAMPU_TAMAN, M, geometriAtapPelana, meshPelana, kotak } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
@@ -703,11 +703,9 @@ export const MODEL_BARU = {
     g.add(kotak(6, 4, 6, 0xeef3f6, 24, 2.2, -16)); g.add(kotak(6.2, 0.4, 6.2, 0x3f6fb5, 24, 4.3, -16)); // cold storage
     const pnC = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.9), new THREE.MeshStandardMaterial({ map: teksturPapanNama("COLD STORAGE", "Hasil tani warga") }));
     pnC.position.set(24, 3.4, -12.95); g.add(pnC);
-    const truk = new THREE.Group();
-    truk.add(kotak(2.2, 1.3, 2.0, MERAH, 0, 1.2, 2.4)); truk.add(kotak(2.0, 0.6, 1.4, 0x24323d, 0, 1.9, 2.6));
-    truk.add(kotak(2.4, 2.2, 4.2, 0xffffff, 0, 1.9, -0.8)); truk.add(kotak(2.42, 0.4, 4.22, MERAH, 0, 1.4, -0.8));
-    for (const [wx, wz] of [[-1.1, 2.2], [1.1, 2.2], [-1.1, -1.8], [1.1, -1.8]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.45, wz); truk.add(r); }
-    truk.position.set(-24, 0, -4); truk.scale.setScalar(SKALA_MOBIL); g.add(truk); // sebanding mobil kota
+    const labelKop = (() => { const cv = document.createElement("canvas"); cv.width = 512; cv.height = 160; const c = cv.getContext("2d"); c.fillStyle = "#ffffff"; c.fillRect(0, 0, 512, 160); c.fillStyle = "#c8102e"; c.fillRect(0, 118, 512, 42); c.font = "bold 54px system-ui"; c.textAlign = "center"; c.fillText("KOPDES", 256, 70); c.fillStyle = "#ffffff"; c.font = "bold 26px system-ui"; c.fillText("MERAH PUTIH", 256, 148); return new THREE.CanvasTexture(cv); })();
+    const truk = buatTruk({ kabin: MERAH, jenis: "boks", boks: 0xffffff, label: labelKop }); // truk logistik realistis
+    truk.position.set(-24, 0, -4); truk.scale.setScalar(1.2); g.add(truk);
     tiangBendera(g, 18, 14); tiangBendera(g, 22, 14);
     parkir(g, 20, 22, 4, false);
     for (const s of [-1, 1]) g.add(bangkuTaman(s * 7, 14, 0));
@@ -738,16 +736,8 @@ export const MODEL_BARU = {
     // mobil boks pengantar MBG
     const texMBG = teksturPapanNama("MBG", "Makan Bergizi Gratis");
     for (const [x, w] of [[3, 0xffffff], [8, 0xffffff], [13, 0xffffff]]) {
-      const v = new THREE.Group();
-      v.add(kotak(2.1, 1.0, 2.0, 0x2f6f9f, 0, 1.0, 2.2)); v.add(kotak(2.0, 0.6, 1.4, 0x24323d, 0, 1.75, 2.4)); // kabin
-      v.add(kotak(2.3, 2.4, 3.6, w, 0, 1.75, -0.8));                                                       // boks
-      const sisi = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.0), new THREE.MeshStandardMaterial({ map: texMBG }));
-      sisi.rotation.y = Math.PI / 2; sisi.position.set(1.16, 2.0, -0.8); v.add(sisi);
-      const sisi2 = sisi.clone(); sisi2.rotation.y = -Math.PI / 2; sisi2.position.x = -1.16; v.add(sisi2);
-      for (const [wx, wz] of [[-1.05, 2.0], [1.05, 2.0], [-1.05, -1.6], [1.05, -1.6]]) {
-        const r = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 12), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(wx, 0.42, wz); v.add(r);
-      }
-      v.position.set(x, 0, 5.2); v.rotation.y = Math.PI; v.scale.setScalar(SKALA_MOBIL); g.add(v); // sebanding mobil kota
+      const v = buatTruk({ kabin: 0x2f6f9f, jenis: "boks", boks: w, label: texMBG }); // mobil boks MBG realistis
+      v.position.set(x, 0, 5.6); v.rotation.y = Math.PI; v.scale.setScalar(1.05); g.add(v);
     }
     // troli ompreng (tumpukan wadah makan stainless) di dok
     for (const x of [-4, -1.5]) {

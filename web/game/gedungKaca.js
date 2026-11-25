@@ -14,7 +14,7 @@
    Performa: semua benda statis interior digabung per gedung (gabungBerwarna)
    -> beberapa draw call per gedung; kaca 1 mesh transparan; layar & lampu 1
    mesh Basic. Interior + orang disembunyikan bila kamera jauh (> 320 m). */
-import { buatMobil } from "./mobilGeo.js";
+import { buatJip, buatMobil, buatTruk } from "./mobilGeo.js";
 import { buatJam } from "./jam.js";
 import { buatPetugas } from "./keamanan.js";
 import { GEDUNG_KACA_BLOK, JALAN, PITCH, SKALA_KARAKTER, sudutBlok } from "./inti.js";
@@ -451,10 +451,8 @@ function markasTentara(G, g, data) {
   for (let r = 0; r < 3; r++) for (let c = 0; c < 7; c++) orang(G, g, 1800 + r * 7 + c, -6 + c * 2, 0.33, 2 + r * 2, Math.PI, false, { petugas: "tentara" });
   orang(G, g, 1830, 0, 0.33, -2.5, 0, false, { petugas: "tentara", aksi: "presentasi" }); G.orang[G.orang.length - 1].ry0 = 0;
   for (let i = 0; i < 6; i++) pejalan(G, g, 1840 + i, { x: -11 + (i % 2) * 0.9, z: 12.5 + Math.floor(i / 2) * 0.9 }, { x: 11 + (i % 2) * 0.9, z: 12.5 + Math.floor(i / 2) * 0.9 }, 0.33, { petugas: "tentara" }); // prajurit lari pagi
-  const truk = (x, z) => { K.b(2.4, 1.5, 2.2, HIJAU, x, 1.35, z + 2.6); K.b(2.0, 0.6, 1.4, 0x24323d, x, 2.0, z + 2.7); K.b(2.6, 0.5, 5, HIJAU, x, 1.0, z - 1); K.b(2.6, 2.2, 5, 0x5a6640, x, 2.4, z - 1);
-    for (const [wx, wz] of [[-1.2, 2.6], [1.2, 2.6], [-1.2, -0.6], [1.2, -0.6], [-1.2, -2.4], [1.2, -2.4]]) K.c(0.5, 0.3, 0x1c1c1e, x + wx, 0.6, z + wz); };
-  truk(-24, 26); truk(-18, 26);
-  K.b(2.0, 0.8, 4, HIJAU, 22, 1.0, 26); K.b(1.8, 0.6, 1.6, HIJAU, 22, 1.65, 25.4); for (const [wx, wz] of [[-1, 1.3], [1, 1.3], [-1, -1.3], [1, -1.3]]) K.c(0.45, 0.3, 0x1c1c1e, 22 + wx, 0.6, 26 + wz); // jip
+  for (const x of [-24, -18]) { const t = buatTruk({ kabin: HIJAU, jenis: "terpal", terpal: 0x5a6640 }); t.position.set(x, 0.3, 26); t.scale.setScalar(1.2); g.add(t); } // truk militer realistis
+  { const j = buatJip(HIJAU); j.position.set(22, 0.3, 26); j.scale.setScalar(1.2); g.add(j); }           // jip militer realistis
   for (const x of [-28, 28]) { for (const dx of [-1, 1]) for (const dz of [-1, 1]) K.b(0.2, 7, 0.2, 0x6b4a2b, x + dx, 3.8, -30 + dz); K.b(3, 0.2, 3, 0x6b4a2b, x, 7.3, -30); K.b(3.2, 0.25, 3.2, HIJAU, x, 9.4, -30); orang(G, g, 1860 + x, x, 7.4, -30, 0, false, { petugas: "tentara" }); }
   for (const x of [-6, 6]) K.b(1.4, 4.6, 1.4, HIJAU, x, 2.6, 33); K.b(13.4, 1.2, 0.9, KREM, 0, 5.3, 33);
   const pg = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.95), new THREE.MeshBasicMaterial({ map: teksturPapanNama(data.nama, "Kawasan Militer") })); pg.position.set(0, 5.3, 33.5); g.add(pg);
