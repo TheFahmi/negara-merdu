@@ -97,6 +97,14 @@
   }
   export function teksRTRW(wl) { return String(wl.rt).padStart(3, "0") + "/" + String(wl.rw).padStart(2, "0"); }
   /* Apartemen (lahan generik dekat pusat — bukan fasilitas server). */
+  /* Gedung kantor & sekolah berkaca bening ber-interior (gedungKaca.js), di
+     lahan berkala yang belum dipakai fasilitas/apartemen. */
+  export const GEDUNG_KACA_BLOK = [
+    { kol: 52, bar: 36, jenis: "kantor", nama: "MENARA MERDU", lantai: 9 },
+    { kol: 28, bar: 36, jenis: "kantor", nama: "GRAHA NIAGA", lantai: 6 },
+    { kol: 60, bar: 28, jenis: "sekolah", nama: "SMA NEGERI 1 MERDU" },
+    { kol: 20, bar: 28, jenis: "sekolah", nama: "SMP NEGERI 1 MERDU" },
+  ];
   export const APARTEMEN_BLOK = [
     { kol: 36, bar: 20, nama: "Merdu Residence" }, { kol: 44, bar: 20, nama: "Taman Sari Tower" },
     { kol: 28, bar: 20, nama: "Griya Kencana" }, { kol: 52, bar: 28, nama: "Puri Harmoni" },

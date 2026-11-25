@@ -20,6 +20,7 @@ import { perbaruiMall } from "./mallDalam.js";
 import { perbaruiPasar } from "./fasilitasBaru.js";
 import { bangunPegunungan } from "./ragam.js";
 import { perbaruiPlazaRamai } from "./plazaRamai.js";
+import { bangunGedungKaca, perbaruiGedungKaca, rintanganGedung } from "./gedungKaca.js";
 import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
 
   /* ================= ANIMASI ================= */
@@ -90,7 +91,8 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
     perbaruiLift(dt); perbaruiApartemenLuar();
     if (diInterior) perbaruiMall(dt); // anak tangga eskalator mall
     perbaruiPasar(dt, t); // pedagang & pembeli Pasar Desa
-    perbaruiPlazaRamai(dt, t); // band, penonton, air mancur menari, umbul-umbul, merpati
+    perbaruiPlazaRamai(dt, t);
+    perbaruiGedungKaca(dt, t); // band, penonton, air mancur menari, umbul-umbul, merpati
     if (animasiKades) {
       animasiKades.position.y = 0.49 + Math.abs(Math.sin(t * 2)) * 0.05; // basis pelataran istana 0.34 (?v=24)
       animasiHidup(animasiKades, t, true);
@@ -183,7 +185,8 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
       // bangunLaluLintas(); // DIMATIKAN 22 Nov (keputusan Fahmi): mobil berjalan kendaraan.js ±320 mati; arteri kota.js 64 yang dipakai. Lihat catatan di loop animasi.
       bangunMobilPajangan(); // 8 mobil detail parkir tepi jalan (plaza & fasilitas)
       bangunApartemen(); rintanganFasilitas.push(...tapakApartemen());
-      bangunTransportasi(); rintanganFasilitas.push(...rintanganTransportasi); // stasiun, kereta, bus
+      bangunTransportasi(); rintanganFasilitas.push(...rintanganTransportasi);
+      bangunGedungKaca(); rintanganFasilitas.push(...rintanganGedung); // kantor & sekolah berkaca ber-interior // stasiun, kereta, bus
       bangunPapanIklan(); // papan iklan sekeliling plaza (isi dari /iklan.json)
       bangunLahanPembangunan(); // petak kosong + fasilitas terbangun (status dari ambilData)
       terapkanKualitas(); // dorong kepadatan awan & info panel sesuai pilihan tersimpan

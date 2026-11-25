@@ -1,7 +1,7 @@
 /* Negara Merdu — modul game "fasilitas" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Fasilitas: papan nama, bendera, model fasilitas, lahan pembangunan, dan pinggiran kota. */
 import { MODEL_BARU } from "./fasilitasBaru.js";
-import { APARTEMEN_BLOK, FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, TAMAN, hashInt, sudutBlok } from "./inti.js";
+import { APARTEMEN_BLOK, GEDUNG_KACA_BLOK, FASILITAS_BLOK, JALAN, KOTA_D, KOTA_W, PITCH, TAMAN, hashInt, sudutBlok } from "./inti.js";
 import { LAMPU_TAMAN, M, REG_TEX, TEX_ATAP, TEX_KILAU, buatKanvasSawah, buatTeksturProsedural, dataPembangunan, gabungGeometri, geometriAtapPelana, meshPelana, kotak, scene, tambahKilau } from "./bersama.js";
 import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
 
@@ -617,7 +617,7 @@ import { TAPAK_FASILITAS, rintanganFasilitas } from "./rumah.js";
   /* Model baru fasilitas lama (fasilitasBaru.js) menimpa model lama —
      taman & toko pancing tetap memakai model di atas. */
   Object.assign(MODEL_FASILITAS, MODEL_BARU);
-  const BLOK_APT = new Set([...APARTEMEN_BLOK.map((a) => a.kol + "," + a.bar), "44,36"]); // lahan yang dipakai apartemen + stasiun/terminal (44,36)
+  const BLOK_APT = new Set([...APARTEMEN_BLOK.map((a) => a.kol + "," + a.bar), ...GEDUNG_KACA_BLOK.map((a) => a.kol + "," + a.bar), "44,36"]); // lahan yang dipakai apartemen + stasiun/terminal (44,36)
   export function bangunLahanPembangunan() {
     const grup = new THREE.Group();
     const parks = [...TAMAN].map((k) => k.split(",").map(Number));
