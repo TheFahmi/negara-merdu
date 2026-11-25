@@ -11,7 +11,6 @@
    - Bus & KRL BERONGGA ber-interior dan BISA DINAIKI pemain (lihat
      bagian NAIK BUS / KRL di bawah); pintu bus geser membuka di halte.
    - Bus tetap menjaga HEADWAY per koridor dan PATUH LAMPU LALU LINTAS
-import { buatJam } from "./jam.js";
      (titik henti per persimpangan, fase sama dengan tiang kota).
    - 5 BUS "TRANS MERDU" berkeliling rute persegi jalan kota (lajur kiri),
      berhenti 3 detik di tiap halte (halte berkanopi di trotoar). */
@@ -22,6 +21,7 @@ import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { batasLampuMerah } from "./kota.js";
+import { buatJam } from "./jam.js";
 
 export const BLOK_STASIUN = { kol: 44, bar: 36 };
 const RZ = sudutBlok(0, 36).z + JALAN / 2;        // as jalan di bawah rel (z 931)
