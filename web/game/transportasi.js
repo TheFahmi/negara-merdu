@@ -102,6 +102,65 @@ function bangunRel(grup) {
   for (const im of [imDek, imT, imK, imP]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; grup.add(im); }
 }
 
+/* ---------- AKSES PERON BISA DIJALANI (25 Nov 2026) ----------
+   Dulu peron layang tidak terhubung ke tanah untuk pejalan. Kini tiap
+   stasiun punya: TANGGA dari tanah (sisi selatan, masuk blok) ke ujung timur
+   peron selatan, dan JEMBATAN PENYEBERANGAN di atas rel & kawat LAA (y 17,8)
+   dengan tangga di ujung barat kedua peron -> peron utara. Zona dipakai
+   tinggiPijak() untuk mengangkat pemain (kamera & karakter) mengikuti
+   tangga/peron; di atas peron pemain tidak bisa jatuh ke rel. */
+export const ZONA_PIJAK = []; // {x0,x1,z0,z1, y} datar | {.., sumbu:"x"|"z", ya, yb} tangga (ya di sisi koordinat kecil)
+const Y_PERON = YD + 1.2, Y_JEMBATAN = YD + 9.2;
+function bangunAksesPeron(grup, xc, zc) {
+  const K = (w, h, d, c, x, y, z) => grup.add(kotak(w, h, d, c, x, y, z));
+  // peron (datar)
+  ZONA_PIJAK.push({ x0: xc - 33, x1: xc + 33, z0: zc + 4.75, z1: zc + 7.85, y: Y_PERON });
+  ZONA_PIJAK.push({ x0: xc - 33, x1: xc + 33, z0: zc - 7.85, z1: zc - 4.75, y: Y_PERON });
+  // 1) tangga tanah -> ujung timur peron selatan (turun ke selatan, masuk blok)
+  const tx0 = xc + 30.4, tx1 = xc + 33, panjang = 15;
+  const za = zc + 7.85, zb = za + panjang;
+  ZONA_PIJAK.push({ x0: tx0, x1: tx1, z0: za, z1: zb, sumbu: "z", ya: Y_PERON, yb: 0.05 });
+  const n = 22;
+  for (let i = 0; i < n; i++) { const f = (i + 0.5) / n; K(tx1 - tx0, Y_PERON / n + 0.05, panjang / n + 0.02, 0xd8d2c6, (tx0 + tx1) / 2, Y_PERON * (1 - f) - Y_PERON / n / 2 + 0.02, za + f * panjang); }
+  for (const x of [tx0 - 0.1, tx1 + 0.1]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, Math.hypot(panjang, Y_PERON)), M(0x8a8f94)); r.position.set(x, Y_PERON / 2 + 1, za + panjang / 2); r.rotation.x = Math.atan2(Y_PERON, panjang); grup.add(r); }
+  K(tx1 - tx0 + 0.6, 0.4, panjang, 0x9aa0a6, (tx0 + tx1) / 2, Y_PERON / 2 - 0.3, za + panjang / 2); // balok penyangga (dilihat dari samping)
+  const pp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.6), new THREE.MeshBasicMaterial({ map: teksturPapanNama("KE PERON", "KRL Merdu") })); pp.position.set((tx0 + tx1) / 2, 2.6, zb + 0.3); grup.add(pp);
+  K(0.15, 2.4, 0.15, 0x7b8086, tx0 - 0.3, 1.2, zb + 0.2); K(0.15, 2.4, 0.15, 0x7b8086, tx1 + 0.3, 1.2, zb + 0.2);
+  // 2) tangga naik di ujung barat kedua peron (naik ke barat) + jembatan melintang rel
+  const bx0 = xc - 33, bx1 = xc - 30.5, sx0 = xc - 30.5, sx1 = xc - 18;
+  for (const sz of [-1, 1]) {
+    const z0 = sz > 0 ? zc + 4.75 : zc - 7.85, z1 = z0 + 3.1;
+    ZONA_PIJAK.push({ x0: sx0, x1: sx1, z0, z1, sumbu: "x", ya: Y_JEMBATAN, yb: Y_PERON });
+    const m = 18, L = sx1 - sx0, tinggi = Y_JEMBATAN - Y_PERON;
+    for (let i = 0; i < m; i++) { const f = (i + 0.5) / m; K(L / m + 0.02, tinggi / m + 0.05, 2.2, 0xcfc9bd, sx0 + f * L, Y_PERON + tinggi * (1 - f) - tinggi / m / 2, (z0 + z1) / 2); }
+    for (const zz of [z0 + 0.35, z1 - 0.35]) { const r = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(L, tinggi), 0.1, 0.1), M(0x8a8f94)); r.position.set(sx0 + L / 2, Y_PERON + tinggi / 2 + 1, zz); r.rotation.z = -Math.atan2(tinggi, L); grup.add(r); }
+  }
+  ZONA_PIJAK.push({ x0: bx0, x1: bx1, z0: zc - 7.85, z1: zc + 7.85, y: Y_JEMBATAN });
+  K(bx1 - bx0, 0.35, 15.7, 0xcfc9bd, (bx0 + bx1) / 2, Y_JEMBATAN - 0.18, zc);                       // lantai jembatan
+  for (const x of [bx0 - 0.05, bx1 + 0.05]) { K(0.1, 1.2, 15.7, 0x8a8f94, x, Y_JEMBATAN + 0.6, zc); K(0.06, 2.6, 15.7, 0x9fc4d6, x, Y_JEMBATAN + 1.6, zc); }
+  K(bx1 - bx0 + 0.8, 0.25, 16, 0x1d5a8f, (bx0 + bx1) / 2, Y_JEMBATAN + 3.1, zc);                   // atap jembatan
+  for (const zz of [zc - 7.6, zc + 7.6]) for (const x of [bx0, bx1]) K(0.25, Y_JEMBATAN, 0.25, 0x7b8086, x, Y_JEMBATAN / 2, zz);
+}
+/* Tinggi pijak di (x,z) bagi pemain yang sekarang di ketinggian yNow:
+   kandidat = tanah (0) + zona datar/tangga di titik itu; dipilih yang paling
+   dekat dengan yNow dalam batas langkah 1,4 m. null = tidak bisa ke sana
+   (mis. melangkah dari peron ke udara di atas rel). */
+export function tinggiPijak(x, z, yNow) {
+  const kand = [0];
+  for (const Z of ZONA_PIJAK) {
+    if (x < Z.x0 || x > Z.x1 || z < Z.z0 || z > Z.z1) continue;
+    if (Z.sumbu === "z") kand.push(Z.ya + (Z.yb - Z.ya) * (z - Z.z0) / (Z.z1 - Z.z0));
+    else if (Z.sumbu === "x") kand.push(Z.ya + (Z.yb - Z.ya) * (x - Z.x0) / (Z.x1 - Z.x0));
+    else kand.push(Z.y);
+  }
+  // zona (tangga/peron) yang terjangkau didahulukan dari tanah, supaya
+  // menaiki tangga dari bawah benar-benar naik; tanah hanya bila tak ada zona terjangkau
+  let best = null, d = 1.4;
+  for (let i = 1; i < kand.length; i++) { const e = Math.abs(kand[i] - yNow); if (e <= d) { d = e; best = kand[i]; } }
+  if (best === null && yNow < 1.4) best = 0;
+  return best;
+}
+
 /* ---------- Stasiun Merdu Utara (rel utara, sumbu istana) ---------- */
 function bangunStasiunUtara(grup) {
   const x = X_UTARA, z = ZN;
@@ -409,6 +468,7 @@ function stopUntuk(J) { // s kepala kereta saat berhenti di tiap stasiun (pusat 
 
 /* Titik henti lampu lalu lintas untuk bus di satu rute jalur: satu per
    persimpangan ber-lampu yang dilalui rute (persimpanganKota di inti.js
+  bangunAksesPeron(grup, XST, RZ); bangunAksesPeron(grup, X_UTARA, ZN);
    sudah mengecualikan kotak jalan tertutup plaza). s = posisi pusat bus
    saat berhenti (moncong di belakang garis henti); sumbu dari arah rute
    di titik itu: "tb" gerak timur-barat, "us" utara-selatan. */
@@ -824,6 +884,16 @@ export function aksiTransportasi(fp) {
     const d = duniaDari(b.g, 2.6, 0, PINTU_BUS_Z);
     if (Math.hypot(fp.x - d.x, fp.z - d.z) < 5.5) return { teks: "Bus Trans Merdu di halte", tombol: "Naik Bus", aksi: () => naik("bus", b) };
   }
+  if ((fp.y || 0) > Y_PERON - 1) { // di peron: naik lewat pintu KRL terdekat yang terbuka
+    for (const k of kereta) {
+      if (!(k.berhenti > 2.5) || k.stasiunKini < 0) continue;
+      for (let ci = 0; ci < k.mobil.length; ci++) for (const lx of [-4.2, 4.2]) {
+        const d = duniaDari(k.mobil[ci], lx, 0, (k.sisiPintu || 1) * 2.0);
+        if (Math.hypot(fp.x - d.x, fp.z - d.z) < 3.2) return { teks: "Pintu KRL terbuka", tombol: "Naik KRL", aksi: () => { naik("kereta", k); NAIK.lx = lx - ci * 14.2; } };
+      }
+    }
+    return { teks: "Peron stasiun · tunggu KRL berhenti", tombol: null };
+  }
   for (let i = 0; i < STASIUN.length; i++) {
     const ps = STASIUN[i].pintu;
     if (Math.hypot(fp.x - ps.x, fp.z - ps.z) < 10) {
@@ -849,6 +919,7 @@ function turun() {
   const fp = kaitNaik.fp, o = NAIK.obj;
   if (NAIK.jenis === "bus") { const h = (o.halteKini && o.halteKini.pos) || duniaDari(o.g, 4, 0, PINTU_BUS_Z); fp.x = h.x; fp.z = h.z; if (h.yaw !== undefined) fp.yaw = h.yaw; fp.pitch = 0; }
   else { const p = STASIUN[Math.max(0, o.stasiunKini)].pintu; fp.x = p.x; fp.z = p.z; fp.yaw = 0; }
+  fp.y = 0;
   Object.assign(NAIK, { aktif: false, jenis: null, obj: null });
   kaitNaik.selesai();
 }

@@ -10,7 +10,7 @@ import { perbaruiMinimapTampil } from "./peta.js";
 import { ketukIklan } from "./iklan.js";
 import { istanaKlik } from "./istana.js";
 import { MALL_KLIK } from "./fasilitasBaru.js";
-import { sedangNaik, updateNaik } from "./transportasi.js";
+import { sedangNaik, tinggiPijak, updateNaik } from "./transportasi.js";
 import { AP, apartemenKlik, pintuApartemen } from "./apartemen.js";
 import { waktuLalu } from "./main.js";
 
@@ -164,7 +164,7 @@ import { waktuLalu } from "./main.js";
 
   /* ================= MODE KAMERA: ORBIT / 1ST PERSON / DRONE ================= */
   export let modeKamera = "orbit";
-  export const fp = { x: 8, z: 22, yaw: 0.35, pitch: 0 };          // 1st Person: posisi di tanah + arah pandang
+  export const fp = { x: 8, z: 22, y: 0, yaw: 0.35, pitch: 0 };          // 1st Person: posisi di tanah + arah pandang
   export const dr = { x: 0, y: 140, z: 320, yaw: 0, pitch: -0.4 }; // Drone: posisi terbang bebas + arah pandang
   /* 3rd Person: posisi pemain memakai fp yang sama; tp = orbit kamera di
      sekeliling karakter. yaw/pitch mengikuti konvensi fp (arah pandang kamera
@@ -297,9 +297,15 @@ import { waktuLalu } from "./main.js";
       const t = tabrakanInterior(nx, nz), pos = jepitInteriorUmum(t.x, t.z); // + kabin lift apartemen
       fp.x = pos.x; fp.z = pos.z;
     } else {
-      const pos = tabrakan(nx, nz);
-      fp.x = jepit(pos.x, -BATAS_X + 2, BATAS_X - 2);
-      fp.z = jepit(pos.z, -BATAS_Z + 2, BATAS_Z - 2);
+      /* di tanah: tabrakan biasa; di ketinggian (tangga/peron/jembatan stasiun):
+         tanpa tabrakan tanah, tapi hanya boleh melangkah ke zona pijak */
+      const pos = (fp.y || 0) > 0.6 ? { x: nx, z: nz } : tabrakan(nx, nz);
+      const px = jepit(pos.x, -BATAS_X + 2, BATAS_X - 2), pz = jepit(pos.z, -BATAS_Z + 2, BATAS_Z - 2);
+      let h = tinggiPijak(px, pz, fp.y || 0);
+      if (h === null) { // geser satu sumbu saja (meluncur di tepi peron)
+        const hx = tinggiPijak(px, fp.z, fp.y || 0), hz = tinggiPijak(fp.x, pz, fp.y || 0);
+        if (hx !== null) { fp.x = px; fp.y = hx; } else if (hz !== null) { fp.z = pz; fp.y = hz; }
+      } else { fp.x = px; fp.z = pz; fp.y = h; }
     }
     return Math.hypot(fp.x - ox, fp.z - oz);
   }
@@ -307,7 +313,7 @@ import { waktuLalu } from "./main.js";
     if (sedangNaik()) { updateNaik(dt, camera, fp, vektorGerak()); ikutiMatahari(fp.x, fp.z); return; } // menumpang bus / KRL
     langkahPemain(dt, fp.yaw);
     if (diInterior) camera.position.set(fp.x, INT.y + 1.6 + (AP.goyang || 0), fp.z); // mata 1,6 di atas lantai interior (+ getar kabin lift)
-    else camera.position.set(fp.x, 1.6, fp.z); // setinggi mata karakter (±1,6 satuan)
+    else camera.position.set(fp.x, (fp.y || 0) + 1.6, fp.z); // setinggi mata karakter (±1,6 satuan) di atas pijakan
     camera.rotation.set(fp.pitch, fp.yaw, 0);
     ikutiMatahari(fp.x, fp.z);
   }
@@ -336,9 +342,9 @@ import { waktuLalu } from "./main.js";
     for (const f of [1, 0.75, 0.5, 0.3, 0.15]) {
       const c = posisiKameraKetiga(fp.x, fp.z, tp.yaw, tp.pitch, tp.jarak * f);
       const uji = tabrakan(c.x, c.z);
-      if (Math.abs(uji.x - c.x) < 0.01 && Math.abs(uji.z - c.z) < 0.01) return c;
+      if ((fp.y || 0) > 0.6 || (Math.abs(uji.x - c.x) < 0.01 && Math.abs(uji.z - c.z) < 0.01)) { c.y += fp.y || 0; return c; }
     }
-    return posisiKameraKetiga(fp.x, fp.z, tp.yaw, tp.pitch, tp.jarak * 0.15);
+    const c0 = posisiKameraKetiga(fp.x, fp.z, tp.yaw, tp.pitch, tp.jarak * 0.15); c0.y += fp.y || 0; return c0;
   }
   export function updateKetiga(dt) {
     const ox = fp.x, oz = fp.z;
@@ -348,7 +354,7 @@ import { waktuLalu } from "./main.js";
         tp.hadap = lerpSudut(tp.hadap, Math.atan2(fp.x - ox, fp.z - oz), 1 - Math.exp(-dt * 12));
       const bob = animasiJalan(karSaya, jarak, dt);
       animasiHidup(karSaya, waktuLalu, jarak <= 0.001);
-      karSaya.position.set(fp.x, 0.32 + bob * 0.07, fp.z);
+      karSaya.position.set(fp.x, (fp.y || 0) + 0.32 + bob * 0.07, fp.z);
       karSaya.rotation.y = tp.hadap;
     }
     const id = kameraKetigaIdeal();
