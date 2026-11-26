@@ -1188,7 +1188,11 @@ export function updateNaik(dt, camera, fp, gerak) {
   let o, lx = NAIK.lx;
   if (NAIK.jenis === "bus") { NAIK.lx = Math.max(-0.95, Math.min(0.95, NAIK.lx)); NAIK.lz = Math.max(-4.7, Math.min(3.9, NAIK.lz)); o = NAIK.obj.g; lx = NAIK.lx; }
   else {
-    NAIK.lx = Math.max(-42.6 - 4.6, Math.min(4.6, NAIK.lx)); // di antara sekat kabin depan & belakang NAIK.lz = Math.max(-0.95, Math.min(0.95, NAIK.lz));
+    // BUG lama: penjepit lebar (lz) ikut tertulis DI DALAM komentar baris ini,
+    // jadi tidak pernah dijalankan -> pemain bisa berjalan menembus dinding
+    // samping & keluar dari KRL. Kini dua penjepit terpisah.
+    NAIK.lx = Math.max(-42.6 - 4.6, Math.min(4.6, NAIK.lx)); // di antara sekat kabin depan & belakang
+    NAIK.lz = Math.max(-0.95, Math.min(0.95, NAIK.lz));      // tetap di lorong, di antara kursi kiri & kanan
     const i = Math.max(0, Math.min(3, Math.round(-NAIK.lx / 14.2)));
     o = NAIK.obj.mobil[i]; lx = NAIK.lx + i * 14.2;
   }
