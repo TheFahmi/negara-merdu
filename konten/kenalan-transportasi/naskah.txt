@@ -1,0 +1,36 @@
+KENALAN TRANSPORTASI — NEGARA MERDU: BUS TRANS MERDU & KRL MERDU
+Naskah VO (semua peran: profil Narator Pinarak e076e62d, VoiceStudio X99, satu take per segmen)
+Fakta terverifikasi dari game LIVE 24 Nov 2026 (chunk live merdu.id + observasi scene di Alienware):
+- Bus Trans Merdu: 9 bus beroperasi, 3 rute (Koridor 1 keliling kota; Koridor 2A & 2B lewat Plaza dan Istana),
+  9 halte (6 di Koridor 1 + 2 Halte Plaza + Halte Istana), berhenti ±7 detik di halte, pintu geser membuka,
+  warga yang menunggu naik dan ada yang turun, patuh lampu lalu lintas.
+  (Catatan: string "TERMINAL BUS MERDU" ada di kode, tapi registrasi scene live hanya menemukan 9 grup bus
+  dan semuanya bergerak — tidak ada bus statis terminal yang teramati, jadi terminal TIDAK diklaim di video.)
+- KRL Merdu: 4 rangkaian x 4 gerbong, rel layang keliling kota, 2 jalur berlawanan arah,
+  2 stasiun: Stasiun Merdu (selatan) & Stasiun Merdu Utara, berhenti 14 detik di stasiun,
+  pintu membuka ke sisi peron, warga naik-turun di peron.
+- Cara naik (pemain): dekat pintu bus yang sedang berhenti di halte -> tombol "Naik Bus";
+  di pintu masuk stasiun saat KRL berhenti -> tombol "Naik KRL". Di dalam bisa berjalan di lorong
+  (KRL: antar gerbong); turun saat kendaraan berhenti di halte/stasiun berikutnya.
+Capture: Alienware (GPU RTX 3070 Ti), metode animator rAF + kamera ikut kendaraan + screencast (resep Episode 5 vs3).
+
+SEG1 — Drone pembuka kota + rel layang (narator):
+"Assalamu'alaikum, warga Negara Merdu! Hari ini kita kenalan dengan transportasi negara kita: bus Trans Merdu dan KRL Merdu!"
+
+SEG2 — Bus luar: jalan di koridor, berhenti di halte, warga naik (narator):
+"Ini bus Trans Merdu. Sembilan bus melayani tiga rute: Koridor Satu keliling kota, dan Koridor Dua lewat Plaza dan Istana. Di setiap halte bus berhenti, pintunya membuka — warga yang menunggu naik, bus pun jalan lagi."
+
+SEG3 — Interior bus (narator):
+"Di dalam bus ada deretan kursi dan tiang pegangan untuk berdiri. Duduk yang rapi ya — dari jendela, kamu bisa lihat kota kita lewat."
+
+SEG4 — Bus patuh lampu lalu lintas (narator):
+"Sama seperti kendaraan lain di Negara Merdu, bus Trans Merdu patuh lampu lalu lintas. Lampu merah berhenti, lampu hijau jalan lagi."
+
+SEG5 — KRL di Stasiun Merdu: datang, pintu buka, warga naik, berangkat (narator):
+"Kalau yang ini, KRL Merdu! Kereta layang keliling kota: empat rangkaian, dua arah berlawanan. KRL berhenti di Stasiun Merdu dan Stasiun Merdu Utara — empat belas detik di tiap stasiun, cukup untuk naik dan turun."
+
+SEG6 — Interior KRL + tiba di stasiun lain + kartu cara naik (narator):
+"Kamu juga bisa naik beneran! Datang ke halte atau stasiun, tunggu kendaraannya berhenti, lalu tekan tombol Naik. Di dalam, jalan saja di lorongnya — turun lagi saat kendaraan berhenti di halte atau stasiun berikutnya."
+
+SEG7 — Penutup senja: KRL melintas di rel layang, bus di jalan bawah (narator):
+"Jadi tidak perlu jalan kaki keliling negara — naik bus atau KRL saja. Yang follow bukan penonton — tapi warga. Daftar di merdu.id!"

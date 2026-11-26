@@ -164,6 +164,11 @@ func genderSah(g string) bool { return g == "L" || g == "P" }
 // tersimpan, jadi akun pra-daftar lama pun tertangkap).
 func pinDefaultkah(w *db.Warga) bool { return db.PINBenar(PINDefault, w) }
 
+// PINMasihDefault: dipakai paket lain (pemilu) untuk menolak aksi penting
+// dari akun yang PIN-nya masih default (akun pra-daftar follower bisa
+// dimasuki siapa pun yang tahu username-nya selama PIN belum diganti).
+func PINMasihDefault(w *db.Warga) bool { return pinDefaultkah(w) }
+
 // genderKosong: gender belum diisi (NULL/kosong).
 func genderKosong(w *db.Warga) bool { return w.Gender == nil || *w.Gender == "" }
 

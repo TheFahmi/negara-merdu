@@ -1,0 +1,62 @@
+{
+ "d1": {
+  "durasi": 6.2,
+  "frame_jendela": 41,
+  "frame_keluar": 149,
+  "unik_dipakai": 39,
+  "fps_unik": 6.3,
+  "jarak_min": 0.092,
+  "jarak_maks": 0.334,
+  "blend": true
+ },
+ "a1": {
+  "durasi": 15.6,
+  "frame_jendela": 281,
+  "frame_keluar": 374,
+  "unik_dipakai": 273,
+  "fps_unik": 17.5,
+  "jarak_min": 0.014,
+  "jarak_maks": 0.239,
+  "blend": false
+ },
+ "a2": {
+  "durasi": 12.6,
+  "frame_jendela": 226,
+  "frame_keluar": 302,
+  "unik_dipakai": 218,
+  "fps_unik": 17.3,
+  "jarak_min": 0.024,
+  "jarak_maks": 0.281,
+  "blend": false
+ },
+ "k1": {
+  "durasi": 19.2,
+  "frame_jendela": 183,
+  "frame_keluar": 461,
+  "unik_dipakai": 177,
+  "fps_unik": 9.2,
+  "jarak_min": 0.058,
+  "jarak_maks": 0.389,
+  "blend": true
+ },
+ "v1": {
+  "durasi": 12.2,
+  "frame_jendela": 181,
+  "frame_keluar": 293,
+  "unik_dipakai": 178,
+  "fps_unik": 14.6,
+  "jarak_min": 0.047,
+  "jarak_maks": 0.29,
+  "blend": false
+ },
+ "p1": {
+  "durasi": 11.9,
+  "frame_jendela": 98,
+  "frame_keluar": 286,
+  "unik_dipakai": 97,
+  "fps_unik": 8.2,
+  "jarak_min": 0.068,
+  "jarak_maks": 0.351,
+  "blend": true
+ }
+}

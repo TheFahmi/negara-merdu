@@ -1,0 +1,46 @@
+{
+ "kd": {
+  "frame": 625,
+  "info": {
+   "kereta": 1,
+   "dwell_mulai_rel": 0.0,
+   "berangkat_rel": 19.35,
+   "rekam_akhir_rel": 43.85
+  }
+ },
+ "lm2": {
+  "frame": 1642,
+  "info": {
+   "bus": 0,
+   "kandidat": [
+    {
+     "mulai_rel": 57.48,
+     "akhir_rel": 60.66,
+     "pos": [
+      581.1,
+      -584.5
+     ],
+     "dur": 3.18,
+     "lampu": false
+    },
+    {
+     "mulai_rel": 98.15,
+     "akhir_rel": 108.47,
+     "pos": [
+      682.5,
+      -508.5
+     ],
+     "dur": 10.32,
+     "lampu": true
+    }
+   ],
+   "dwell_mulai_rel": 98.15,
+   "dwell_akhir_rel": 108.47,
+   "dwell_pos": [
+    682.5,
+    -508.5
+   ],
+   "rekam_akhir_rel": 114.81
+  }
+ }
+}

@@ -1,0 +1,129 @@
+{
+ "d1": {
+  "frame": 91,
+  "info": {
+   "dur": 10
+  }
+ },
+ "bl": {
+  "frame": 602,
+  "info": {
+   "bus": 1,
+   "interior": false,
+   "kandidat": [
+    {
+     "mulai_rel": 10.13,
+     "akhir_rel": 13.57,
+     "pos": [
+      682.5,
+      -342.9
+     ],
+     "dur": 3.44,
+     "utama": false
+    },
+    {
+     "mulai_rel": 31.58,
+     "akhir_rel": 36.22,
+     "pos": [
+      682.5,
+      -258.9
+     ],
+     "dur": 4.63,
+     "utama": false
+    },
+    {
+     "mulai_rel": 53.85,
+     "akhir_rel": 57.93,
+     "pos": [
+      682.5,
+      -174.9
+     ],
+     "dur": 4.08,
+     "utama": false
+    }
+   ],
+   "dwell_mulai_rel": 53.85,
+   "dwell_akhir_rel": 57.93,
+   "dwell_pos": [
+    682.5,
+    -174.9
+   ],
+   "rekam_akhir_rel": 65.42
+  }
+ },
+ "bd": {
+  "frame": 2380,
+  "info": {
+   "bus": 1,
+   "interior": true,
+   "kandidat": [
+    {
+     "mulai_rel": 9.13,
+     "akhir_rel": 12.38,
+     "pos": [
+      682.5,
+      -90.9
+     ],
+     "dur": 3.25,
+     "utama": false
+    },
+    {
+     "mulai_rel": 153.31,
+     "akhir_rel": 162.52,
+     "pos": [
+      682.5,
+      444.6
+     ],
+     "dur": 9.21,
+     "utama": true
+    }
+   ],
+   "dwell_mulai_rel": 153.31,
+   "dwell_akhir_rel": 162.52,
+   "dwell_pos": [
+    682.5,
+    444.6
+   ],
+   "rekam_akhir_rel": 170.03
+  }
+ },
+ "lm": {
+  "frame": 8370,
+  "info": {
+   "titik": "B-east",
+   "gagal": "timeout titik B-east"
+  }
+ },
+ "kl": {
+  "frame": 668,
+  "info": {
+   "stasiun": 0,
+   "kereta": 1,
+   "dwell_mulai_rel": 25.6,
+   "dwell_akhir_rel": 47.2,
+   "rekam_akhir_rel": 52.71
+  }
+ },
+ "kd": {
+  "frame": 0,
+  "info": {
+   "gagal": "tidak ada dwell Merdu"
+  }
+ },
+ "ku": {
+  "frame": 670,
+  "info": {
+   "stasiun": 1,
+   "kereta": 1,
+   "dwell_mulai_rel": 24.38,
+   "dwell_akhir_rel": 45.75,
+   "rekam_akhir_rel": 51.18
+  }
+ },
+ "p1": {
+  "frame": 110,
+  "info": {
+   "dur": 11
+  }
+ }
+}

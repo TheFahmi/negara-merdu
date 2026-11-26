@@ -1,0 +1,53 @@
+DRAMA NEGARA MERDU — "MUSYAWARAH WARGA: KOPDES ATAU MALL?"
+Format: drama rapat warga memutuskan usulan pembangunan berikutnya; penutup membuka
+VOTING DI KOMENTAR (KOPDES / MALL). Durasi target 60–75 detik, 720x1280, 24fps.
+Semua suara SATU profil: Narator Pinarak e076e62d (VoiceStudio X99), satu take kontinu
+per peran/segmen. Presiden = suara yang sama.
+Capture: ALIENWARE (RTX 3070 Ti), resep baku Ep5 vs3/Ep6/Kenalan/Drama Trans Merdu.
+
+Fakta live (diverifikasi 24 Nov 2026):
+- Kas Negara Rp2.130.000 (kas.json dibaca ulang hari produksi).
+- Koperasi Desa Merah Putih — Blok 997 (kol 36, bar 12, inti.js FASILITAS_BLOK),
+  status BELUM terbangun; lahan pembangunan kosong. Pengusul: Aldi Saputra
+  (BUKAN warga; username IG belum teridentifikasi — disebut namanya saja).
+- Merdu Mall — Blok 2917 (kol 36, bar 36), status BELUM terbangun; lahan kosong.
+  Pengusul: @4caa_caaaee (warga ke-6, Blok 1880 Kav 6), usul di komentar Episode 2.
+  Handle TIDAK dibacakan di VO (TTS tidak wajar) — tampil di overlay & caption.
+- GET /api/pembangunan hanya memuat 10 fasilitas inti (koperasi/mall belum masuk
+  daftar API) — keduanya fasilitas rencana dari data klien; visual = lahan kosong,
+  tidak ada bangunan jadi yang ditampilkan.
+
+Tokoh warga (diperankan NPC in-game berlabel, pola drama sebelumnya):
+- Warga pro-kopdes: @drennvanzz_ — warga ke-5, Blok 1880 Kav 5, pemilik Toko Pancing.
+- Warga pro-mall: @4caa_caaaee — warga ke-6, pengusul mall membela usulannya sendiri.
+
+================================================================
+SEG1 — PAK PRESIDEN (membuka musyawarah, di depan Istana Negara):
+"Warga Negara Merdu, mari bermusyawarah. Kas negara kita saat ini
+dua juta seratus tiga puluh ribu rupiah. Ada dua usulan pembangunan
+yang sedang antre. Malam ini, kita dengar keduanya."
+
+SEG2 — NARATOR (drone di atas lahan Blok 997 — lahan kosong):
+"Usulan pertama: Koperasi Desa, diusulkan Aldi Saputra. Lahannya sudah
+disiapkan di Blok 997. Warga bisa belanja kebutuhan dan simpan-pinjam
+di koperasi milik bersama — untungnya kembali ke warga."
+
+SEG3 — NARATOR (drone di atas lahan Blok 2917 — lahan kosong):
+"Usulan kedua: Merdu Mall, diusulkan lewat komentar Episode 2.
+Lahannya di Blok 2917, di selatan negara. Pusat belanja sekaligus
+tempat nongkrong warga, kata pengusulnya."
+
+SEG4 — @drennvanzz_ (warga, di plaza — pro kopdes):
+"Aku dukung koperasi! Belanja dekat rumah, harga untuk warga,
+untungnya juga balik ke warga."
+
+SEG5 — @4caa_caaaee (warga, di plaza — pro mall):
+"Kalau aku tetap tim mall! Negara ini butuh tempat nongkrong yang
+seru. Belanja bisa, santai juga bisa."
+
+SEG6 — PAK PRESIDEN (penutup, wide kota/Istana — VOTING DIBUKA):
+"Musyawarah selesai. Keputusannya di tangan warga: voting dibuka di
+komentar video ini. Tulis KOPDES, atau MALL. Dukungan terbanyak,
+itulah yang dibangun duluan — dan pengusulnya jadi pemiliknya.
+Yang follow bukan penonton, tapi warga!"
+================================================================

@@ -1,0 +1,101 @@
+{
+ "b1": {
+  "segmen": "d8",
+  "mulai_rel": 4.5,
+  "durasi": 6.5,
+  "frame_jendela": 29,
+  "frame_keluar": 156,
+  "unik_dipakai": 29,
+  "fps_unik": 4.5,
+  "jarak_min": 0.094,
+  "jarak_maks": 0.951
+ },
+ "b2": {
+  "segmen": "ist",
+  "mulai_rel": 0.5,
+  "durasi": 9.5,
+  "frame_jendela": 109,
+  "frame_keluar": 228,
+  "unik_dipakai": 109,
+  "fps_unik": 11.5,
+  "jarak_min": 0.05,
+  "jarak_maks": 0.336
+ },
+ "b3": {
+  "segmen": "hl",
+  "mulai_rel": 1.2,
+  "durasi": 9.5,
+  "frame_jendela": 115,
+  "frame_keluar": 228,
+  "unik_dipakai": 115,
+  "fps_unik": 12.1,
+  "jarak_min": 0.049,
+  "jarak_maks": 0.219
+ },
+ "b4": {
+  "segmen": "bd8",
+  "mulai_rel": 230.5,
+  "durasi": 7.5,
+  "frame_jendela": 80,
+  "frame_keluar": 180,
+  "unik_dipakai": 80,
+  "fps_unik": 10.7,
+  "jarak_min": 0.041,
+  "jarak_maks": 0.361
+ },
+ "b5": {
+  "segmen": "lm8",
+  "mulai_rel": 10.5,
+  "durasi": 7.5,
+  "frame_jendela": 98,
+  "frame_keluar": 180,
+  "unik_dipakai": 98,
+  "fps_unik": 13.1,
+  "jarak_min": 0.038,
+  "jarak_maks": 0.26
+ },
+ "b6": {
+  "segmen": "kl8",
+  "mulai_rel": 42.5,
+  "durasi": 8.5,
+  "frame_jendela": 102,
+  "frame_keluar": 204,
+  "unik_dipakai": 102,
+  "fps_unik": 12.0,
+  "jarak_min": 0.039,
+  "jarak_maks": 0.334
+ },
+ "b7": {
+  "segmen": "kd8",
+  "mulai_rel": 17.5,
+  "durasi": 6.0,
+  "frame_jendela": 81,
+  "frame_keluar": 144,
+  "unik_dipakai": 81,
+  "fps_unik": 13.5,
+  "jarak_min": 0.041,
+  "jarak_maks": 0.201
+ },
+ "b8": {
+  "segmen": "ku8",
+  "mulai_rel": 66.0,
+  "durasi": 7.5,
+  "frame_jendela": 94,
+  "frame_keluar": 180,
+  "unik_dipakai": 94,
+  "fps_unik": 12.5,
+  "jarak_min": 0.051,
+  "jarak_maks": 0.202
+ },
+ "b9": {
+  "segmen": "p8",
+  "mulai_rel": 0.3,
+  "durasi": 8.5,
+  "frame_jendela": 77,
+  "frame_keluar": 204,
+  "unik_dipakai": 77,
+  "fps_unik": 9.1,
+  "jarak_min": 0.082,
+  "jarak_maks": 0.302
+ }
+}

@@ -1,0 +1,32 @@
+{
+ "kop": {
+  "frame": 252,
+  "info": {
+   "dur": 14
+  }
+ },
+ "mal": {
+  "frame": 207,
+  "info": {
+   "dur": 14
+  }
+ },
+ "plzA": {
+  "frame": 234,
+  "info": {
+   "dur": 11
+  }
+ },
+ "plzB": {
+  "frame": 179,
+  "info": {
+   "dur": 11
+  }
+ },
+ "p9": {
+  "frame": 170,
+  "info": {
+   "dur": 13
+  }
+ }
+}

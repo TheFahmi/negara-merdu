@@ -1,0 +1,22 @@
+EPISODE 6 — NEGARA MERDU: 46 WARGA
+Naskah VO (semua peran: profil Narator Pinarak e076e62d, VoiceStudio X99, satu take per segmen)
+Data live 24 Nov 2026: 46 warga; kas Rp2.130.000 (113 like terkumpul); target Apartemen Blok 2120 Rp50.000.000.
+Capture: Alienware (GPU RTX 3070 Ti), metode animator rAF + screencast (resep Episode 5 vs3).
+
+SEG1 — Drone pembuka + judul (narator):
+"Assalamu'alaikum, warga Negara Merdu! Episode keenam: negara kita makin ramai — empat puluh enam warga!"
+
+SEG2 — Absen #41–#43 (Presiden menyapa):
+"Selamat datang, warga baru! Nomor empat puluh satu: eka_catherine_, Rumah Nomor 41, Blok 1881 Kavling 16. Nomor empat puluh dua: ramadaniferlita, Kavling 17. Nomor empat puluh tiga: dubaicwikuki4life, Kavling 18."
+
+SEG3 — Absen #44–#46:
+"Nomor empat puluh empat: asila_cill, Kavling 19. Nomor empat puluh lima: xyjr.naaa, Kavling 20. Dan warga keempat puluh enam: pricilliady, Kavling 21. Blok 1881 tinggal empat kavling lagi menuju penuh!"
+
+SEG4 — Laporan kas:
+"Laporan kas negara: seratus tiga belas like terkumpul dari semua postingan. Kas sekarang dua juta seratus tiga puluh ribu rupiah. Target besar kita tetap: Apartemen Merdu Residence di Blok 2120, lima puluh juta rupiah. Setiap like dari kamu bernilai sepuluh ribu rupiah untuk kas negara."
+
+SEG5 — Voting usulan:
+"Usulan yang masih antre: Kopdes dari Aldi Saputra, dan Mall dari 4caa_caaaee. Like usulan favoritmu, atau tulis usulanmu sendiri di komentar. Usulan dengan like terbanyak dibangun duluan — dan pengusulnya jadi owner-nya!"
+
+SEG6 — Penutup:
+"Menuju seratus warga: di warga keseratus, akan ada Perayaan Seratus Warga di negara ini. Pemilu dibuka di sepuluh ribu warga. Yang follow bukan penonton — tapi warga. Daftar di merdu.id, dapat rumah, KTP, dan Kartu Keluarga!"

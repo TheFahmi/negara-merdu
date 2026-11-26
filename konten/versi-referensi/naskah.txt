@@ -1,0 +1,4 @@
+Seg1: "Ini Negara Merdu — negara 3D yang hidup di browser kamu. Penduduknya bukan NPC. Mereka orang asli: 47 warga, masing-masing punya rumah, KTP, dan Kartu Keluarga."
+Seg2: "Setiap warga yang daftar langsung dapat rumah di kavlingnya sendiri. Ada jalan raya, lampu merah, bus Trans Merdu, sampai KRL yang bisa kamu naiki."
+Seg3: "Rumahnya bisa dimasuki. Di dalam game kamu bisa ngobrol sesama warga, ikut pemilu, dan mengusulkan pembangunan. Masjid, taman, dan toko pancing ini semua usulan warga."
+Seg4: "Kas negaranya asli dari engagement kalian: tujuh juta seratus sembilan puluh ribu rupiah, terkumpul dari like dan share. Mau jadi warga? Komentar RUMAH di postingan ini — rumahmu langsung dibangun. Gratis, tanpa download, main di merdu.id. Yang follow bukan penonton — tapi warga."

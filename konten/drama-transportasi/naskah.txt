@@ -1,0 +1,44 @@
+DRAMA NEGARA MERDU — "HARI PERTAMA TRANS MERDU"
+Format: drama bercerita (sekuel video Kenalan Transportasi). Durasi target 60–75 detik.
+Semua suara SATU profil: Narator Pinarak e076e62d (VoiceStudio X99), satu take kontinu
+per peran/segmen. Presiden = suara yang sama.
+Tokoh warga: @jr.natharaa — warga ke-47 (terbaru, data live 24 Nov 2026),
+Rumah No. 47, Blok 1881 Kavling 22. Belum pernah muncul di video mana pun.
+Fakta live (terverifikasi produksi Kenalan Transportasi, 24 Nov 2026):
+- Bus Trans Merdu: 9 bus, 3 rute (Koridor 1 keliling kota; Koridor 2A/2B lewat Plaza
+  dan Istana), 9 halte, berhenti ±7 detik, pintu geser membuka, warga menunggu naik.
+- KRL Merdu: 4 rangkaian x 4 gerbong, dua arah berlawanan, HANYA 2 stasiun:
+  Stasiun Merdu (selatan) dan Stasiun Merdu Utara, berhenti 14 detik.
+- Cara naik: dekati pintu saat kendaraan berhenti -> tombol "Naik Bus" / "Naik KRL".
+Kas Negara Rp2.130.000 (kas.json, dibaca 24 Nov 2026) — tidak disinggung di naskah ini.
+
+================================================================
+SEG1 — NARATOR (drone pagi: kota, rel layang, mendekat ke Istana Negara):
+"Pagi yang cerah di Negara Merdu. Hari ini hari yang ditunggu-tunggu:
+hari pertama bus Trans Merdu dan KRL Merdu resmi beroperasi untuk warga!"
+
+SEG2 — PAK PRESIDEN (di depan Istana Negara, mengumumkan):
+"Mulai hari ini, tidak ada lagi jalan kaki keliling negara. Sembilan bus
+dan KRL kita siap mengantar warga sampai tujuan. Ini transportasi negara —
+untuk warga."
+
+SEG3 — @jr.natharaa (di halte, datang terburu-buru, bus tiba):
+"Aduh, aku telat bangun! Busnya sudah lewat belum, ya?
+Itu dia datang! Untung pintunya masih terbuka — aku ikut!"
+
+SEG4 — NARATOR (naik bus, interior, bus berhenti di lampu merah):
+"Pintu membuka, warga yang mengantre naik satu per satu. Bus pun melaju
+tertib — lampu merah, berhenti dulu."
+
+SEG5 — @jr.natharaa (turun dari bus, ke Stasiun Merdu, KRL tiba, naik):
+"Turun di sini, ganti KRL ke Merdu Utara. Itu dia keretanya datang!
+Di dalamnya bisa jalan di lorong — pindah gerbong juga bisa."
+
+SEG6 — PAK PRESIDEN (menyambut di Stasiun Merdu Utara):
+"Selamat datang di Stasiun Merdu Utara. Cepat dan nyaman, kan?
+Begitulah transportasi di negara kita."
+
+SEG7 — NARATOR (penutup: kota, KRL melintas, bus di jalan):
+"Hari pertama Trans Merdu berjalan lancar. Besok, giliranmu yang naik.
+Yang follow bukan penonton — tapi warga. Daftar di merdu.id!"
+================================================================

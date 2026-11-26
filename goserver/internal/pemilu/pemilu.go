@@ -394,6 +394,10 @@ func (h *Handler) Calon(w http.ResponseWriter, r *http.Request) {
 		galat(w, 401, "Masuk dulu untuk mencalonkan diri")
 		return
 	}
+	if warga.PINMasihDefault(row) {
+		galat(w, 403, "Ganti dulu PIN default 123456 lewat Lengkapi Profil sebelum ikut pemilu — supaya akunmu tidak bisa dipakai orang lain")
+		return
+	}
 	data := bacaJSON(r)
 	if data == nil {
 		galat(w, 400, "Data tidak valid")
@@ -451,6 +455,10 @@ func (h *Handler) Pilih(w http.ResponseWriter, r *http.Request) {
 	row := warga.DariHeader(ctx, h.DB.Pool, r)
 	if row == nil {
 		galat(w, 401, "Masuk dulu untuk memilih")
+		return
+	}
+	if warga.PINMasihDefault(row) {
+		galat(w, 403, "Ganti dulu PIN default 123456 lewat Lengkapi Profil sebelum ikut pemilu — supaya akunmu tidak bisa dipakai orang lain")
 		return
 	}
 	data := bacaJSON(r)

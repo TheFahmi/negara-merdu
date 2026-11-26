@@ -1,0 +1,53 @@
+TEASER NEGARA MERDU — "APARTEMEN MERDU RESIDENCE, BLOK 2120"
+Format: teaser pendek ±40 detik, 720x1280. Bukan episode absen.
+Fakta live (dicek 23 Nov 2026 pagi):
+- Apartemen Merdu Residence: Blok 2120 (persis selatan plaza), Rp50.000.000,
+  status BELUM terbangun — lahan kosong berpagar + papan nama.
+- Kas Negara: Rp1.820.000 (kas.json, hitungan 22 Nov 20:40) — kurang
+  Rp48.180.000 dari target. Tarif: like Rp10.000, share/repost Rp1.000.000.
+- Warga: 38 (GET /api/statistik merdu.id). Fasilitas terbangun 3/10:
+  Taman (1879), Toko Pancing (1882), Masjid (2285).
+- Adegan gedung berdiri = VISUALISASI RENCANA: model Residensia 10 dari game
+  dihidupkan murni sisi klien pada sesi syuting (status server tidak diubah);
+  narasi + kartu di video membingkainya sebagai "wujudnya nanti".
+
+Suara: SEMUA peran profil Narator Pinarak e076e62d (VoiceStudio X99) —
+aturan final Fahmi 22 Nov: suara Pak Presiden = suara narator Episode 1-4.
+Dialog Presiden digenerate SATU take kontinu, dipotong di jeda kalimat.
+
+================================================================
+ADEGAN 1 — PEMBUKA (drone menyapu pusat kota -> berhenti di lahan
+kosong Blok 2120, berpagar + papan nama apartemen)
+NARATOR:
+"Negara Merdu tidak berhenti membangun. Sesudah taman, toko pancing,
+dan masjid, Pak Presiden menyiapkan proyek terbesar dalam sejarah
+negara ini."
+
+ADEGAN 2 — PENGUMUMAN (Pak Presiden + warga di depan lahan Blok 2120,
+papan nama apartemen di belakangnya)
+PAK PRESIDEN (satu take, dua potongan):
+"Di Blok dua satu dua nol ini, akan berdiri Apartemen Merdu
+Residence."
+"Sepuluh lantai, lift kaca panorama, dan kolam renang di atapnya.
+Warga Negara Merdu nanti tidak cuma punya rumah. Mereka juga bisa
+tinggal di apartemen."
+
+ADEGAN 3 — VISUALISASI + KAS (drone mengelilingi gedung visualisasi:
+naik dari lobi kaca ke balkon-balkon, lift kaca, kolam di atap;
+kartu label "VISUALISASI RENCANA" tampil selama adegan ini)
+NARATOR:
+"Beginilah wujudnya nanti. Harganya lima puluh juta rupiah. Kas
+negara kita baru terkumpul satu juta delapan ratus dua puluh ribu
+rupiah. Setiap like bernilai sepuluh ribu, setiap share satu juta.
+Bantu isi kasnya, dan apartemen ini akan berdiri."
+(Kartu kas menyusul: TARGET Rp50.000.000 — TERKUMPUL Rp1.820.000 —
+KURANG Rp48.180.000)
+
+ADEGAN 4 — PENUTUP (senja, gedung visualisasi dari jalan; kartu
+penutup tengah layar)
+NARATOR:
+"Yang follow bukan penonton, tapi warga."
+Kartu penutup: SEGERA — APARTEMEN MERDU RESIDENCE — Blok 2120 ·
+Rp50.000.000 — Yang follow bukan penonton, tapi warga. — Daftar di
+merdu.id
+================================================================

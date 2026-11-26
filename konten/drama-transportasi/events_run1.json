@@ -1,0 +1,130 @@
+{
+ "d8": {
+  "frame": 48,
+  "info": {
+   "dur": 11
+  }
+ },
+ "ist": {
+  "frame": 152,
+  "info": {
+   "dur": 13
+  }
+ },
+ "hl": {
+  "frame": 286,
+  "info": {
+   "halte": [
+    37.02,
+    57.5
+   ],
+   "bus": "b8",
+   "dwell_mulai_rel": 6.11,
+   "dwell_akhir_rel": 18.05,
+   "rekam_akhir_rel": 23.27
+  }
+ },
+ "bd8": {
+  "frame": 3317,
+  "info": {
+   "bus": 0,
+   "interior": true,
+   "kandidat": [
+    {
+     "mulai_rel": 29.09,
+     "akhir_rel": 32.67,
+     "pos": [
+      -6.9,
+      -584.5
+     ],
+     "dur": 3.58,
+     "utama": false
+    },
+    {
+     "mulai_rel": 50.66,
+     "akhir_rel": 54.7,
+     "pos": [
+      77.1,
+      -584.5
+     ],
+     "dur": 4.04,
+     "utama": false
+    },
+    {
+     "mulai_rel": 224.96,
+     "akhir_rel": 236.53,
+     "pos": [
+      682.5,
+      -508.5
+     ],
+     "dur": 11.57,
+     "utama": false
+    }
+   ],
+   "dwell_mulai_rel": 224.96,
+   "dwell_akhir_rel": 236.53,
+   "dwell_pos": [
+    682.5,
+    -508.5
+   ],
+   "rekam_akhir_rel": 243.77
+  }
+ },
+ "lm8": {
+  "frame": 260,
+  "info": {
+   "bus": 0,
+   "kandidat": [
+    {
+     "mulai_rel": 11.7,
+     "akhir_rel": 17.52,
+     "pos": [
+      682.5,
+      -426.9
+     ],
+     "dur": 5.82,
+     "lampu": true
+    }
+   ],
+   "dwell_mulai_rel": 11.7,
+   "dwell_akhir_rel": 17.52,
+   "dwell_pos": [
+    682.5,
+    -426.9
+   ],
+   "rekam_akhir_rel": 23.7
+  }
+ },
+ "kl8": {
+  "frame": 685,
+  "info": {
+   "stasiun": 0,
+   "kereta": 2,
+   "dwell_mulai_rel": 49.55,
+   "dwell_akhir_rel": 52.32,
+   "rekam_akhir_rel": 57.62
+  }
+ },
+ "kd8": {
+  "frame": 0,
+  "info": {
+   "gagal": "tidak ada dwell Merdu"
+  }
+ },
+ "ku8": {
+  "frame": 1100,
+  "info": {
+   "stasiun": 1,
+   "kereta": 2,
+   "dwell_mulai_rel": 65.5,
+   "dwell_akhir_rel": 87.23,
+   "rekam_akhir_rel": 92.81
+  }
+ },
+ "p8": {
+  "frame": 101,
+  "info": {
+   "dur": 11
+  }
+ }
+}

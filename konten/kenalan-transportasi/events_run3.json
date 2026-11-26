@@ -1,0 +1,21 @@
+{
+ "bl2": {
+  "frame": 541,
+  "info": {
+   "halte": [
+    682.5,
+    444.6
+   ],
+   "bus": "b2",
+   "dwell_mulai_rel": 22.29,
+   "dwell_akhir_rel": 30.2,
+   "rekam_akhir_rel": 35.66
+  }
+ },
+ "p1b": {
+  "frame": 97,
+  "info": {
+   "dur": 11
+  }
+ }
+}
