@@ -136,6 +136,11 @@ export function warnaSkala(hex, faktor) {
    kepalaGrup 1,61 berskala SKALA_KEPALA (satuan kepala lama -> topi/baret
    di keamanan.js tetap pas), userData sama seperti sebelumnya. */
 export const PINGGUL = 0.85, NAIK = 0.33, SKALA_KEPALA = 0.34;
+/* Skala tubuh (26 Nov, "karakter terlalu kecil"): seluruh tubuh 25% lebih
+   tinggi & 28% lebih lebar/tebal (±2,3 m: sebanding mobil skala 1,35 & pintu rumah). Diterapkan di grup `tubuh` saja, jadi
+   semua NPC/pemain ikut sama besar; pose duduk menyesuaikan (pinggul tetap
+   di tinggi dudukan 0,52). */
+export const SKALA_TUBUH = { xz: 1.28, y: 1.25 };
 const CACHE_GEO_VAR = new Map();
 function geoVar(kunci, buat) {
   let g = CACHE_GEO_VAR.get(kunci);
@@ -180,7 +185,7 @@ export function buatKarakter(opsi) {
   const bola = (mat, x, y, z, sx, sy, sz) => { const m = bagian(BOLA(), mat, x, y, z, false); m.scale.set(sx, sy, sz); return m; };
   const balok = (mat, x, y, z, sx, sy, sz) => { const m = bagian(BALOK(), mat, x, y, z, false); m.scale.set(sx, sy, sz); return m; };
 
-  const tubuh = new THREE.Group(); g.add(tubuh); // semua bagian; turun saat duduk supaya pinggul tetap di tinggi dudukan lama (0,52)
+  const tubuh = new THREE.Group(); tubuh.scale.set(SKALA_TUBUH.xz, SKALA_TUBUH.y, SKALA_TUBUH.xz); g.add(tubuh); // semua bagian; turun saat duduk supaya pinggul tetap di tinggi dudukan lama (0,52)
   const W = wanita ? 1 : 0;
   const lebarBahu = wanita ? 0.18 : 0.195, xLengan = wanita ? 0.198 : 0.218;
 
@@ -454,7 +459,7 @@ export function skalaKedip(t, geser) {
 export function aturDuduk(kar) {
   const u = kar.userData; if (!u.tubuh || !u.kakiK) return;
   const duduk = u.kakiK.rotation.x < -1.0 && u.kakiR.rotation.x < -1.0;
-  u.tubuh.position.y = duduk ? 0.52 - PINGGUL : 0;
+  u.tubuh.position.y = duduk ? 0.52 - PINGGUL * SKALA_TUBUH.y : 0;
   if (u.lututK) { u.lututK.rotation.x = duduk ? -u.kakiK.rotation.x : 0; u.lututR.rotation.x = duduk ? -u.kakiR.rotation.x : 0; }
 }
 export function animasiHidup(kar, t, diam) {

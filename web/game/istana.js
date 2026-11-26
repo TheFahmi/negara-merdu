@@ -369,7 +369,7 @@ import { gambarPapanRencana, papanTex, rencanaTex, rintangan } from "./rumah.js"
     rintanganIstana({ minX: 27.6, maxX: 28.2, minZ: -29.4, maxZ: -3.1 });    // pagar timur
     const kades = buatKarakter({ baju: "#6e4525", kulit: "#f1c27d", topi: "peci" });
     kades.scale.setScalar(SKALA_KARAKTER); kades.position.set(POS_KADES.x, 0.34 * SKALA_ISTANA, POS_KADES.z); pusat.add(kades); animasiKades = kades; // berdiri di pelataran, di kaki tangga istana
-    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(POS_KADES.x, 2.9, POS_KADES.z); pusat.add(lk);
+    const lk = buatLabel("Pak Presiden", 4.4); lk.position.set(POS_KADES.x, 3.5, POS_KADES.z); pusat.add(lk);
     // tugu — palet diseragamkan dengan balai: badan krem 0xfdf3d8 + sabuk terakota 0xb5533c
     const tugu = new THREE.Group();
     const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.4, 5.4, 4), M(0xfdf3d8));

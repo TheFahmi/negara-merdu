@@ -356,7 +356,7 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi, rupa: w.rupa, gender: w.gender });
       kar.scale.setScalar(SKALA_KARAKTER);
       kar.userData.username = w.username; // dipakai multiplayer: NPC disembunyikan saat orangnya online
-      const lb = buatLabel("@" + w.username, 4.2, w.jabatan || null); lb.position.y = 2.25; kar.add(lb);
+      const lb = buatLabel("@" + w.username, 4.2, w.jabatan || null); lb.position.y = 3.0; kar.add(lb);
       kar.userData.fase = (i / Math.max(1, Math.min(30, wargaTerbaru.length))) * PANJANG_JALUR + i * 5.3;
       /* Aktivitas prosedural (Paket 1 ?v=15): peran dari LOGIKA AKTIVITAS
          NPC — pembawa membawa properti di depan dada, pengobrol & yang
