@@ -175,7 +175,8 @@ function bangunAksesPeron(grup, xc, zc) {
   for (const sz of [-1, 1]) {
     const z0 = sz > 0 ? zc + 4.75 : zc - 7.85, z1 = z0 + 3.1;
     ZONA_PIJAK.push({ x0: sx0, x1: sx1, z0, z1, sumbu: "x", ya: Y_JEMBATAN, yb: Y_PERON });
-    tanggaRapi(grup, { x: sx1, y: Y_PERON, z: (z0 + z1) / 2 }, { x: sx0, y: Y_JEMBATAN, z: (z0 + z1) / 2 }, 2.4, false);
+    // digeser ke sisi rel (z ±5,95) supaya tidak menabrak tiang kanopi peron di z ±7,6
+    tanggaRapi(grup, { x: sx1, y: Y_PERON, z: zc + sz * 5.95 }, { x: sx0, y: Y_JEMBATAN, z: zc + sz * 5.95 }, 2.2, false);
   }
   ZONA_PIJAK.push({ x0: bx0, x1: bx1, z0: zc - 7.85, z1: zc + 7.85, y: Y_JEMBATAN });
   K(bx1 - bx0, 0.35, 15.7, 0xcfc9bd, (bx0 + bx1) / 2, Y_JEMBATAN - 0.18, zc);                       // lantai jembatan
@@ -210,9 +211,9 @@ function bangunStasiunUtara(grup) {
     grup.add(kotak(66, 0.5, 3.2, 0xe6dcc6, x, YD + 0.95, z + s * 6.3));
     grup.add(kotak(66, 0.1, 0.3, 0xf2c230, x, YD + 1.22, z + s * 4.85));
     for (let i = 0; i < 6; i++) grup.add(kotak(0.35, 5.2, 0.35, 0x7b8086, x - 30 + i * 12, YD + 3.6, z + s * 7.6));
-    for (const t of [-20, 20]) { const bk = bangkuTaman(x + t, z + s * 7.0, s > 0 ? Math.PI : 0); bk.position.y = YD + 1.2; grup.add(bk); }
+    for (const t of [-6, 20]) { const bk = bangkuTaman(x + t, z + s * 7.0, s > 0 ? Math.PI : 0); bk.position.y = YD + 1.2; grup.add(bk); }
   }
-  const atap = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 68, 24, 1, true, -Math.PI / 2 + 0.6, Math.PI - 1.2),
+  const atap = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 58, 24, 1, true, -Math.PI / 2 + 0.6, Math.PI - 1.2),
     new THREE.MeshStandardMaterial({ color: 0xdfe5ea, metalness: 0.35, roughness: 0.4, side: THREE.DoubleSide }));
   atap.rotation.z = Math.PI / 2; atap.position.set(x, YD + 2.5, z); atap.castShadow = true; grup.add(atap);
   // tangga turun ke selatan (arah kota) dari ujung peron selatan + kios pintu
@@ -244,32 +245,32 @@ function teksturLayarJadwal() {
   return new THREE.CanvasTexture(cv);
 }
 function bangunGedungStasiun(grup, zb) {
-  const x0 = XST - 30, x1 = XST + 30, z0 = zb + 1, z1 = zb + 17, zc = (z0 + z1) / 2, H = YD + 1.2, LT = 4.6;
+  const W = 57, x0 = XST - W / 2, x1 = XST + W / 2, z0 = zb + 1, z1 = zb + 17, zc = (z0 + z1) / 2, H = YD + 1.2, LT = 4.6;
   const bag = []; // bagian opak digabung jadi 1 mesh (hemat draw call)
   const P = (w, h, d, x, y, z, warna) => bag.push({ geo: new THREE.BoxGeometry(w, h, d), x, y, z, warna });
   const PUTIH = 0xf1eee8, ABU = 0x5f6b75, ALU = 0xd5dade, BATU = 0xb9b2a6, BIRU = 0x14467a;
   // lantai, dinding belakang & samping, plafon lantai dasar (= lantai atas)
-  P(60, 0.3, 16, XST, 0.15, zc, 0xd9d4cc);
-  P(60, H, 0.4, XST, H / 2, z0 + 0.2, 0xe7e3da);
-  for (const sx of [-1, 1]) { P(0.5, H, 16, XST + sx * 29.75, H / 2, zc, 0xe7e3da); for (let i = 0; i < 6; i++) P(0.25, H - 1, 0.6, XST + sx * 30.1, H / 2, z0 + 2 + i * 2.6, ALU); }
-  P(59, 0.45, 16, XST, LT, zc, 0xf3f0ea);                               // pelat lantai atas
-  P(60.8, 0.9, 1.4, XST, LT + 0.2, z1 - 0.3, PUTIH);                    // lis tebal depan lantai atas
-  P(60.8, 0.18, 1.42, XST, LT - 0.12, z1 - 0.3, BIRU);                  // strip biru
-  P(61.2, 0.7, 17.2, XST, H + 0.25, zc, PUTIH); P(61.4, 0.25, 17.4, XST, H + 0.7, zc, BIRU); // atap datar + lisplang
+  P(W, 0.3, 16, XST, 0.15, zc, 0xd9d4cc);
+  P(W, H, 0.4, XST, H / 2, z0 + 0.2, 0xe7e3da);
+  for (const sx of [-1, 1]) { P(0.5, H, 16, XST + sx * (W / 2 - 0.25), H / 2, zc, 0xe7e3da); for (let i = 0; i < 6; i++) P(0.25, H - 1, 0.6, XST + sx * (W / 2 + 0.1), H / 2, z0 + 2 + i * 2.6, ALU); }
+  P(W - 1, 0.45, 16, XST, LT, zc, 0xf3f0ea);                               // pelat lantai atas
+  P(W + 0.8, 0.9, 1.4, XST, LT + 0.2, z1 - 0.3, PUTIH);                    // lis tebal depan lantai atas
+  P(W + 0.8, 0.18, 1.42, XST, LT - 0.12, z1 - 0.3, BIRU);                  // strip biru
+  P(W + 1.2, 0.7, 17.2, XST, H + 0.25, zc, PUTIH); P(W + 1.4, 0.25, 17.4, XST, H + 0.7, zc, BIRU); // atap datar + lisplang
   // kolom bulat fasad
   const geoKolom = new THREE.CylinderGeometry(0.38, 0.38, H, 16);
-  for (let i = 0; i <= 8; i++) bag.push({ geo: geoKolom, x: x0 + 1 + i * 7.25, y: H / 2, z: z1 - 0.3, warna: PUTIH });
+  for (let i = 0; i <= 8; i++) bag.push({ geo: geoKolom, x: x0 + 1 + i * (W - 2) / 8, y: H / 2, z: z1 - 0.3, warna: PUTIH });
   // lantai dasar: kusen kaca (kaca mundur 1,6 m di bawah overhang)
   const zg = z1 - 1.6;
   for (let x = x0 + 1; x <= x1 - 1 + 0.01; x += 2.9) P(0.12, 4.2, 0.16, x, 2.4, zg, ABU);
-  P(58, 0.14, 0.18, XST, 0.38, zg, ABU); P(58, 0.14, 0.18, XST, 4.35, zg, ABU); P(58, 0.08, 0.14, XST, 3.3, zg, ABU);
+  P(W - 2, 0.14, 0.18, XST, 0.38, zg, ABU); P(W - 2, 0.14, 0.18, XST, 4.35, zg, ABU); P(W - 2, 0.08, 0.14, XST, 3.3, zg, ABU);
   // lantai atas: kaca pita + sirip aluminium vertikal
   for (let x = x0 + 0.8; x <= x1 - 0.8; x += 1.25) P(0.14, H - LT - 1.2, 0.8, x, (LT + 0.7 + H - 0.4) / 2, z1 - 0.2, ALU);
-  P(58.5, 0.12, 0.2, XST, LT + 0.75, z1 - 0.95, ABU);
+  P(W - 1.5, 0.12, 0.2, XST, LT + 0.75, z1 - 0.95, ABU);
   // kanopi pintu masuk + 2 tiang + papan "PINTU MASUK"
   P(12, 0.35, 4.6, XST, 4.05, z1 + 1.6, PUTIH); P(12.1, 0.12, 4.7, XST, 3.86, z1 + 1.6, BIRU);
   for (const sx of [-1, 1]) P(0.22, 3.8, 0.22, XST + sx * 5.6, 1.9, z1 + 3.6, ALU);
-  P(64, 0.08, 9, XST, 0.04, z1 + 4.5, 0xc9c2b6);                       // pelataran paving depan stasiun
+  P(W + 4, 0.08, 9, XST, 0.04, z1 + 4.5, 0xc9c2b6);                       // pelataran paving depan stasiun
   P(6, 0.06, 3.2, XST, 0.33, z1 + 1.3, 0x3d3a36);                       // keset
   // tiang pembatas (bollard) & pot tanaman di pelataran
   for (let i = -6; i <= 6; i++) if (Math.abs(i) > 2) P(0.25, 0.8, 0.25, XST + i * 4.2, 0.4, z1 + 4.8, 0x8a8f94);
@@ -295,14 +296,14 @@ function bangunGedungStasiun(grup, zb) {
   mesh.castShadow = true; mesh.receiveShadow = true; grup.add(mesh);
   // kaca transparan (lantai dasar & atas) + pintu geser
   const matKaca = new THREE.MeshStandardMaterial({ color: 0xa8d4e8, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide });
-  const kacaBawah = new THREE.Mesh(new THREE.PlaneGeometry(58, 3.9), matKaca); kacaBawah.position.set(XST, 2.4, zg + 0.02); grup.add(kacaBawah);
-  const kacaAtas = new THREE.Mesh(new THREE.PlaneGeometry(58.5, H - LT - 1.2), matKaca); kacaAtas.position.set(XST, (LT + 0.7 + H - 0.4) / 2, z1 - 0.95); grup.add(kacaAtas);
+  const kacaBawah = new THREE.Mesh(new THREE.PlaneGeometry(W - 2, 3.9), matKaca); kacaBawah.position.set(XST, 2.4, zg + 0.02); grup.add(kacaBawah);
+  const kacaAtas = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.5, H - LT - 1.2), matKaca); kacaAtas.position.set(XST, (LT + 0.7 + H - 0.4) / 2, z1 - 0.95); grup.add(kacaAtas);
   // lampu plafon (panel menyala) lantai dasar & atas
   const matPanel = new THREE.MeshBasicMaterial({ color: 0xfff7e6 });
   const bagLampu = [];
   for (let i = 0; i < 9; i++) for (let j = 0; j < 3; j++) {
-    bagLampu.push({ geo: new THREE.BoxGeometry(2.2, 0.05, 0.6), x: x0 + 4 + i * 6.5, y: LT - 0.25, z: z0 + 3.5 + j * 4.5, warna: 0xfff7e6 });
-    bagLampu.push({ geo: new THREE.BoxGeometry(2.2, 0.05, 0.6), x: x0 + 4 + i * 6.5, y: H - 0.12, z: z0 + 3.5 + j * 4.5, warna: 0xfff7e6 });
+    bagLampu.push({ geo: new THREE.BoxGeometry(2.2, 0.05, 0.6), x: x0 + 4 + i * (W - 8) / 8, y: LT - 0.25, z: z0 + 3.5 + j * 4.5, warna: 0xfff7e6 });
+    bagLampu.push({ geo: new THREE.BoxGeometry(2.2, 0.05, 0.6), x: x0 + 4 + i * (W - 8) / 8, y: H - 0.12, z: z0 + 3.5 + j * 4.5, warna: 0xfff7e6 });
   }
   grup.add(new THREE.Mesh(gabungBerwarna(bagLampu), matPanel));
   // papan nama modern di lis depan + di atas atap, papan LOKET, layar jadwal
@@ -329,7 +330,7 @@ function bangunStasiun(grup, st) {
     grup.add(kotak(66, 0.1, 0.3, 0xf2c230, XST, YD + 1.22, RZ + s * 4.85)); // garis kuning peron
     for (let i = 0; i < 6; i++) grup.add(kotak(0.35, 5.2, 0.35, 0x7b8086, XST - 30 + i * 12, YD + 3.6, RZ + s * 7.6));
   }
-  const atap = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 68, 24, 1, true, -Math.PI / 2 + 0.6, Math.PI - 1.2),
+  const atap = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 58, 24, 1, true, -Math.PI / 2 + 0.6, Math.PI - 1.2),
     new THREE.MeshStandardMaterial({ color: 0xdfe5ea, metalness: 0.35, roughness: 0.4, side: THREE.DoubleSide }));
   atap.rotation.z = Math.PI / 2; atap.position.set(XST, YD + 2.5, RZ); atap.castShadow = true; grup.add(atap);
   // GEDUNG STASIUN (rombak 26 Nov): 2 lantai, fasad kaca + kolom + sirip
@@ -337,7 +338,7 @@ function bangunStasiun(grup, st) {
   // tiket, layar jadwal, bangku) terlihat menembus kaca.
   bangunGedungStasiun(grup, zb);
   const jam = buatJam(1.1); jam.position.set(XST + 12, YD - 1.1, zb + 17.3); grup.add(jam); // jam stasiun real time di fasad
-  rintanganTransportasi.push({ minX: XST - 30, maxX: XST + 30, minZ: zb + 1, maxZ: zb + 17 });
+  rintanganTransportasi.push({ minX: XST - 28.5, maxX: XST + 28.5, minZ: zb + 1, maxZ: zb + 17 });
   if (!st.terminal) return;
   // terminal bus (selatan blok, hanya Stasiun Merdu)
   const zt = zb + 48;
