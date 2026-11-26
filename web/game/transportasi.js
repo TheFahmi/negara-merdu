@@ -1192,7 +1192,7 @@ export function updateNaik(dt, camera, fp, gerak) {
     const i = Math.max(0, Math.min(3, Math.round(-NAIK.lx / 14.2)));
     o = NAIK.obj.mobil[i]; lx = NAIK.lx + i * 14.2;
   }
-  const w = duniaDari(o, lx, NAIK.lantaiY + 1.55, NAIK.lz);
+  const w = duniaDari(o, lx, NAIK.lantaiY + 2.05, NAIK.lz); // mata penumpang (karakter ±2,3 m)
   camera.position.copy(w);
   camera.rotation.set(fp.pitch, o.rotation.y + fp.yaw, 0);
   fp.x = w.x; fp.z = w.z; // untuk peta kecil & posisi yang disiarkan

@@ -312,8 +312,8 @@ import { waktuLalu } from "./main.js";
   export function updateOrang(dt) {
     if (sedangNaik()) { updateNaik(dt, camera, fp, vektorGerak()); ikutiMatahari(fp.x, fp.z); return; } // menumpang bus / KRL
     langkahPemain(dt, fp.yaw);
-    if (diInterior) camera.position.set(fp.x, INT.y + 1.6 + (AP.goyang || 0), fp.z); // mata 1,6 di atas lantai interior (+ getar kabin lift)
-    else camera.position.set(fp.x, (fp.y || 0) + 1.6, fp.z); // setinggi mata karakter (±1,6 satuan) di atas pijakan
+    if (diInterior) camera.position.set(fp.x, INT.y + 2.2 + (AP.goyang || 0), fp.z); // mata 2,2 di atas lantai interior (karakter ±2,3 m) (+ getar kabin lift)
+    else camera.position.set(fp.x, (fp.y || 0) + 2.45, fp.z); // setinggi mata karakter (±2,13 + alas 0,32) di atas pijakan
     camera.rotation.set(fp.pitch, fp.yaw, 0);
     ikutiMatahari(fp.x, fp.z);
   }
@@ -331,7 +331,7 @@ import { waktuLalu } from "./main.js";
     const cp = Math.cos(pitch);
     return {
       x: px + Math.sin(yaw) * cp * jarak,
-      y: 1.2 + Math.sin(pitch) * jarak, // dada karakter (SKALA_KARAKTER 1,0)
+      y: 1.7 + Math.sin(pitch) * jarak, // dada karakter (tubuh ±2,3 m)
       z: pz + Math.cos(yaw) * cp * jarak,
     };
   }
@@ -368,7 +368,7 @@ import { waktuLalu } from "./main.js";
       tp.kamX += (id.x - tp.kamX) * k; tp.kamY += (id.y - tp.kamY) * k; tp.kamZ += (id.z - tp.kamZ) * k;
     }
     camera.position.set(tp.kamX, Math.max(0.6, tp.kamY), tp.kamZ);
-    camera.lookAt(fp.x, 1.5, fp.z);
+    camera.lookAt(fp.x, (fp.y || 0) + 2.0, fp.z); // bidik dada-kepala karakter yang lebih tinggi
     ikutiMatahari(fp.x, fp.z);
   }
   /* Karakter pemain sendiri — selama ini tidak pernah di-render (1st Person
