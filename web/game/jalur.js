@@ -86,3 +86,34 @@ export function arahSein(J, s, depan) {
 }
 /* Kedip sein ±1,5 Hz (nyala 55%). */
 export function kedip(t, geser) { return ((t + (geser || 0)) * 1.5) % 1 < 0.55; }
+
+/* ---------- GOYANGAN KENDARAAN (sway) — 26 Nov 2026 ----------
+   Bodi kendaraan miring keluar saat menikung (gaya sentrifugal ~ v x laju
+   belok), mengangguk saat mengerem / menyentak saat menggas, plus getar
+   halus jalan. Pegas-redam membuatnya berayun lembut lalu tenang (bukan
+   langsung patah). Dipakai bus, KRL, mobil lalu lintas & patroli.
+   st: objek keadaan per kendaraan (disimpan pemanggil). Mengembalikan st
+   dengan st.roll (rotasi z, + = sisi kiri/+x naik), st.pitch (rotasi x,
+   + = moncong turun) dan st.naik (getar vertikal, meter). Pakai dengan
+   rotation.order = "YXZ" supaya miring di sumbu lokal kendaraan. */
+export const SWAY = {
+  bus: { roll: 0.012, pitch: 0.006, maks: 0.075, k: 26, c: 5.5, getar: 0.016 },
+  krl: { roll: 0.006, pitch: 0.0025, maks: 0.035, k: 18, c: 4.5, getar: 0.022 }, // getar besar = goyang rel
+  mobil: { roll: 0.005, pitch: 0.0045, maks: 0.055, k: 38, c: 8, getar: 0.006 },
+};
+export function goyang(st, dt, yaw, v, p, t) {
+  if (st.yaw === undefined) { st.yaw = yaw; st.v = v; st.roll = 0; st.pitch = 0; st.vr = 0; st.vp = 0; st.naik = 0; st.f = Math.random() * 10; return st; }
+  if (!(dt > 0)) return st;
+  let dy = yaw - st.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  const lajuBelok = dy / dt, aLat = v * lajuBelok, aLong = (v - st.v) / dt;
+  st.yaw = yaw; st.v = v;
+  const mR = Math.max(-p.maks, Math.min(p.maks, aLat * p.roll));
+  const mP = Math.max(-p.maks * 0.8, Math.min(p.maks * 0.8, -aLong * p.pitch));
+  const h = Math.min(dt, 1 / 30); // langkah stabil
+  st.vr += (p.k * (mR - st.roll) - p.c * st.vr) * h; st.roll += st.vr * h;
+  st.vp += (p.k * (mP - st.pitch) - p.c * st.vp) * h; st.pitch += st.vp * h;
+  const g = Math.min(1, Math.abs(v) / 10) * p.getar, tt = (t || 0) + st.f;
+  st.naik = g * (Math.sin(tt * 13.1) * 0.6 + Math.sin(tt * 7.7) * 0.4);
+  st.rollTampil = st.roll + g * 0.25 * Math.sin(tt * 9.3);
+  return st;
+}

@@ -9,6 +9,7 @@
    Semua mobil = 2 InstancedMesh (badan berwarna per instans + detail
    kaca/lampu/roda berwarna verteks) per kelompok -> murah di HP. */
 import { MAT_KACA_MOBIL, geoMobil } from "./mobilGeo.js";
+import { SWAY, goyang } from "./jalur.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, SKALA_MOBIL, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
 import { M, PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { rintanganFasilitas } from "./rumah.js";
@@ -169,7 +170,7 @@ export function perbaruiLaluLintasMobil(t, dt) {
       const lampu = m.dx !== 0 ? fase.tb : fase.us;
       if (lampu !== "hijau" && m.s <= titikHenti + 0.3) batas = Math.min(batas, titikHenti);
       const maju = Math.max(0, Math.min(m.v * dt, batas - m.s));
-      m.s += maju;
+      m.s += maju; m.vNyata = dt > 0 ? maju / dt : 0;
       if (m.s >= m.panjang - 0.01) { // masuk persimpangan: belok/lurus ke ruas berikut
         const berikut = pilihBerikut(m.ke, m.dari);
         const ndx = Math.sign(berikut.cx - m.ke.cx), ndz = Math.sign(berikut.cz - m.ke.cz);
@@ -180,7 +181,7 @@ export function perbaruiLaluLintasMobil(t, dt) {
     }
   }
   for (const m of mobilJalan) if (m.fase === "simpang") {
-    m.ss += m.v * 0.8 * dt;
+    m.ss += m.v * 0.8 * dt; m.vNyata = m.v * 0.8;
     if (m.ss >= m.sPanjang) mulaiRuas(m, m.ke, m.berikut);
   }
   mobilJalan.forEach((m, i) => {
@@ -193,7 +194,8 @@ export function perbaruiLaluLintasMobil(t, dt) {
       x = m.sa.x + (m.sb.x - m.sa.x) * f; z = m.sa.z + (m.sb.z - m.sa.z) * f;
       hx = m.sb.x - m.sa.x; hz = m.sb.z - m.sa.z;
     }
-    _d.position.set(x, 0.02, z); _d.rotation.set(0, Math.atan2(hx, hz), 0); _d.scale.set(1, 1, 1); _d.updateMatrix();
+    const yawJ = Math.atan2(hx, hz), gJ = goyang(m.goy || (m.goy = {}), dt, yawJ, m.vNyata || 0, SWAY.mobil, t);
+    _d.position.set(x, 0.02 + (gJ.naik || 0), z); _d.rotation.order = "YXZ"; _d.rotation.set(gJ.pitch, yawJ, gJ.rollTampil || 0); _d.scale.set(1, 1, 1); _d.updateMatrix(); // sway
     inst.badan.setMatrixAt(i, _d.matrix); inst.detail.setMatrixAt(i, _d.matrix);
   });
   inst.badan.instanceMatrix.needsUpdate = true; inst.detail.instanceMatrix.needsUpdate = true;

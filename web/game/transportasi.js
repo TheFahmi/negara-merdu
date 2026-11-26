@@ -18,7 +18,7 @@ import { JALAN, PITCH, PUSAT_X, faseLaluLintas, persimpanganKota, sudutBlok } fr
 import { M, camera, gabungBerwarna, jarakDetail, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
-import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
+import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
 import { bunyiPeristiwa } from "./suara.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { batasLampuMerah } from "./kota.js";
@@ -819,6 +819,16 @@ function perbaruiPintuKrl(k) {
     pt.daun.position.x = pt.x0 + pt.arah * aktif * 0.66;
   }
 }
+const _eLihat = new THREE.Euler(), _qLihat = new THREE.Quaternion();
+function goyangKrl(k, dt) { // sway tiap gerbong dari laju beloknya sendiri
+  const t = performance.now() / 1000;
+  for (const c of k.mobil) {
+    const g = goyang(c.userData.goy || (c.userData.goy = {}), dt, c.rotation.y, k.v, SWAY.krl, t);
+    // gerbong menghadap +x: miring (roll) di sumbu x lokal, angguk (pitch) di sumbu z lokal
+    c.rotation.order = "YXZ"; c.rotation.set(g.rollTampil || 0, c.rotation.y, -g.pitch);
+    c.position.y += g.naik || 0;
+  }
+}
 function aturGerbong(k) {
   k.mobil.forEach((c, i) => {
     const sc = k.s - i * 14.2, a = posJalur(k.J, sc + 5), b = posJalur(k.J, sc - 5);
@@ -843,6 +853,7 @@ export function perbaruiTransportasi(t, dt) {
       }
       k.berhenti -= dt; if (k.berhenti <= 0) k.tahan = 0;
       if (k.berhenti <= 0) { k.sudahIdx = k.stasiunKini; k.stasiunKini = -1; bunyiPeristiwa("krlBerangkat", k.mobil[1].position); }
+      aturGerbong(k); goyangKrl(k, dt); // ayunan rem mereda saat berhenti
       continue;
     }
     let vMaks = 34;
@@ -862,6 +873,7 @@ export function perbaruiTransportasi(t, dt) {
     k.s = (k.s + k.v * dt) % k.J.total;
     if (k.sudahIdx >= 0) { const st = k.stop.find((x) => x.idx === k.sudahIdx); const lewat = ((k.s - st.s) % k.J.total + k.J.total) % k.J.total; if (lewat > 300 && lewat < k.J.total - 300) k.sudahIdx = -1; }
     aturGerbong(k);
+    goyangKrl(k, dt);
   }
   if (!RUTE.length) return;
   /* HEADWAY per koridor: jarak target antarbus = keliling rute koridor /
@@ -917,7 +929,9 @@ export function perbaruiTransportasi(t, dt) {
       for (const m of L.sein[-1]) m.visible = nyala && arah < 0;
     }
     const p = posJalur(r.R, b.s);
-    b.g.position.set(p.x, tinggiBus(p.x, p.z), p.z); b.g.rotation.y = arahHalus(r.R, b.s, 2.5);
+    const yawB = arahHalus(r.R, b.s, 2.5), gB = goyang(b.goy || (b.goy = {}), dt, yawB, b.v, SWAY.bus, performance.now() / 1000);
+    b.g.rotation.order = "YXZ"; b.g.rotation.set(gB.pitch, yawB, gB.rollTampil || 0); // sway: miring di tikungan, mengangguk saat rem
+    b.g.position.set(p.x, tinggiBus(p.x, p.z) + (gB.naik || 0), p.z);
   }
   perbaruiGerbangBus(dt, bus.map((b) => b.g.position));
   perbaruiPenumpang(dt);
@@ -1198,6 +1212,8 @@ export function updateNaik(dt, camera, fp, gerak) {
   }
   const w = duniaDari(o, lx, NAIK.lantaiY + 2.05, NAIK.lz); // mata penumpang (karakter ±2,3 m)
   camera.position.copy(w);
-  camera.rotation.set(fp.pitch, o.rotation.y + fp.yaw, 0);
+  // arah pandang = orientasi kendaraan (termasuk sway: miring & angguk) x arah lihat pemain
+  _eLihat.set(fp.pitch, fp.yaw, 0, "YXZ"); _qLihat.setFromEuler(_eLihat);
+  camera.quaternion.copy(o.quaternion).multiply(_qLihat);
   fp.x = w.x; fp.z = w.z; // untuk peta kecil & posisi yang disiarkan
 }

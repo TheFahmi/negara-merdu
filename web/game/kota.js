@@ -3,7 +3,7 @@
 import { MAT_KACA_MOBIL, geoMobil } from "./mobilGeo.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas, persimpanganKota } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
-import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
+import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, plafonTerang, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
@@ -534,8 +534,9 @@ geoKepalaL.translate(1.02, 4.80, 0);
       }
       const q = posJalur(m.J, m.s), ql = Math.hypot(q.hx, q.hz) || 1;
       m.x = q.x; m.z = q.z; m.hx = q.hx / ql; m.hz = q.hz / ql;
-      _dummyM.position.set(q.x, 0, q.z);
-      _dummyM.rotation.set(0, arahHalus(m.J, m.s, 2), 0);
+      const yawM = arahHalus(m.J, m.s, 2), gM = goyang(m.goy || (m.goy = {}), dt, yawM, m.v, SWAY.mobil, t);
+      _dummyM.position.set(q.x, gM.naik || 0, q.z);
+      _dummyM.rotation.order = "YXZ"; _dummyM.rotation.set(gM.pitch, yawM, gM.rollTampil || 0); // sway
       _dummyM.scale.setScalar(SKALA_MOBIL);
       _dummyM.updateMatrix();
       imBodi.setMatrixAt(i, _dummyM.matrix);
