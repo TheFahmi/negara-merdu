@@ -264,6 +264,8 @@ func main() {
 				pemiluH.Admin("fase")(w, r)
 			case "/api/admin/pemilu/tutup":
 				pemiluH.Admin("tutup")(w, r)
+			case "/api/admin/verifikasi":
+				wargaH.Verifikasi(w, r)
 			case "/api/admin/pembangunan/bangun":
 				pembH.Bangun(w, r)
 			default:

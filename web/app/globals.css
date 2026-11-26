@@ -997,3 +997,6 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 #ktp-gambar { display: block; width: 100%; height: 100%; user-select: none; }
 #ktp-gambar:not([src]) { visibility: hidden; }
 .ktp-aksi { width: min(94vw, 640px); }
+
+/* Pemilu: catatan peringatan (belum berhak / tanpa pemenang) berwarna kuning tua */
+#pemilu-isi .pemilu-peringatan { background: #fff4dc; border-color: #f0d28a; color: #7a5200; }

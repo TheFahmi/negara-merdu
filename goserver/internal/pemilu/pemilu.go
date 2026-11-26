@@ -32,6 +32,9 @@ type Periode struct {
 	Status      string
 	DibukaPada  *string
 	DitutupPada *string
+	// PemungutanPada: saat fase pemungutan dibuka — hanya warga terdaftar
+	// SEBELUM saat ini yang punya hak pilih.
+	PemungutanPada *string
 }
 
 // KandidatView: satu kandidat + suara berjalan untuk respons API.
@@ -54,6 +57,10 @@ type Balapan struct {
 	TotalSuara int            `json:"total_suara"`
 	Kandidat   []KandidatView `json:"kandidat"`
 	PemenangID *int64         `json:"pemenang_id"`
+	// TanpaPemenang: periode selesai tetapi tidak ada pemenang sah
+	// ("seri" = suara teratas sama; "nol" = tidak ada suara masuk) ->
+	// jabatan tetap dipegang pejabat lama.
+	TanpaPemenang string `json:"tanpa_pemenang,omitempty"`
 }
 
 // Pejabat: satu pejabat aktif untuk panel publik.
@@ -84,8 +91,8 @@ func StatusGerbang(ctx context.Context, q db.Querier, minWarga int) (Gerbang, er
 func Terbaru(ctx context.Context, q db.Querier) (*Periode, error) {
 	p := &Periode{}
 	err := q.QueryRow(ctx,
-		"SELECT id, status, dibuka_pada, ditutup_pada FROM pemilu ORDER BY id DESC LIMIT 1").
-		Scan(&p.ID, &p.Status, &p.DibukaPada, &p.DitutupPada)
+		"SELECT id, status, dibuka_pada, ditutup_pada, pemungutan_pada FROM pemilu ORDER BY id DESC LIMIT 1").
+		Scan(&p.ID, &p.Status, &p.DibukaPada, &p.DitutupPada, &p.PemungutanPada)
 	if err != nil {
 		return nil, nil
 	}
@@ -159,16 +166,36 @@ func BalapanData(ctx context.Context, q db.Querier, p *Periode, jabatan string, 
 		})
 	}
 	if p.Status == "selesai" && len(b.Kandidat) > 0 {
-		terbaik := b.Kandidat[0]
-		for _, k := range b.Kandidat[1:] {
-			if k.Suara > terbaik.Suara {
-				terbaik = k
-			}
+		id, alasan := pemenangSah(b.Kandidat)
+		if alasan == "" {
+			b.PemenangID = &id
+		} else {
+			b.TanpaPemenang = alasan
 		}
-		id := terbaik.ID
-		b.PemenangID = &id
 	}
 	return b, nil
+}
+
+// pemenangSah: kandidat bersuara terbanyak, dengan syarat (26 Nov 2026):
+// minimal 1 suara (kalau tidak -> "nol") dan tidak seri di posisi teratas
+// (kalau seri -> "seri"). Tanpa pemenang sah, jabatan tetap dipegang
+// pejabat lama sampai pemilu berikutnya.
+func pemenangSah(daftar []KandidatView) (int64, string) {
+	terbaik, seri := daftar[0], false
+	for _, k := range daftar[1:] {
+		if k.Suara > terbaik.Suara {
+			terbaik, seri = k, false
+		} else if k.Suara == terbaik.Suara {
+			seri = true
+		}
+	}
+	if terbaik.Suara < 1 {
+		return 0, "nol"
+	}
+	if seri {
+		return 0, "seri"
+	}
+	return terbaik.ID, ""
 }
 
 // pemenangBalapan: (warga_id pemenang) satu balapan pada penutupan.
@@ -178,14 +205,8 @@ func pemenangBalapan(ctx context.Context, q db.Querier, p *Periode, jabatan stri
 		return 0, false, err
 	}
 	kid := data.PemenangID
-	if kid == nil {
-		terbaik := data.Kandidat[0]
-		for _, k := range data.Kandidat[1:] {
-			if k.Suara > terbaik.Suara {
-				terbaik = k
-			}
-		}
-		kid = &terbaik.ID
+	if kid == nil { // seri atau tanpa suara: tidak ada pemenang, pejabat lama tetap
+		return 0, false, nil
 	}
 	var wargaID int64
 	err = q.QueryRow(ctx, "SELECT warga_id FROM kandidat WHERE id=$1", *kid).Scan(&wargaID)
@@ -279,6 +300,23 @@ func DaftarPejabat(ctx context.Context, q db.Querier) ([]Pejabat, error) {
 	return hasil, rows.Err()
 }
 
+// statusHak: (terverifikasi, terdaftar_pada) warga — dibaca terpisah
+// supaya struktur Warga bersama tidak berubah.
+func statusHak(ctx context.Context, q db.Querier, wargaID int64) (bool, string) {
+	var v bool
+	var dibuat *string
+	if err := q.QueryRow(ctx, "SELECT terverifikasi, created_at FROM warga WHERE id=$1", wargaID).Scan(&v, &dibuat); err != nil {
+		return false, ""
+	}
+	if dibuat == nil {
+		return v, ""
+	}
+	return v, *dibuat
+}
+
+// PesanBelumVerifikasi: alasan ditolak bila akun belum terverifikasi.
+const PesanBelumVerifikasi = "Akunmu belum terverifikasi. Hak pilih & mencalonkan khusus warga yang mem-follow @negaramerdu di Instagram dengan username yang sama — follow dulu, verifikasi berjalan otomatis berkala."
+
 // Handler: endpoint pemilu.
 type Handler struct {
 	DB         *db.Store
@@ -318,6 +356,20 @@ func (h *Handler) Ambil(w http.ResponseWriter, r *http.Request) {
 	balapan := []Balapan{}
 	suaraSaya := map[string]int64{}
 	var kandidatSaya map[string]any
+	var hakSaya map[string]any
+	if row != nil {
+		v, dibuat := statusHak(ctx, h.DB.Pool, row.ID)
+		bolehPilih := v && !warga.PINMasihDefault(row)
+		alasan := ""
+		if warga.PINMasihDefault(row) {
+			alasan = "pin_default"
+		} else if !v {
+			alasan = "belum_verifikasi"
+		} else if p != nil && p.PemungutanPada != nil && dibuat != "" && dibuat >= *p.PemungutanPada {
+			bolehPilih, alasan = false, "terdaftar_terlambat"
+		}
+		hakSaya = map[string]any{"terverifikasi": v, "boleh_ikut": bolehPilih, "alasan": alasan}
+	}
 	if p != nil {
 		daftar := [][2]any{{"kades", 0}}
 		j := q.Get("jabatan")
@@ -371,6 +423,7 @@ func (h *Handler) Ambil(w http.ResponseWriter, r *http.Request) {
 		pemiluView = map[string]any{
 			"id": p.ID, "status": p.Status,
 			"dibuka_pada": p.DibukaPada, "ditutup_pada": p.DitutupPada,
+			"pemungutan_pada": p.PemungutanPada,
 		}
 	}
 	tulisJSON(w, 200, map[string]any{
@@ -383,6 +436,7 @@ func (h *Handler) Ambil(w http.ResponseWriter, r *http.Request) {
 		"balapan":       balapan,
 		"suara_saya":    suaraSaya,
 		"kandidat_saya": kandidatSaya,
+		"hak_saya":      hakSaya,
 	})
 }
 
@@ -396,6 +450,10 @@ func (h *Handler) Calon(w http.ResponseWriter, r *http.Request) {
 	}
 	if warga.PINMasihDefault(row) {
 		galat(w, 403, "Ganti dulu PIN default 123456 lewat Lengkapi Profil sebelum ikut pemilu — supaya akunmu tidak bisa dipakai orang lain")
+		return
+	}
+	if v, _ := statusHak(ctx, h.DB.Pool, row.ID); !v {
+		galat(w, 403, PesanBelumVerifikasi)
 		return
 	}
 	data := bacaJSON(r)
@@ -485,6 +543,14 @@ func (h *Handler) Pilih(w http.ResponseWriter, r *http.Request) {
 	p, _ := Terbaru(ctx, h.DB.Pool)
 	if p == nil || p.Status != "pemungutan" {
 		galat(w, 409, "Pemungutan suara sedang tidak berlangsung")
+		return
+	}
+	if v, dibuat := statusHak(ctx, h.DB.Pool, row.ID); !v {
+		galat(w, 403, PesanBelumVerifikasi)
+		return
+	} else if p.PemungutanPada != nil && dibuat != "" && dibuat >= *p.PemungutanPada {
+		// format kedua waktu sama ('YYYY-MM-DD HH24:MI:SS' UTC) -> bisa dibandingkan sebagai teks
+		galat(w, 403, "Hak pilih periode ini hanya untuk warga yang terdaftar sebelum pemungutan suara dibuka")
 		return
 	}
 	var kJabatan string
@@ -579,7 +645,7 @@ func (h *Handler) Admin(aksi string) http.HandlerFunc {
 				return
 			}
 			if _, err := h.DB.Pool.Exec(ctx,
-				"UPDATE pemilu SET status='pemungutan' WHERE id=$1", p.ID); err != nil {
+				"UPDATE pemilu SET status='pemungutan', pemungutan_pada=to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') WHERE id=$1", p.ID); err != nil {
 				galat(w, 500, "Kesalahan server")
 				return
 			}

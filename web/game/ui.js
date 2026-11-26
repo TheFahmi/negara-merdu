@@ -867,10 +867,21 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
         "Wilayah rumahmu: " + teksWilayahPendek(d.wilayah_saya) +
         ". Kamu memilih Ketua RT, Ketua RW, Lurah, Camat & Wali Kota di wilayahmu, dan Presiden untuk seluruh negara."));
     }
+    const hak = d.hak_saya;
+    if (hak && !hak.boleh_ikut && p.status !== "selesai") {
+      const ALASAN = {
+        pin_default: "Kamu belum bisa ikut pemilu: PIN-mu masih PIN default 123456. Ganti dulu lewat Lengkapi Profil supaya akunmu tidak bisa dipakai orang lain.",
+        belum_verifikasi: "Kamu belum bisa ikut pemilu: akunmu belum terverifikasi. Hak pilih & mencalonkan khusus warga yang mem-follow @negaramerdu di Instagram dengan username yang sama. Follow dulu, lalu verifikasi berjalan otomatis berkala.",
+        terdaftar_terlambat: "Kamu terdaftar setelah pemungutan suara periode ini dibuka, jadi belum punya hak pilih. Kamu bisa ikut di pemilu berikutnya.",
+      };
+      isi.appendChild(elemenPemilu("p", "pemilu-status pemilu-peringatan", ALASAN[hak.alasan] || "Kamu belum bisa ikut pemilu periode ini."));
+    }
     for (const b of d.balapan || []) gambarBalapanPemilu(isi, d, b);
     if (p.status === "pencalonan" && !d.terkunci) {
       if (!sesi.saya) {
         isi.appendChild(elemenPemilu("p", "pemilu-catatan", "Masuk pakai Kartu Warga Negara untuk mencalonkan diri."));
+      } else if (hak && !hak.boleh_ikut) {
+        // alasan sudah ditampilkan di atas
       } else if (!d.kandidat_saya) {
         gambarFormCalon(isi, d);
       }
@@ -885,6 +896,11 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     if (!b.kandidat.length) {
       isi.appendChild(elemenPemilu("p", "pemilu-catatan", "Belum ada kandidat untuk jabatan ini."));
       return;
+    }
+    if (b.tanpa_pemenang) {
+      isi.appendChild(elemenPemilu("p", "pemilu-status pemilu-peringatan", b.tanpa_pemenang === "seri"
+        ? "Hasil seri di posisi teratas — tidak ada pemenang. Jabatan tetap dipegang pejabat lama sampai pemilu berikutnya."
+        : "Tidak ada suara masuk — tidak ada pemenang. Jabatan tetap dipegang pejabat lama sampai pemilu berikutnya."));
     }
     const sudahPilih = d.suara_saya ? d.suara_saya[b.jabatan] : undefined;
     for (const k of b.kandidat) {
@@ -918,6 +934,8 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
           kartu.appendChild(elemenPemilu("p", "sudah-pilih", "✓ Kamu memilih kandidat ini"));
         } else if (sudahPilih !== undefined) {
           kartu.appendChild(elemenPemilu("p", "pemilu-catatan", "Kamu sudah memilih untuk jabatan ini."));
+        } else if (d.hak_saya && !d.hak_saya.boleh_ikut) {
+          // tidak punya hak pilih (alasan tampil di atas)
         } else {
           const btn = elemenPemilu("button", "tombol-pilih", "Pilih @" + k.username);
           btn.type = "button";

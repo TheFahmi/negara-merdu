@@ -6,7 +6,9 @@ package warga
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -302,6 +304,12 @@ func (h *Handler) Daftar(w http.ResponseWriter, r *http.Request) {
 		galat(w, 500, "Kesalahan server")
 		return
 	}
+	if praDaftar { // pra-daftar resmi dari daftar follower = terverifikasi untuk pemilu
+		if _, err := tx.Exec(ctx, "UPDATE warga SET terverifikasi=TRUE WHERE id=$1", wargaID); err != nil {
+			galat(w, 500, "Kesalahan server")
+			return
+		}
+	}
 	token := db.TokenAcak(24)
 	if _, err := tx.Exec(ctx, "INSERT INTO sesi(token,warga_id) VALUES($1,$2)", token, wargaID); err != nil {
 		galat(w, 500, "Kesalahan server")
@@ -588,4 +596,36 @@ func (h *Handler) Statistik(w http.ResponseWriter, r *http.Request) {
 		"warga": n, "rumah": n, "terisi": n, "kapasitas": db.Kapasitas,
 		"blok_total": db.BlokKolom * db.BlokBaris, "per_blok": db.PerBlok,
 	})
+}
+
+// Verifikasi menangani POST /api/admin/verifikasi (X-Admin-Token):
+// {"usernames":[...]} -> tandai warga ber-username itu terverifikasi
+// (follower @negaramerdu). Dipanggil autoreg tiap run untuk semua
+// follower, termasuk warga yang mendaftar sendiri lalu mem-follow.
+func (h *Handler) Verifikasi(w http.ResponseWriter, r *http.Request) {
+	if h.AdminToken == "" || subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Admin-Token")), []byte(h.AdminToken)) != 1 {
+		galat(w, 403, "Token admin tidak sah")
+		return
+	}
+	var data struct {
+		Usernames []string `json:"usernames"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 4<<20)).Decode(&data); err != nil {
+		galat(w, 400, "Data tidak valid")
+		return
+	}
+	daftar := make([]string, 0, len(data.Usernames))
+	for _, u := range data.Usernames {
+		u = strings.ToLower(strings.TrimSpace(u))
+		if u != "" {
+			daftar = append(daftar, u)
+		}
+	}
+	tag, err := h.DB.Pool.Exec(r.Context(),
+		"UPDATE warga SET terverifikasi=TRUE WHERE username = ANY($1) AND NOT terverifikasi", daftar)
+	if err != nil {
+		galat(w, 500, "Kesalahan server")
+		return
+	}
+	tulisJSON(w, 200, map[string]any{"ok": true, "ditandai": tag.RowsAffected()})
 }

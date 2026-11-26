@@ -98,6 +98,7 @@ RUNNER = '''
 import json, urllib.request, urllib.error
 
 KANDIDAT = __KANDIDAT__
+VERIF = __VERIF__
 
 token = None
 try:
@@ -135,16 +136,33 @@ for k in KANDIDAT:
         hasil.append({"username": k["username"], "status": e.code, "error": pesan})
     except Exception as e:
         hasil.append({"username": k["username"], "status": 0, "error": str(e)[:200]})
+# Tandai semua follower yang sudah jadi warga sebagai TERVERIFIKASI (hak
+# pilih & mencalonkan di pemilu). Idempoten; dikirim per 500 username.
+verif = {"ditandai": 0}
+if token and VERIF:
+    for i in range(0, len(VERIF), 500):
+        req = urllib.request.Request(
+            "http://127.0.0.1:8026/api/admin/verifikasi",
+            data=json.dumps({"usernames": VERIF[i:i + 500]}).encode(),
+            headers={"Content-Type": "application/json", "X-Admin-Token": token})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                verif["ditandai"] += json.loads(r.read()).get("ditandai", 0)
+        except Exception as e:
+            verif["error"] = str(e)[:200]
+print("VERIF_JSON:" + json.dumps(verif))
 print("HASIL_JSON:" + json.dumps(hasil))
 '''
 
 
-def buat_akun(kandidat: list) -> list:
-    skrip = RUNNER.replace("__KANDIDAT__", json.dumps(kandidat))
+def buat_akun(kandidat: list, verif: list) -> list:
+    skrip = RUNNER.replace("__KANDIDAT__", json.dumps(kandidat)).replace("__VERIF__", json.dumps(verif))
     p = subprocess.run(["python3", HOST_EXEC], input=skrip.encode(),
                        capture_output=True, timeout=300)
     out = p.stdout.decode(errors="replace")
     for line in out.splitlines():
+        if line.startswith("VERIF_JSON:"):
+            print("VERIF " + line[len("VERIF_JSON:"):])
         if line.startswith("HASIL_JSON:"):
             return json.loads(line[len("HASIL_JSON:"):])
     raise RuntimeError("runner Hostinger tidak memberi hasil. stdout: "
@@ -180,13 +198,9 @@ def main() -> int:
         if dry:
             print("INFO dry-run, tidak ada akun dibuat")
             return 0
-        if not kandidat:
-            state["failed_permanent"] = gagal
-            simpan_state(state)
-            print("INFO tidak ada perubahan")
-            return 0
-
-        hasil = buat_akun(kandidat)
+        # follower yang sudah jadi warga -> ditandai terverifikasi (pemilu)
+        verif = sorted(u for u in set(followers) if u in warga)
+        hasil = buat_akun(kandidat, verif)
         for h in hasil:
             u = h["username"]
             if h["status"] == 201:
