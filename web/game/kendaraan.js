@@ -8,8 +8,8 @@
       jarak dengan mobil di depan, dan berbelok acak di persimpangan.
    Semua mobil = 2 InstancedMesh (badan berwarna per instans + detail
    kaca/lampu/roda berwarna verteks) per kelompok -> murah di HP. */
-import { MAT_KACA_MOBIL, geoMobil } from "./mobilGeo.js";
-import { SWAY, goyang } from "./jalur.js";
+import { MAT_KACA_MOBIL, MAT_RODA, PIVOT_MOBIL, geoMobil } from "./mobilGeo.js";
+import { SWAY, goyang, matriksSway } from "./jalur.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, SKALA_MOBIL, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
 import { M, PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { rintanganFasilitas } from "./rumah.js";
@@ -49,7 +49,8 @@ function buatInstans(n) {
   for (const m of [badan, detail]) { m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; }
   const kaca = new THREE.InstancedMesh(g.kaca, MAT_KACA_MOBIL, Math.max(1, n)); kaca.frustumCulled = false; kaca.renderOrder = 2;
   detail.userData.kaca = kaca; // ikut matriks detail (lihat setMatrixAt di bawah)
-  return { badan, detail, kaca };
+  const roda = new THREE.InstancedMesh(g.roda, MAT_RODA(), Math.max(1, n)); roda.frustumCulled = false; roda.castShadow = true; // roda terpisah (sway)
+  return { badan, detail, kaca, roda };
 }
 
 /* ================= 1) MOBIL PARKIR (1 per rumah terisi) ================= */
@@ -71,16 +72,16 @@ export function bangunMobilParkir() {
       posisi.push({ x: x + sisi * (detail ? 5.75 : 5.6), z: z + 1.0, w: WARNA_MOBIL[Math.floor(hashInt(blok * 31 + k * 7) * WARNA_MOBIL.length)] });
     }
   }
-  const { badan, detail, kaca } = buatInstans(posisi.length);
+  const { badan, detail, kaca, roda } = buatInstans(posisi.length);
   const d = new THREE.Object3D(), c = new THREE.Color();
   posisi.forEach((p, i) => {
     d.position.set(p.x, 0, p.z); d.rotation.set(0, 0, 0); d.scale.setScalar(SKALA_MOBIL); d.updateMatrix();
-    badan.setMatrixAt(i, d.matrix); detail.setMatrixAt(i, d.matrix); kaca.setMatrixAt(i, d.matrix); badan.setColorAt(i, c.setHex(p.w));
+    badan.setMatrixAt(i, d.matrix); detail.setMatrixAt(i, d.matrix); kaca.setMatrixAt(i, d.matrix); roda.setMatrixAt(i, d.matrix); badan.setColorAt(i, c.setHex(p.w));
   });
-  badan.count = detail.count = kaca.count = posisi.length;
+  badan.count = detail.count = kaca.count = roda.count = posisi.length;
   badan.instanceMatrix.needsUpdate = detail.instanceMatrix.needsUpdate = kaca.instanceMatrix.needsUpdate = true;
   if (badan.instanceColor) badan.instanceColor.needsUpdate = true;
-  grupParkir = new THREE.Group(); grupParkir.add(badan); grupParkir.add(detail); grupParkir.add(kaca); scene.add(grupParkir);
+  grupParkir = new THREE.Group(); grupParkir.add(badan); grupParkir.add(detail); grupParkir.add(kaca); grupParkir.add(roda); scene.add(grupParkir);
 }
 
 /* ================= 2) LALU LINTAS BERJALAN ================= */
@@ -147,9 +148,9 @@ export function bangunLaluLintas() {
   const c = new THREE.Color();
   mobilJalan.forEach((m, i) => inst.badan.setColorAt(i, c.setHex(m.warna)));
   if (inst.badan.instanceColor) inst.badan.instanceColor.needsUpdate = true;
-  scene.add(inst.badan); scene.add(inst.detail);
+  scene.add(inst.badan); scene.add(inst.detail); scene.add(inst.roda);
 }
-const _d = new THREE.Object3D();
+const _d = new THREE.Object3D(), _mRodaJ = new THREE.Matrix4();
 export function perbaruiLaluLintasMobil(t, dt) {
   if (!inst || !mobilJalan.length) return;
   const fase = faseLaluLintas(t);
@@ -195,10 +196,10 @@ export function perbaruiLaluLintasMobil(t, dt) {
       hx = m.sb.x - m.sa.x; hz = m.sb.z - m.sa.z;
     }
     const yawJ = Math.atan2(hx, hz), gJ = goyang(m.goy || (m.goy = {}), dt, yawJ, m.vNyata || 0, SWAY.mobil, t);
-    _d.position.set(x, 0.02 + (gJ.naik || 0), z); _d.rotation.order = "YXZ"; _d.rotation.set(gJ.pitch, yawJ, gJ.rollTampil || 0); _d.scale.set(1, 1, 1); _d.updateMatrix(); // sway
-    inst.badan.setMatrixAt(i, _d.matrix); inst.detail.setMatrixAt(i, _d.matrix);
+    matriksSway(_d.matrix, _mRodaJ, x, 0.02 + (gJ.naik || 0), z, yawJ, gJ.pitch, gJ.rollTampil || 0, PIVOT_MOBIL, 1); // sway: bodi berayun, roda tegak
+    inst.badan.setMatrixAt(i, _d.matrix); inst.detail.setMatrixAt(i, _d.matrix); inst.roda.setMatrixAt(i, _mRodaJ);
   });
-  inst.badan.instanceMatrix.needsUpdate = true; inst.detail.instanceMatrix.needsUpdate = true;
+  inst.badan.instanceMatrix.needsUpdate = true; inst.detail.instanceMatrix.needsUpdate = true; inst.roda.instanceMatrix.needsUpdate = true;
 }
 
 export function mobil(g, x, z, ry, warna) {

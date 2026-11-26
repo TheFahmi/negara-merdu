@@ -117,3 +117,35 @@ export function goyang(st, dt, yaw, v, p, t) {
   st.rollTampil = st.roll + g * 0.25 * Math.sin(tt * 9.3);
   return st;
 }
+
+/* Terapkan sway dengan TITIK PUTAR setinggi as roda (h, satuan lokal):
+   bodi (obj) berayun di atas suspensi, sedangkan grup sasis (roda, as,
+   bogie) dibalik rotasinya sehingga tetap tegak & menapak jalan/rel.
+   rx/rz = rotasi sway lokal (urutan YXZ, sesudah yaw). */
+const _Y = new THREE.Vector3(0, 1, 0), _eS = new THREE.Euler(0, 0, 0, "YXZ");
+const _qS = new THREE.Quaternion(), _qY = new THREE.Quaternion(), _qI = new THREE.Quaternion();
+const _P = new THREE.Vector3(), _RP = new THREE.Vector3(), _o = new THREE.Vector3();
+function offsetSway(yaw, rx, rz, h, skala) { // -> _o = Ry*(P - Rs*P)*skala, _qS = Rs, _qY = Ry
+  _qS.setFromEuler(_eS.set(rx, 0, rz)); _qY.setFromAxisAngle(_Y, yaw);
+  _P.set(0, h, 0); _RP.copy(_P).applyQuaternion(_qS);
+  _o.copy(_P).sub(_RP).multiplyScalar(skala || 1).applyQuaternion(_qY);
+}
+export function terapkanSway(obj, x, y, z, yaw, rx, rz, h, sasis) {
+  offsetSway(yaw, rx, rz, h, obj.scale.y);
+  obj.rotation.order = "YXZ"; // rotation.y tetap = arah hadap (kode lain membacanya)
+  obj.quaternion.copy(_qY).multiply(_qS);
+  obj.position.set(x + _o.x, y + _o.y, z + _o.z);
+  if (sasis) { // kebalikan sway -> sasis hanya ikut yaw
+    _qI.copy(_qS).invert(); sasis.quaternion.copy(_qI);
+    _RP.copy(_P).applyQuaternion(_qI); sasis.position.copy(_P).sub(_RP);
+  }
+}
+/* Versi InstancedMesh: matriks bodi (bersway) & matriks roda (hanya yaw). */
+const _sv = new THREE.Vector3(), _pv = new THREE.Vector3(), _qB = new THREE.Quaternion();
+export function matriksSway(mBodi, mRoda, x, y, z, yaw, rx, rz, h, skala) {
+  offsetSway(yaw, rx, rz, h, skala);
+  _sv.setScalar(skala || 1);
+  _qB.copy(_qY).multiply(_qS);
+  mBodi.compose(_pv.set(x + _o.x, y + _o.y, z + _o.z), _qB, _sv);
+  if (mRoda) mRoda.compose(_pv.set(x, y, z), _qY, _sv);
+}

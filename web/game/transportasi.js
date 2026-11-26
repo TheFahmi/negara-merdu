@@ -18,7 +18,7 @@ import { JALAN, PITCH, PUSAT_X, faseLaluLintas, persimpanganKota, sudutBlok } fr
 import { M, camera, gabungBerwarna, jarakDetail, kotak, scene } from "./bersama.js";
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
-import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
+import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur, terapkanSway } from "./jalur.js";
 import { bunyiPeristiwa } from "./suara.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { batasLampuMerah } from "./kota.js";
@@ -440,11 +440,13 @@ function buatKereta() {
     if (i < 3) { K(0.9, 0.25, 1.1, 0x55595e, cx - 7.1, 0.4, 0); for (const s of [-1, 1]) K(0.9, 2.8, 0.06, 0x2b2d30, cx - 7.1, 1.9, s * 0.58); } // sambungan lorong
     K(L - 0.4, 0.3, 2.6, 0x37474f, cx, 0.1, 0);               // rangka bawah
     /* 2 bogie per gerbong: rangka + 4 roda baja + pegas; peralatan bawah lantai; 2 unit AC atap */
+    const sasC = new THREE.Group(); c.add(sasC); c.userData.sasis = sasC; tgt = sasC; // bogie & roda: tetap di rel saat kabin sway
     for (const bz of [-4.6, 4.6]) {
       K(2.6, 0.35, 2.2, 0x2b2d30, cx + bz, -0.2, 0);
       for (const dx of [-0.8, 0.8]) for (const sz of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.14, 14), M(0x55595e)); r.rotation.x = Math.PI / 2; r.position.set(cx + bz + dx, -0.08, sz * 0.75); tgt.add(r); }
       for (const sz of [-1, 1]) { const pg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.32, 8), M(0x8a3a30)); pg.position.set(cx + bz, 0.0, sz * 1.0); tgt.add(pg); }
     }
+    tgt = c;
     K(4.5, 0.5, 1.8, 0x3a3d40, cx, -0.2, 0);                   // kotak peralatan bawah lantai
     for (const ax of [-3.3, 3.3]) { K(2.6, 0.4, 1.8, 0xc9ced4, cx + ax, 4.3, 0); K(1.6, 0.05, 1.2, 0x5f6b75, cx + ax, 4.53, 0); }
     const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("KRL MERDU", "Gerbong " + (i + 1)) }));
@@ -507,6 +509,7 @@ function buatKereta() {
 const PINTU_BUS_Z = 0; // pintu bus di TENGAH bodi (z lokal)
 function buatBus(warna) {
   const g = new THREE.Group(), w = parseInt(warna.slice(1), 16), tex = teksturBus(warna);
+  const sasisBus = []; // roda, as, gardan, rel sasis: dipindah ke grup sasis (tetap tegak saat bodi sway)
   const K = (l, t, d, c, x, y, z) => { const m = kotak(l, t, d, c, x, y, z); m.castShadow = false; g.add(m); return m; };
   const kaca = (l, t, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(l, t, d), KACA_KRL); m.position.set(x, y, z); g.add(m); };
   K(2.5, 0.3, 10.3, 0x55595e, 0, 0.5, 0);                     // lantai
@@ -597,8 +600,8 @@ function buatBus(warna) {
   /* Roda simetris z ±3,4 (overhang depan = belakang), pintu di tengah di
      antara kedua as. Tiap ban berpelek & bernaung spakbor gelap. */
   for (const [x, z] of [[-1.2, 3.4], [1.2, 3.4], [-1.2, -3.4], [1.2, -3.4]]) {
-    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 16), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.5, z); g.add(r);
-    const pelek = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.37, 12), M(0xb8bcc2)); pelek.rotation.z = Math.PI / 2; pelek.position.set(x, 0.5, z); g.add(pelek);
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 16), M(0x1c1c1e)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.5, z); g.add(r); sasisBus.push(r);
+    const pelek = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.37, 12), M(0xb8bcc2)); pelek.rotation.z = Math.PI / 2; pelek.position.set(x, 0.5, z); g.add(pelek); sasisBus.push(pelek);
     const sx = Math.sign(x);
     K(0.06, 0.16, 1.3, 0x1b1d20, sx * 1.36, 1.08, z);                           // spakbor atas
     for (const dz of [-0.62, 0.62]) K(0.06, 0.5, 0.1, 0x1b1d20, sx * 1.36, 0.82, z + dz);
@@ -613,11 +616,11 @@ function buatBus(warna) {
     for (const [a, b] of potongR.concat([[5.15, 5.15]])) { if (a > za) { K(0.1, 0.28, a - za, w, s * 1.26, 0.48, (a + za) / 2); K(0.11, 0.05, a - za, 0x1b1d20, s * 1.265, 0.35, (a + za) / 2); } za = b; }
   }
   K(2.3, 0.04, 10.1, 0x3a3d40, 0, 0.34, 0);                                       // pelat dasar
-  for (const sx of [-0.45, 0.45]) K(0.14, 0.18, 9.8, 0x1b1d20, sx, 0.26, 0);      // rel sasis
-  for (const z of [-3.4, 3.4]) { const as = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.2, 8), M(0x2a2c30)); as.rotation.z = Math.PI / 2; as.position.set(0, 0.5, z); g.add(as); // as roda
+  for (const sx of [-0.45, 0.45]) sasisBus.push(K(0.14, 0.18, 9.8, 0x1b1d20, sx, 0.26, 0));      // rel sasis
+  for (const z of [-3.4, 3.4]) { const as = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.2, 8), M(0x2a2c30)); as.rotation.z = Math.PI / 2; as.position.set(0, 0.5, z); g.add(as); sasisBus.push(as); // as roda
     for (const sx of [-0.45, 0.45]) { K(0.1, 0.06, 1.2, 0x3a3d40, sx, 0.62, z); K(0.1, 0.05, 1.0, 0x3a3d40, sx, 0.56, z); } } // pegas daun
-  { const gd = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), M(0x2a2c30)); gd.position.set(0, 0.5, -3.4); g.add(gd); }  // gardan belakang
-  K(0.08, 0.08, 6.5, 0x55595e, 0, 0.3, 0);                                         // poros propeler
+  { const gd = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), M(0x2a2c30)); gd.position.set(0, 0.5, -3.4); g.add(gd); sasisBus.push(gd); }  // gardan belakang
+  sasisBus.push(K(0.08, 0.08, 6.5, 0x55595e, 0, 0.3, 0));                                         // poros propeler
   K(0.5, 0.42, 1.4, 0x5f6b75, -0.85, 0.28, 0.6);                                   // tangki solar
   for (const z of [-1.2, -1.8]) { const tb = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.7, 10), M(0x8a8f94)); tb.rotation.z = Math.PI / 2; tb.position.set(0.6, 0.24, z); g.add(tb); } // tabung udara rem
   K(0.4, 0.3, 0.5, 0x1b1d20, 0.8, 0.27, 1.8);                                      // kotak aki
@@ -660,6 +663,8 @@ function buatBus(warna) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matSein); m.position.set(x, y, z); m.visible = false; g.add(m); sein[sx].push(m);
   }
   g.userData.lampu = { matRem, sein };
+  const sas = new THREE.Group(); g.add(sas); g.userData.sasis = sas;
+  for (const m of sasisBus) sas.add(m); // posisi lokal sama (sas = identitas saat diam)
   return g;
 }
 /* ================= RUTE BUS (jalur halus) =================
@@ -823,17 +828,17 @@ const _eLihat = new THREE.Euler(), _qLihat = new THREE.Quaternion();
 function goyangKrl(k, dt) { // sway tiap gerbong dari laju beloknya sendiri
   const t = performance.now() / 1000;
   for (const c of k.mobil) {
-    const g = goyang(c.userData.goy || (c.userData.goy = {}), dt, c.rotation.y, k.v, SWAY.krl, t);
-    // gerbong menghadap +x: miring (roll) di sumbu x lokal, angguk (pitch) di sumbu z lokal
-    c.rotation.order = "YXZ"; c.rotation.set(g.rollTampil || 0, c.rotation.y, -g.pitch);
-    c.position.y += g.naik || 0;
+    const g = goyang(c.userData.goy || (c.userData.goy = {}), dt, c.userData.yaw, k.v, SWAY.krl, t);
+    // gerbong menghadap +x: miring (roll) di sumbu x lokal, angguk (pitch) di sumbu z lokal;
+    // kabin berayun di titik putar 1,0 m, bogie & roda tetap tegak di rel
+    terapkanSway(c, c.position.x, c.position.y + (g.naik || 0), c.position.z, c.userData.yaw, g.rollTampil || 0, -g.pitch, 1.0, c.userData.sasis);
   }
 }
 function aturGerbong(k) {
   k.mobil.forEach((c, i) => {
     const sc = k.s - i * 14.2, a = posJalur(k.J, sc + 5), b = posJalur(k.J, sc - 5);
     c.position.set((a.x + b.x) / 2, YD + 0.7, (a.z + b.z) / 2); // roda bogie di atas rel, lantai sejajar peron
-    c.rotation.y = Math.atan2(-(a.z - b.z), a.x - b.x);
+    c.userData.yaw = Math.atan2(-(a.z - b.z), a.x - b.x); c.rotation.set(0, c.userData.yaw, 0);
   });
 }
 
@@ -930,8 +935,8 @@ export function perbaruiTransportasi(t, dt) {
     }
     const p = posJalur(r.R, b.s);
     const yawB = arahHalus(r.R, b.s, 2.5), gB = goyang(b.goy || (b.goy = {}), dt, yawB, b.v, SWAY.bus, performance.now() / 1000);
-    b.g.rotation.order = "YXZ"; b.g.rotation.set(gB.pitch, yawB, gB.rollTampil || 0); // sway: miring di tikungan, mengangguk saat rem
-    b.g.position.set(p.x, tinggiBus(p.x, p.z) + (gB.naik || 0), p.z);
+    // sway: bodi berayun di atas suspensi (titik putar setinggi as 0,8 m); roda & sasis tetap tegak
+    terapkanSway(b.g, p.x, tinggiBus(p.x, p.z) + (gB.naik || 0), p.z, yawB, gB.pitch, gB.rollTampil || 0, 0.8, b.g.userData.sasis);
   }
   perbaruiGerbangBus(dt, bus.map((b) => b.g.position));
   perbaruiPenumpang(dt);

@@ -83,12 +83,13 @@ export function geoMobil() {
   for (const sx of [-1, 1]) det.push({ geo: new THREE.BoxGeometry(0.04, 0.35, 2.2), x: sx * 0.84, y: 0.8, z: -0.25, warna: 0x2a2c30 }); // panel pintu
   det.push({ geo: new THREE.BoxGeometry(0.22, 0.07, 0.02), x: 0, y: 1.35, z: 0.55, warna: 0x111111 });                     // spion dalam
   const kaca = [{ geo: ekstrusi(profilKabin(0), 1.6, 0), warna: 0xffffff }];
+  const roda = []; // ban+pelek+dop: geometri TERPISAH -> tetap tegak saat bodi sway
   for (const [x, z] of [[-1, RODA_Z], [1, RODA_Z], [-1, -RODA_Z], [1, -RODA_Z]]) {
     const wx = x * 0.8;
-    det.push({ geo: new THREE.CylinderGeometry(RODA_R, RODA_R, 0.26, 16), x: wx, y: RODA_R, z, rz: Math.PI / 2, warna: KARET });
-    det.push({ geo: new THREE.CylinderGeometry(0.22, 0.22, 0.27, 14), x: wx + x * 0.005, y: RODA_R, z, rz: Math.PI / 2, warna: PELEK });
-    for (let k = 0; k < 5; k++) det.push({ geo: new THREE.BoxGeometry(0.02, 0.36, 0.06), x: wx + x * 0.14, y: RODA_R, z, rx: k * Math.PI / 5 * 2, warna: 0x8a9097 }); // palang pelek
-    det.push({ geo: new THREE.CylinderGeometry(0.06, 0.06, 0.29, 8), x: wx, y: RODA_R, z, rz: Math.PI / 2, warna: 0x55595e });          // dop
+    roda.push({ geo: new THREE.CylinderGeometry(RODA_R, RODA_R, 0.26, 16), x: wx, y: RODA_R, z, rz: Math.PI / 2, warna: KARET });
+    roda.push({ geo: new THREE.CylinderGeometry(0.22, 0.22, 0.27, 14), x: wx + x * 0.005, y: RODA_R, z, rz: Math.PI / 2, warna: PELEK });
+    for (let k = 0; k < 5; k++) roda.push({ geo: new THREE.BoxGeometry(0.02, 0.36, 0.06), x: wx + x * 0.14, y: RODA_R, z, rx: k * Math.PI / 5 * 2, warna: 0x8a9097 }); // palang pelek
+    roda.push({ geo: new THREE.CylinderGeometry(0.06, 0.06, 0.29, 8), x: wx, y: RODA_R, z, rz: Math.PI / 2, warna: 0x55595e });          // dop
   }
   for (const sx of [-1, 1]) {
     det.push({ geo: new THREE.BoxGeometry(0.42, 0.13, 0.08), x: sx * 0.63, y: 0.74, z: 2.15, ry: sx * 0.12, warna: 0xf4f6f0 });         // lampu depan
@@ -105,9 +106,12 @@ export function geoMobil() {
   det.push({ geo: new THREE.BoxGeometry(1.86, 0.16, 0.12), x: 0, y: 0.38, z: -2.16, warna: GELAP });                                    // bumper belakang
   det.push({ geo: new THREE.BoxGeometry(0.5, 0.12, 0.03), x: 0, y: 0.38, z: 2.225, warna: 0x111111 });                                  // pelat depan
   det.push({ geo: new THREE.BoxGeometry(0.5, 0.12, 0.03), x: 0, y: 0.62, z: -2.205, warna: 0x111111 });                                 // pelat belakang
-  GEO = { badan: gabungBerwarna(badan), detail: gabungBerwarna(det), kaca: gabungBerwarna(kaca) };
+  GEO = { badan: gabungBerwarna(badan), detail: gabungBerwarna(det), kaca: gabungBerwarna(kaca), roda: gabungBerwarna(roda) };
   return GEO;
 }
+let _matRoda = null;
+export function MAT_RODA() { return _matRoda || (_matRoda = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0.2 })); }
+export const PIVOT_MOBIL = 0.36; // titik putar sway mobil (setinggi as roda, satuan lokal)
 /* Mesh mobil mandiri (bukan instanced). */
 export function buatMobil(warna) {
   const G = geoMobil(), g = new THREE.Group();
@@ -115,6 +119,8 @@ export function buatMobil(warna) {
   const d = new THREE.Mesh(G.detail, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.15 }));
   for (const m of [b, d]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
   const k = new THREE.Mesh(G.kaca, MAT_KACA_MOBIL); k.renderOrder = 2; g.add(k);
+  const sasis = new THREE.Group(); g.add(sasis); g.userData.sasis = sasis; // roda: tetap tegak saat bodi sway
+  const r = new THREE.Mesh(G.roda, MAT_RODA()); r.castShadow = true; sasis.add(r);
   return g;
 }
 

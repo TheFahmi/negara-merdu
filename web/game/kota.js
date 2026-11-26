@@ -1,9 +1,9 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
-import { MAT_KACA_MOBIL, geoMobil } from "./mobilGeo.js";
+import { MAT_KACA_MOBIL, MAT_RODA, PIVOT_MOBIL, geoMobil } from "./mobilGeo.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas, persimpanganKota } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
-import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
+import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, matriksSway, posJalur } from "./jalur.js";
 import { PERSIMPANGAN_DITUTUP } from "./plazaPagar.js";
 import { IM_LINGKUNGAN, LAMPU_JALAN, LL_AKTIF, PARAM, TEX_ATAP, TEX_DINDING, gabungBerwarna, gabungGeometri, geometriAtapPelana, geometriDetailMassal, plafonTerang, geometriPagar, rumahDetailSet, rumahTerisi, scene, warnaPemilik } from "./bersama.js";
 
@@ -411,7 +411,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
 
   /* ================= LALU LINTAS MOBIL (INSTANCED, LAJUR KIRI) ================= */
   const MOBIL_AKTIF = { imBodi: null, imDetail: null, daftar: [] };
-  const _dummyM = new THREE.Object3D();
+  const _dummyM = new THREE.Object3D(), _mRoda = new THREE.Matrix4();
 
   export function bangunLaluLintasMobil() {
     // 1. Geometri bodi (diwarnai per instans via instanceColor)
@@ -451,6 +451,8 @@ geoKepalaL.translate(1.02, 4.80, 0);
 
     const imKaca = new THREE.InstancedMesh(geoKaca, MAT_KACA_MOBIL, daftar.length); imKaca.frustumCulled = false; imKaca.renderOrder = 2;
     scene.add(imBodi); scene.add(imDetail); scene.add(imKaca); MOBIL_AKTIF.imKaca = imKaca;
+    const imRoda = new THREE.InstancedMesh(geoMobil().roda, MAT_RODA(), daftar.length); imRoda.frustumCulled = false; imRoda.castShadow = true;
+    scene.add(imRoda); MOBIL_AKTIF.imRoda = imRoda; // roda terpisah: tetap tegak saat bodi sway
     /* LAMPU KENDARAAN (24 Nov 2026): lampu depan putih selalu nyala, lampu
        belakang merah redup yang MENYALA TERANG saat mengerem/berhenti, dan
        SEIN kuning berkedip kiri/kanan sebelum & selama berbelok. Material
@@ -535,10 +537,9 @@ geoKepalaL.translate(1.02, 4.80, 0);
       const q = posJalur(m.J, m.s), ql = Math.hypot(q.hx, q.hz) || 1;
       m.x = q.x; m.z = q.z; m.hx = q.hx / ql; m.hz = q.hz / ql;
       const yawM = arahHalus(m.J, m.s, 2), gM = goyang(m.goy || (m.goy = {}), dt, yawM, m.v, SWAY.mobil, t);
-      _dummyM.position.set(q.x, gM.naik || 0, q.z);
-      _dummyM.rotation.order = "YXZ"; _dummyM.rotation.set(gM.pitch, yawM, gM.rollTampil || 0); // sway
-      _dummyM.scale.setScalar(SKALA_MOBIL);
-      _dummyM.updateMatrix();
+      // sway: bodi berayun di titik putar setinggi as roda; roda hanya ikut arah
+      matriksSway(_dummyM.matrix, _mRoda, q.x, gM.naik || 0, q.z, yawM, gM.pitch, gM.rollTampil || 0, PIVOT_MOBIL, SKALA_MOBIL);
+      if (MOBIL_AKTIF.imRoda) MOBIL_AKTIF.imRoda.setMatrixAt(i, _mRoda);
       imBodi.setMatrixAt(i, _dummyM.matrix);
       imDetail.setMatrixAt(i, _dummyM.matrix);
       if (MOBIL_AKTIF.imKaca) MOBIL_AKTIF.imKaca.setMatrixAt(i, _dummyM.matrix);
@@ -560,5 +561,7 @@ geoKepalaL.translate(1.02, 4.80, 0);
     }
     imBodi.instanceMatrix.needsUpdate = true;
     imDetail.instanceMatrix.needsUpdate = true;
+    if (MOBIL_AKTIF.imRoda) MOBIL_AKTIF.imRoda.instanceMatrix.needsUpdate = true;
+    if (MOBIL_AKTIF.imKaca) MOBIL_AKTIF.imKaca.instanceMatrix.needsUpdate = true;
   }
 

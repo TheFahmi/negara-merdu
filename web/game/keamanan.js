@@ -13,7 +13,8 @@ import { buatMobil } from "./mobilGeo.js";
 import { JALAN, PUSAT_X, PUSAT_Z, SKALA_KARAKTER, SKALA_MOBIL, Z_ISTANA, SKALA_ISTANA, sudutBlok } from "./inti.js";
 import { M, kotak, scene } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
-import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur } from "./jalur.js";
+import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur, terapkanSway } from "./jalur.js";
+import { PIVOT_MOBIL } from "./mobilGeo.js";
 import { batasLampuMerah } from "./kota.js";
 
 export const WARNA_POLISI = { baju: "#8b6b45", celana: "#3d2b1f" };
@@ -159,7 +160,7 @@ export function perbaruiKeamanan(dt, t) {
     m.s = (m.s + m.v * dt) % m.J.total;
     const q = posJalur(m.J, m.s);
     const yawP = arahHalus(m.J, m.s, 2), gP = goyang(m.goy || (m.goy = {}), dt, yawP, m.v, SWAY.mobil, t);
-    m.g.position.set(q.x, 0.02 + (gP.naik || 0), q.z); m.g.rotation.order = "YXZ"; m.g.rotation.set(gP.pitch, yawP, gP.rollTampil || 0); // sway
+    terapkanSway(m.g, q.x, 0.02 + (gP.naik || 0), q.z, yawP, gP.pitch, gP.rollTampil || 0, PIVOT_MOBIL, m.g.userData.sasis); // sway: bodi berayun, roda tegak
     u.rem.color.setHex(m.v < 0.5 || vMaks < m.v - 0.3 ? 0xff2a2a : 0x8a1212);
     const arah = arahSein(m.J, m.s, 24), nyala = arah !== 0 && kedip(t, m.fase);
     for (const s of u.seinM[1]) s.visible = nyala && arah > 0; for (const s of u.seinM[-1]) s.visible = nyala && arah < 0;
