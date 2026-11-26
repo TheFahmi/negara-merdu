@@ -42,6 +42,17 @@ const X_UTARA = 7; // Stasiun Merdu Utara (sumbu istana)
 const sSt = sudutBlok(BLOK_STASIUN.kol, BLOK_STASIUN.bar);
 const XST = sSt.x + JALAN + (PITCH - JALAN) / 2;   // pusat stasiun (x)
 const kereta = [], bus = [];
+/* Armada & headway (26 Nov): 4 KRL per arah, bus 7 (K1) + 4 + 4 (K2A/K2B).
+   Pengaturan headway: (1) jaga jarak aman ke kendaraan di depan (rem
+   bertahap), (2) di stasiun/halte, kendaraan yang terlalu dekat dengan yang
+   di depannya ditahan lebih lama sampai jaraknya kembali ~ideal, sehingga
+   armada tidak menggerombol (bunching) dan tidak berjarak terlalu jauh. */
+const N_KRL = 4, N_BUS = [7, 4, 4];
+function jarakKeDepan(daftar, o, total, sama) { // jarak lintasan ke kendaraan terdekat di depan pada lintasan yang sama
+  let min = Infinity;
+  for (const x of daftar) { if (x === o || !sama(x)) continue; const d = ((x.s - o.s) % total + total) % total; if (d > 0.01 && d < min) min = d; }
+  return min;
+}
 export const rintanganTransportasi = [];
 
 function teksturBus(warna) {
@@ -184,6 +195,104 @@ function bangunStasiunUtara(grup) {
   rintanganTransportasi.push({ minX: x - 2.6, maxX: x + 2.6, minZ: z + 7.8, maxZ: z + 22 });
 }
 
+/* ---------- Gedung Stasiun Merdu (realistis) ---------- */
+function teksturNamaStasiun(judul, sub) {
+  const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 192; const c = cv.getContext("2d");
+  c.fillStyle = "#14467a"; c.fillRect(0, 0, 1024, 192);
+  c.fillStyle = "#e3262d"; c.fillRect(0, 160, 1024, 32);           // strip merah bawah
+  c.fillStyle = "#ffffff"; c.beginPath(); c.arc(96, 82, 56, 0, Math.PI * 2); c.fill(); // logo bulat
+  c.fillStyle = "#14467a"; c.font = "900 62px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("M", 96, 86);
+  c.fillStyle = "#ffffff"; c.textAlign = "left"; c.font = "800 86px system-ui, sans-serif"; c.fillText(judul, 176, 74, 820);
+  c.font = "600 34px system-ui, sans-serif"; c.fillStyle = "#cfe2f5"; c.fillText(sub, 180, 134, 820);
+  const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; return t;
+}
+function teksturLayarJadwal() {
+  const cv = document.createElement("canvas"); cv.width = 512; cv.height = 256; const c = cv.getContext("2d");
+  c.fillStyle = "#0b0f14"; c.fillRect(0, 0, 512, 256);
+  c.fillStyle = "#ffb020"; c.font = "bold 30px monospace"; c.fillText("JADWAL KRL MERDU", 18, 40);
+  c.font = "24px monospace"; c.fillStyle = "#f2f2f2";
+  [["K1", "Keliling Kota", "5 mnt"], ["K1", "Keliling Kota", "12 mnt"], ["UTR", "Merdu Utara", "8 mnt"], ["HUB", "Trans Merdu", "3 mnt"]].forEach(([a, b, d], i) => {
+    const y = 86 + i * 42; c.fillStyle = "#ffb020"; c.fillText(a, 18, y); c.fillStyle = "#f2f2f2"; c.fillText(b, 100, y); c.fillStyle = "#5fd46a"; c.fillText(d, 400, y);
+  });
+  return new THREE.CanvasTexture(cv);
+}
+function bangunGedungStasiun(grup, zb) {
+  const x0 = XST - 30, x1 = XST + 30, z0 = zb + 1, z1 = zb + 17, zc = (z0 + z1) / 2, H = YD + 1.2, LT = 4.6;
+  const bag = []; // bagian opak digabung jadi 1 mesh (hemat draw call)
+  const P = (w, h, d, x, y, z, warna) => bag.push({ geo: new THREE.BoxGeometry(w, h, d), x, y, z, warna });
+  const PUTIH = 0xf1eee8, ABU = 0x5f6b75, ALU = 0xd5dade, BATU = 0xb9b2a6, BIRU = 0x14467a;
+  // lantai, dinding belakang & samping, plafon lantai dasar (= lantai atas)
+  P(60, 0.3, 16, XST, 0.15, zc, 0xd9d4cc);
+  P(60, H, 0.4, XST, H / 2, z0 + 0.2, 0xe7e3da);
+  for (const sx of [-1, 1]) { P(0.5, H, 16, XST + sx * 29.75, H / 2, zc, 0xe7e3da); for (let i = 0; i < 6; i++) P(0.25, H - 1, 0.6, XST + sx * 30.1, H / 2, z0 + 2 + i * 2.6, ALU); }
+  P(59, 0.45, 16, XST, LT, zc, 0xf3f0ea);                               // pelat lantai atas
+  P(60.8, 0.9, 1.4, XST, LT + 0.2, z1 - 0.3, PUTIH);                    // lis tebal depan lantai atas
+  P(60.8, 0.18, 1.42, XST, LT - 0.12, z1 - 0.3, BIRU);                  // strip biru
+  P(61.2, 0.7, 17.2, XST, H + 0.25, zc, PUTIH); P(61.4, 0.25, 17.4, XST, H + 0.7, zc, BIRU); // atap datar + lisplang
+  // kolom bulat fasad
+  const geoKolom = new THREE.CylinderGeometry(0.38, 0.38, H, 16);
+  for (let i = 0; i <= 8; i++) bag.push({ geo: geoKolom, x: x0 + 1 + i * 7.25, y: H / 2, z: z1 - 0.3, warna: PUTIH });
+  // lantai dasar: kusen kaca (kaca mundur 1,6 m di bawah overhang)
+  const zg = z1 - 1.6;
+  for (let x = x0 + 1; x <= x1 - 1 + 0.01; x += 2.9) P(0.12, 4.2, 0.16, x, 2.4, zg, ABU);
+  P(58, 0.14, 0.18, XST, 0.38, zg, ABU); P(58, 0.14, 0.18, XST, 4.35, zg, ABU); P(58, 0.08, 0.14, XST, 3.3, zg, ABU);
+  // lantai atas: kaca pita + sirip aluminium vertikal
+  for (let x = x0 + 0.8; x <= x1 - 0.8; x += 1.25) P(0.14, H - LT - 1.2, 0.8, x, (LT + 0.7 + H - 0.4) / 2, z1 - 0.2, ALU);
+  P(58.5, 0.12, 0.2, XST, LT + 0.75, z1 - 0.95, ABU);
+  // kanopi pintu masuk + 2 tiang + papan "PINTU MASUK"
+  P(12, 0.35, 4.6, XST, 4.05, z1 + 1.6, PUTIH); P(12.1, 0.12, 4.7, XST, 3.86, z1 + 1.6, BIRU);
+  for (const sx of [-1, 1]) P(0.22, 3.8, 0.22, XST + sx * 5.6, 1.9, z1 + 3.6, ALU);
+  P(64, 0.08, 9, XST, 0.04, z1 + 4.5, 0xc9c2b6);                       // pelataran paving depan stasiun
+  P(6, 0.06, 3.2, XST, 0.33, z1 + 1.3, 0x3d3a36);                       // keset
+  // tiang pembatas (bollard) & pot tanaman di pelataran
+  for (let i = -6; i <= 6; i++) if (Math.abs(i) > 2) P(0.25, 0.8, 0.25, XST + i * 4.2, 0.4, z1 + 4.8, 0x8a8f94);
+  for (const sx of [-1, 1]) for (const dx of [10, 20]) P(2.4, 0.7, 1.2, XST + sx * dx, 0.35, z1 + 2.2, BATU);
+  // INTERIOR lantai dasar: loket, gerbang tap, mesin tiket, bangku, layar jadwal
+  for (const sx of [-1, 1]) {
+    P(12, 1.1, 1.1, XST + sx * 16, 0.85, z0 + 2.2, 0x8a5a30);             // meja loket
+    P(12.2, 0.12, 1.3, XST + sx * 16, 1.46, z0 + 2.2, 0xe9e2d4);
+    for (let k = 0; k < 4; k++) P(0.08, 1.3, 1.1, XST + sx * 16 - 4.5 + k * 3, 2.15, z0 + 2.2, ABU); // sekat jendela loket
+    P(12, 0.9, 0.12, XST + sx * 16, 3.6, z0 + 0.5, BIRU);                 // papan LOKET
+    for (let k = 0; k < 3; k++) P(0.9, 1.8, 0.6, XST + sx * 25.5, 1.2, z0 + 3 + k * 1.4, k === 1 ? 0xe3262d : 0x2a6db0); // mesin tiket/top-up
+  }
+  for (let k = 0; k < 9; k++) { // deret gerbang tap (tiang + sayap kaca kecil)
+    const gx = XST - 8 + k * 2;
+    P(0.32, 1.05, 1.4, gx, 0.85, zc + 0.5, 0xc4c8cc); P(0.34, 0.06, 0.3, gx, 1.41, zc + 0.05, k % 3 === 1 ? 0xe3262d : 0x3fbf5a);
+  }
+  for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) { // bangku tunggu
+    const bx = XST + sx * (6 + k * 4), bz = zc + 4.2;
+    P(3, 0.12, 0.6, bx, 0.75, bz, 0x2a6db0); P(3, 0.6, 0.1, bx, 1.05, bz - 0.3, 0x2a6db0); P(0.1, 0.45, 0.4, bx - 1.3, 0.52, bz, ALU); P(0.1, 0.45, 0.4, bx + 1.3, 0.52, bz, ALU);
+  }
+  P(0.6, 2.2, 0.6, XST + 12, 1.4, zc, 0xe3262d); // tiang info merah
+  const mesh = new THREE.Mesh(gabungBerwarna(bag), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.1 }));
+  mesh.castShadow = true; mesh.receiveShadow = true; grup.add(mesh);
+  // kaca transparan (lantai dasar & atas) + pintu geser
+  const matKaca = new THREE.MeshStandardMaterial({ color: 0xa8d4e8, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide });
+  const kacaBawah = new THREE.Mesh(new THREE.PlaneGeometry(58, 3.9), matKaca); kacaBawah.position.set(XST, 2.4, zg + 0.02); grup.add(kacaBawah);
+  const kacaAtas = new THREE.Mesh(new THREE.PlaneGeometry(58.5, H - LT - 1.2), matKaca); kacaAtas.position.set(XST, (LT + 0.7 + H - 0.4) / 2, z1 - 0.95); grup.add(kacaAtas);
+  // lampu plafon (panel menyala) lantai dasar & atas
+  const matPanel = new THREE.MeshBasicMaterial({ color: 0xfff7e6 });
+  const bagLampu = [];
+  for (let i = 0; i < 9; i++) for (let j = 0; j < 3; j++) {
+    bagLampu.push({ geo: new THREE.BoxGeometry(2.2, 0.05, 0.6), x: x0 + 4 + i * 6.5, y: LT - 0.25, z: z0 + 3.5 + j * 4.5, warna: 0xfff7e6 });
+    bagLampu.push({ geo: new THREE.BoxGeometry(2.2, 0.05, 0.6), x: x0 + 4 + i * 6.5, y: H - 0.12, z: z0 + 3.5 + j * 4.5, warna: 0xfff7e6 });
+  }
+  grup.add(new THREE.Mesh(gabungBerwarna(bagLampu), matPanel));
+  // papan nama modern di lis depan + di atas atap, papan LOKET, layar jadwal
+  const texNama = teksturNamaStasiun("STASIUN MERDU", "KRL Merdu · Terminal Bus · MRD");
+  const papan1 = new THREE.Mesh(new THREE.PlaneGeometry(14, 2.6), new THREE.MeshBasicMaterial({ map: texNama }));
+  papan1.position.set(XST, H - 1.1, z1 + 0.25); grup.add(papan1);
+  const papan2 = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.7), new THREE.MeshBasicMaterial({ map: texNama }));
+  papan2.position.set(XST, 4.05, z1 + 3.92); grup.add(papan2);
+  const texLoket = teksturPapanNama("LOKET", "Tiket & Kartu Merdu");
+  for (const sx of [-1, 1]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(6, 0.85), new THREE.MeshBasicMaterial({ map: texLoket })); l.position.set(XST + sx * 16, 3.6, z0 + 0.57); grup.add(l); }
+  const layar = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshBasicMaterial({ map: teksturLayarJadwal() }));
+  layar.position.set(XST, 3.4, z0 + 0.45); grup.add(layar);
+  const layar2 = layar.clone(); layar2.position.set(XST, 3.6, zc + 0.5); layar2.rotation.y = 0; grup.add(layar2);
+  // pohon di pelataran
+  for (const sx of [-1, 1]) for (const dx of [10, 20]) { const ph = pohonKecil(XST + sx * dx, z1 + 2.2); ph.position.y = 0.7; grup.add(ph); }
+}
+
 /* ---------- stasiun + terminal ---------- */
 function bangunStasiun(grup, st) {
   const XST = st.x, zb = st.sBlok.z + JALAN; // tepi utara kavling blok stasiun
@@ -196,16 +305,13 @@ function bangunStasiun(grup, st) {
   const atap = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 68, 24, 1, true, -Math.PI / 2 + 0.6, Math.PI - 1.2),
     new THREE.MeshStandardMaterial({ color: 0xdfe5ea, metalness: 0.35, roughness: 0.4, side: THREE.DoubleSide }));
   atap.rotation.z = Math.PI / 2; atap.position.set(XST, YD + 2.5, RZ); atap.castShadow = true; grup.add(atap);
-  // concourse di blok (utara) + tangga/eskalator turun ke halaman
-  grup.add(kotak(60, YD + 1.2, 16, 0xf3efe6, XST, (YD + 1.2) / 2, zb + 9));
-  for (let i = 0; i < 9; i++) grup.add(kotak(4.2, 3.2, 0.2, 0x2e5a73, XST - 26 + i * 6.5, YD - 1.8, zb + 17.05));
-  grup.add(kotak(60.6, 0.6, 16.6, 0x1d5a8f, XST, YD + 1.4, zb + 9));
-  const papan = new THREE.Mesh(new THREE.BoxGeometry(24, 2.4, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama(st.nama, st.sub), roughness: 0.8 }));
-  papan.position.set(XST, YD + 3.0, zb + 17.2); grup.add(papan);
-  const jam = buatJam(1.1); jam.position.set(XST + 16, YD + 3, zb + 17.35); grup.add(jam); // jam stasiun real time
+  // GEDUNG STASIUN (rombak 26 Nov): 2 lantai, fasad kaca + kolom + sirip
+  // aluminium, kanopi pintu masuk, interior hall (loket, gerbang tap, mesin
+  // tiket, layar jadwal, bangku) terlihat menembus kaca.
+  bangunGedungStasiun(grup, zb);
+  const jam = buatJam(1.1); jam.position.set(XST + 12, YD - 1.1, zb + 17.3); grup.add(jam); // jam stasiun real time di fasad
   for (let t = 0; t < 14; t++) grup.add(kotak(4, 0.4, 0.9, 0xd8d2c6, XST - 6, 0.2 + t * 0.6, zb + 30 - t * 0.85)); // tangga
   const esk = kotak(1.6, 0.3, 14, 0x8a8f94, XST + 6, YD / 2, zb + 24); esk.rotation.x = -Math.atan2(YD, 12); grup.add(esk); // eskalator
-  grup.add(kotak(4.4, 3.6, 3.2, 0x2e5a73, XST, 1.8, zb + 18.6)); // pintu masuk bawah
   rintanganTransportasi.push({ minX: XST - 30, maxX: XST + 30, minZ: zb + 1, maxZ: zb + 17 });
   if (!st.terminal) return;
   // terminal bus (selatan blok, hanya Stasiun Merdu)
@@ -595,9 +701,9 @@ export function bangunTransportasi() {
   STASIUN.push({ nama: "Stasiun Merdu Utara", x: X_UTARA, z: ZN, pintu: { x: X_UTARA, z: ZN + 27.5 } });
   for (const [J, nama] of [[JALUR_A, "A"], [JALUR_B, "B"]]) {
     const stop = stopUntuk(J);
-    for (let j = 0; j < 2; j++) {
+    for (let j = 0; j < N_KRL; j++) { // armada per arah, tersebar rata (headway = keliling / N_KRL)
       const k = buatKereta(); grup.add(k);
-      kereta.push({ g: k, mobil: k.userData.gerbong, J, jalur: nama, s: (stop[0].s + J.total * (0.25 + j * 0.5)) % J.total, v: 20, berhenti: 0, stop, sudahIdx: -1, stasiunKini: -1 });
+      kereta.push({ g: k, mobil: k.userData.gerbong, J, jalur: nama, s: (stop[0].s + J.total * (0.12 + j / N_KRL)) % J.total, v: 20, berhenti: 0, stop, sudahIdx: -1, stasiunKini: -1 });
     }
   }
   for (const k of kereta) aturGerbong(k);
@@ -655,10 +761,10 @@ export function bangunTransportasi() {
   for (const r of RUTE) r.halte.sort((a, b) => a.s - b.s);
   bangunGedungHub(grup, zHub);
   const WARNA = ["#2e9e5b", "#1d5a8f", "#e8943a", "#c8102e", "#7b2ff7"];
-  for (let i = 0; i < 5; i++) { const b = buatBus(WARNA[i]); grup.add(b); bus.push({ g: b, r: 0, s: R1.total * i / 5, v: 0, tunggu: 0, halteTerakhir: -1, halteKini: null }); }
-  for (const r of [1, 2]) for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < N_BUS[0]; i++) { const b = buatBus(WARNA[i % WARNA.length]); grup.add(b); bus.push({ g: b, r: 0, s: R1.total * i / N_BUS[0], v: 0, tunggu: 0, halteTerakhir: -1, halteKini: null }); }
+  for (const r of [1, 2]) for (let i = 0; i < N_BUS[r]; i++) {
     const b = buatBus(r === 1 ? "#c8102e" : "#e8943a"); grup.add(b);
-    bus.push({ g: b, r, s: RUTE[r].R.total * (i / 3 + 0.05), v: 0, tunggu: 0, halteTerakhir: -1, halteKini: null });
+    bus.push({ g: b, r, s: RUTE[r].R.total * (i / N_BUS[r] + 0.05), v: 0, tunggu: 0, halteTerakhir: -1, halteKini: null });
   }
   for (const b of bus) isiAwal(b.g, 2 + Math.floor(Math.random() * 3));      // penumpang awal
   for (const k of kereta) for (const c of k.mobil) isiAwal(c, 2 + Math.floor(Math.random() * 2));
@@ -697,11 +803,19 @@ export function perbaruiTransportasi(t, dt) {
     if (k.berhenti > 0) {
       k.tahan = (k.tahan || 0) + dt;
       if (k.berhenti - dt <= 2.6 && sibuk(k) && k.tahan < 40) { k.berhenti = 2.6; continue; } // tunggu penumpang selesai
+      if (k.berhenti - dt <= 2.6 && k.tahan < 45) { // atur headway: tahan bila terlalu rapat dengan KRL di depan
+        const ideal = k.J.total / N_KRL, depan = jarakKeDepan(kereta, k, k.J.total, (x) => x.J === k.J);
+        if (depan < ideal * 0.8) { k.berhenti = 2.6; continue; }
+      }
       k.berhenti -= dt; if (k.berhenti <= 0) k.tahan = 0;
       if (k.berhenti <= 0) { k.sudahIdx = k.stasiunKini; k.stasiunKini = -1; }
       continue;
     }
     let vMaks = 34;
+    { // jarak aman ke KRL di depan (panjang rangkaian ±86 m + jarak aman 60 m)
+      const depan = jarakKeDepan(kereta, k, k.J.total, (x) => x.J === k.J);
+      vMaks = Math.min(vMaks, Math.sqrt(2 * 2.6 * Math.max(0, depan - 120)));
+    }
     const dB = jarakKeBelok(k.J, k.s + 6, 160); // melambat sebelum & selama tikungan
     if (dB < 160) vMaks = Math.min(vMaks, 15 + dB * 0.12);
     for (const st of k.stop) {

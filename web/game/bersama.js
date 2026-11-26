@@ -443,7 +443,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
      - unit AC luar di sisi, meteran listrik, kotak surat */
   export function geometriDetailMassal() {
     const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-    const TRIM = 0xfdf3d8, KAYU = 0x7a5230, KACA = 0x8fb4c8, TIRAI = 0xe9dcc2, BESI = 0x2a2c30, KERAMIK = 0xc9b9a0;
+    const TRIM = 0xfdf3d8, KAYU = 0x7a5230, KACA = 0x5f8aa3, TIRAI = 0xe9dcc2, BESI = 0x2a2c30, KERAMIK = 0xc9b9a0;
     const bagian = [];
     const P = (w, h, d, x, y, z, warna, rx, ry) => bagian.push({ geo: B(w, h, d), x, y, z, rx: rx || 0, ry: ry || 0, warna });
     P(9.3, 0.55, 8.3, 0, 0.27, 0, 0x9a938a);                                   // pondasi
@@ -469,9 +469,13 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
       const dz = sisi === "z" ? Math.sign(z) : 0, dx = sisi === "x" ? Math.sign(x) : 0;
       const W = (w, d) => (sisi === "z" ? [w, d] : [d, w]);
       const put = (w, h, d, ox, y, off, warna) => { const [a, c] = W(w, d); P(a, h, c, x + (sisi === "z" ? ox : dx * off), y, z + (sisi === "z" ? dz * off : ox), warna); };
-      put(lebar + 0.2, 1.7, 0.12, 0, 2.2, 0.0, KAYU);               // kusen luar
-      put(lebar, 1.5, 0.06, 0, 2.2, 0.03, KACA);                    // kaca
-      put(lebar * 0.42, 1.4, 0.03, -lebar * 0.26, 2.22, -0.02, TIRAI); // tirai dalam (terlihat lewat kaca)
+      /* kusen = 4 batang (BUKAN balok padat): dulu balok kusen menutupi panel kaca
+         (muka depannya sebidang -> kaca tertutup/berkedip). Kaca kini di depan
+         dinding, di dalam bingkai; tirai tipis di sisi kiri kaca. */
+      put(lebar + 0.2, 0.1, 0.12, 0, 2.2 + 0.8, 0.05, KAYU); put(lebar + 0.2, 0.1, 0.12, 0, 2.2 - 0.8, 0.05, KAYU);
+      put(0.1, 1.5, 0.12, -lebar / 2 - 0.05, 2.2, 0.05, KAYU); put(0.1, 1.5, 0.12, lebar / 2 + 0.05, 2.2, 0.05, KAYU);
+      put(lebar, 1.5, 0.012, 0, 2.2, 0.016, KACA);                  // kaca (di depan muka dinding)
+      put(lebar * 0.3, 1.42, 0.006, -lebar * 0.33, 2.22, 0.026, TIRAI); // tirai terlihat di balik kaca
       put(0.08, 1.5, 0.1, 0, 2.2, 0.06, KAYU);                      // kusen tengah
       for (let i = 1; i < 6; i++) put(0.03, 1.5, 0.04, -lebar / 2 + i * lebar / 6, 2.2, 0.12, BESI); // teralis
       put(lebar + 0.4, 0.12, 0.24, 0, 1.38, 0.08, TRIM);            // ambang bawah
