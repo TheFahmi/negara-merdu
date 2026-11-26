@@ -19,6 +19,7 @@ import { M, camera, gabungBerwarna, jarakDetail, kotak, scene } from "./bersama.
 import { bangkuTaman, pohonKecil, teksturPapanNama } from "./fasilitas.js";
 import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 import { arahHalus, arahSein, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur } from "./jalur.js";
+import { bunyiPeristiwa } from "./suara.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { batasLampuMerah } from "./kota.js";
 import { buatJam } from "./jam.js";
@@ -798,6 +799,13 @@ export function bangunTransportasi() {
   return grup;
 }
 
+/* posisi kendaraan untuk suara berposisi (suara.js) */
+export function posisiSuaraKendaraan() {
+  return {
+    bus: bus.map((b) => ({ x: b.g.position.x, z: b.g.position.z, jalan: b.v > 0.5 })),
+    krl: kereta.map((k) => { const p = k.mobil[1].position; return { x: p.x, z: p.z, jalan: k.v > 1 }; }),
+  };
+}
 /* Posisi & arah tiap gerbong mengikuti lengkung rel: titik bogie depan &
    belakang (±5 m dari pusat gerbong) di lintasan -> gerbong berbelok mulus
    dan rangkaian "melipat" di tikungan seperti kereta sungguhan. */
@@ -834,7 +842,7 @@ export function perbaruiTransportasi(t, dt) {
         if (depan < ideal * 0.8) { k.berhenti = 2.6; continue; }
       }
       k.berhenti -= dt; if (k.berhenti <= 0) k.tahan = 0;
-      if (k.berhenti <= 0) { k.sudahIdx = k.stasiunKini; k.stasiunKini = -1; }
+      if (k.berhenti <= 0) { k.sudahIdx = k.stasiunKini; k.stasiunKini = -1; bunyiPeristiwa("krlBerangkat", k.mobil[1].position); }
       continue;
     }
     let vMaks = 34;
@@ -871,7 +879,7 @@ export function perbaruiTransportasi(t, dt) {
   for (const b of bus) {
     const r = RUTE[b.r];
     if (b.tunggu > 0 && b.tunggu - dt <= 1.3 && sibuk(b) && (b.tahan = (b.tahan || 0) + dt) < 30) { b.tunggu = 1.3; b.v = 0; } // pintu terbuka sampai penumpang selesai
-    else if (b.tunggu > 0) { b.tunggu -= dt; b.v = 0; if (b.tunggu <= 0) { b.tahan = 0; const db = perKoridor[b.r].daftar; if (db.length > 1 && b.gap < (r.R.total / db.length) * 0.85) b.tunggu = 0.5; else { if (b.halteKini && b.halteKini.entri) b.halteKini.entri.isiUlang = 9 + Math.random() * 8; b.halteKini = null; } } }
+    else if (b.tunggu > 0) { b.tunggu -= dt; b.v = 0; if (b.tunggu <= 0) { b.tahan = 0; const db = perKoridor[b.r].daftar; if (db.length > 1 && b.gap < (r.R.total / db.length) * 0.85) b.tunggu = 0.5; else { bunyiPeristiwa("busBerangkat", b.g.position); if (b.halteKini && b.halteKini.entri) b.halteKini.entri.isiUlang = 9 + Math.random() * 8; b.halteKini = null; } } }
     else {
       const dB = jarakKeBelok(r.R, b.s + 3, 16), vMaks = dB < 16 ? 4.5 + dB * 0.3 : 9; // pelan di tikungan
       let vM = vMaks;
@@ -1041,6 +1049,7 @@ function naikkan(w, pintuLuar, pintuDalam, induk, pintuLx, pintuLz, bus, tunda, 
   };
 }
 function peristiwaBusBerhenti(b, entri) {
+  bunyiPeristiwa("busBerhenti", b.g.position);
   const pintuLuar = duniaDari(b.g, 2.2, 0, PINTU_BUS_Z).clone(), pintuDalam = duniaDari(b.g, 0.9, 0.65, PINTU_BUS_Z).clone();
   const y0 = entri.y + 0.02; pintuLuar.y = y0;
   const duduk = (b.g.userData.kursi || []).filter((k) => k.isi).map((k) => k.isi);
@@ -1071,6 +1080,7 @@ function peristiwaBusBerhenti(b, entri) {
   });
 }
 function peristiwaKeretaBerhenti(k, idx) {
+  bunyiPeristiwa("krlBerhenti", k.mobil[1].position);
   const st = STASIUN[idx], e = st.entri;
   const tengah = k.mobil[1].position;
   const sisiDunia = Math.sign(tengah.z - st.z) || 1; // -1 peron utara as, +1 selatan

@@ -23,7 +23,9 @@ import { perbaruiPlazaRamai } from "./plazaRamai.js";
 import { perbaruiJam } from "./jam.js";
 import { PARKIR_POLISI, bangunGedungKaca, perbaruiGedungKaca, rintanganGedung } from "./gedungKaca.js";
 import { bangunKeamananIstana, bangunPatroliPolisi, perbaruiKeamanan } from "./keamanan.js";
-import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from "./transportasi.js";
+import { bangunTransportasi, perbaruiTransportasi, posisiSuaraKendaraan, rintanganTransportasi } from "./transportasi.js";
+import { pasangPengaturanSuara, perbaruiSuara } from "./suara.js";
+import { wkt } from "./bersama.js";
 
   /* ================= ANIMASI ================= */
   export const jam = new THREE.Clock();
@@ -112,8 +114,14 @@ import { bangunTransportasi, perbaruiTransportasi, rintanganTransportasi } from 
       }
     }
     awanGrup.children.forEach((g) => { if (g.visible) { g.position.x += g.userData.kecepatan * 0.16; if (g.position.x > 2900) g.position.x = -2900; } });
+    if (frameSuara++ % 3 === 0) { // suara: cukup tiap 3 frame
+      const pk = posisiSuaraKendaraan();
+      perbaruiSuara(dt * 3, { mode: modeKamera, diDalam: diInterior, malam: (wkt.jendela || 0) / 2.2, plaza: { x: PUSAT_X, z: PUSAT_Z }, bus: pk.bus, krl: pk.krl });
+    }
     renderer.render(scene, camera);
   }
+  let frameSuara = 0;
+  pasangPengaturanSuara();
   addEventListener("resize", () => {
     camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);

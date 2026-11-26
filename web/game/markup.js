@@ -72,6 +72,15 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
         </div>
         <p id="info-waktu"></p>
       </div>
+      <div class="pm-kualitas">
+        <span class="pm-kualitas-judul"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg> Suara</span>
+        <div class="seg" id="seg-suara">
+          <button type="button" data-suara="nyala">Nyala</button>
+          <button type="button" data-suara="mati">Mati</button>
+        </div>
+        <input id="vol-suara" type="range" min="0" max="100" step="1" aria-label="Volume suara" style="width:100%;margin-top:8px;accent-color:#2e9e5b">
+        <p>Suasana kota, burung &amp; jangkrik, bus, KRL, langkah kaki.</p>
+      </div>
       <button id="tombol-keluarga" type="button"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20.5v-2A4.5 4.5 0 0 1 7 14h4a4.5 4.5 0 0 1 4.5 4.5v2"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 14.4a4.5 4.5 0 0 1 5.5 4.4v1.7"/></svg> Keluarga Saya</button>
       <button id="tombol-pemilu" type="button"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V12"/><path d="M10.3 7.6l1.2 1.2 2-2.3"/><rect x="3" y="12" width="18" height="8" rx="1.5"/><path d="M3 16h18"/></svg> Pemilu</button>
       <button id="tombol-pembangunan" type="button"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 22V4"/><path d="M7 4h13"/><path d="M7 9l6.5-5"/><path d="M17 4v5"/><rect x="15.4" y="9" width="3.2" height="3.2"/><path d="M3.5 22h10"/></svg> Pembangunan</button>
