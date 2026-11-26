@@ -179,11 +179,11 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
   for (const sx of [-1, 1]) {
     const x = sx * HW, gg = new THREE.Group(); gg.position.set(x, Y0, 0); g.add(gg);
     // portal di atas busway
-    for (const s of [-1, 1]) { gg.add(kotak(0.6, 6.4, 0.6, 0x7b8086, 0, 3.2, BUSWAY_Z + s * (BW + 0.9))); rintanganPusat({ minX: x - 0.5, maxX: x + 0.5, minZ: BUSWAY_Z + s * (BW + 0.9) - 0.5, maxZ: BUSWAY_Z + s * (BW + 0.9) + 0.5 }); }
-    gg.add(kotak(0.7, 0.9, BW * 2 + 2.4, 0x7b8086, 0, 6.2, BUSWAY_Z));
+    for (const s of [-1, 1]) { gg.add(kotak(0.6, 8.4, 0.6, 0x7b8086, 0, 4.2, BUSWAY_Z + s * (BW + 0.9))); rintanganPusat({ minX: x - 0.5, maxX: x + 0.5, minZ: BUSWAY_Z + s * (BW + 0.9) - 0.5, maxZ: BUSWAY_Z + s * (BW + 0.9) + 0.5 }); }
+    gg.add(kotak(0.7, 0.9, BW * 2 + 2.4, 0x7b8086, 0, 8.2, BUSWAY_Z)); // portal dinaikkan: palang tegak (ujung ±7,3 m) tidak lagi menembus balok atas
     for (const s of [-1, 1]) {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(BW * 2 - 1, 0.85), new THREE.MeshBasicMaterial({ map: papanGerbang }));
-      p.rotation.y = s * Math.PI / 2; p.position.set(s * 0.37, 6.2, BUSWAY_Z); gg.add(p);
+      p.rotation.y = s * Math.PI / 2; p.position.set(s * 0.37, 8.2, BUSWAY_Z); gg.add(p);
     }
     // pos palang di as busway (median) + 2 palang: lajur utara mengarah -z, lajur selatan +z
     gg.add(kotak(0.9, 1.3, 0.9, 0xf2c230, 0, 0.65, BUSWAY_Z));
@@ -202,7 +202,7 @@ export function bangunPagarPlaza(pusat, rintanganPusat) {
     for (const s of [-1, 1]) {
       const l = new THREE.Mesh(new THREE.CircleGeometry(0.28, 14), matMerah);
       // lampu menghadap +x (s=1) dilihat bus dari timur = lajur selatan (arah +1); s=-1 -> lajur utara
-      l.rotation.y = s * Math.PI / 2; l.position.set(s * 0.37, 5.45, BUSWAY_Z + s * 2.2); gg.add(l); palang.find((p) => p.arah === s).lampu.push(l);
+      l.rotation.y = s * Math.PI / 2; l.position.set(s * 0.37, 7.45, BUSWAY_Z + s * 2.2); gg.add(l); palang.find((p) => p.arah === s).lampu.push(l);
     }
     GERBANG.push({ x: x + PUSAT_X, palang });
   }
