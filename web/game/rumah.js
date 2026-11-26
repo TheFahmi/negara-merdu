@@ -353,7 +353,7 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
       label.position.set(0, 7.4, 0); rumah.add(label);
       dinamis.add(rumah); rumahKlik.push(rumah);
       rintanganDetail.push({ minX: pos.x - 4.6, maxX: pos.x + 4.6, minZ: pos.z - 4.2, maxZ: pos.z + 4.2 }); // tapak detail — cakupan tabrakan kavling ini
-      const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi, rupa: w.rupa });
+      const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi, rupa: w.rupa, gender: w.gender });
       kar.scale.setScalar(SKALA_KARAKTER);
       kar.userData.username = w.username; // dipakai multiplayer: NPC disembunyikan saat orangnya online
       const lb = buatLabel("@" + w.username, 4.2, w.jabatan || null); lb.position.y = 2.25; kar.add(lb);

@@ -508,19 +508,22 @@ function buatBus(warna) {
   }
   K(1.6, 0.35, 2.4, 0xdfe3e6, 0, 3.6, -1.5); K(1.4, 0.06, 2.2, 0x8a8f94, 0, 3.8, -1.5);        // AC atap
   for (const sx of [-1, 1]) K(0.16, 0.16, 10.5, w, sx * 1.22, 3.42, 0);                        // lis atap membulat
-  for (let i = 0; i < 5; i++) K(2.2, 0.05, 0.08, 0x1b1d20, 0, 0.95 + i * 0.12, -5.27);         // kisi mesin belakang
+  for (let i = 0; i < 5; i++) K(1.5, 0.05, 0.08, 0x1b1d20, 0, 0.95 + i * 0.12, -5.27);         // kisi mesin belakang (dipersempit: sudut untuk lampu)
   const papan = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), new THREE.MeshBasicMaterial({ map: teksturPapanNama("TRANS MERDU", "Keliling Kota") }));
   papan.position.set(0, 3.0, -5.28); papan.rotation.y = Math.PI; g.add(papan);
   /* lampu: rem merah (terang saat berhenti/melambat), sein kuning kiri (+x)
      & kanan (-x) di 4 sudut + samping, lampu mundur/kabut tidak perlu */
   const matRem = new THREE.MeshBasicMaterial({ color: 0x8a1212 });
   for (const sx of [-1, 1]) {
-    const r = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.06), matRem); r.position.set(sx * 0.95, 1.0, -5.24); g.add(r);
+    // lampu belakang vertikal di sudut, MENONJOL dari panel (z -5.26) supaya tidak tertutup bodi/kisi
+    K(0.32, 1.05, 0.06, 0x16181b, sx * 1.1, 1.42, -5.285);                                      // rumah lampu gelap
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.6, 0.05), matRem); r.position.set(sx * 1.1, 1.22, -5.325); g.add(r);
+    const mundur = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.05), new THREE.MeshBasicMaterial({ color: 0xe8e8e8 })); mundur.position.set(sx * 1.1, 1.84, -5.325); g.add(mundur);
     const d = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.06), new THREE.MeshBasicMaterial({ color: 0xfff6d8 })); d.position.set(sx * 0.9, 0.95, 5.24); g.add(d);
   }
-  const lampuRem3 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.06), matRem); lampuRem3.position.set(0, 3.2, -5.24); g.add(lampuRem3);
+  const lampuRem3 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.06), matRem); lampuRem3.position.set(0, 3.25, -5.3); g.add(lampuRem3);
   const sein = { 1: [], "-1": [] }, matSein = new THREE.MeshBasicMaterial({ color: 0xffb020 });
-  for (const sx of [-1, 1]) for (const [x, y, z, w, h, d] of [[sx * 1.15, 0.95, 5.24, 0.2, 0.18, 0.06], [sx * 1.15, 1.45, -5.24, 0.2, 0.3, 0.06], [sx * 1.36, 1.0, 4.6, 0.04, 0.14, 0.35]]) {
+  for (const sx of [-1, 1]) for (const [x, y, z, w, h, d] of [[sx * 1.15, 0.95, 5.24, 0.2, 0.18, 0.06], [sx * 1.1, 1.66, -5.325, 0.24, 0.22, 0.05], [sx * 1.36, 1.0, 4.6, 0.04, 0.14, 0.35]]) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matSein); m.position.set(x, y, z); m.visible = false; g.add(m); sein[sx].push(m);
   }
   g.userData.lampu = { matRem, sein };

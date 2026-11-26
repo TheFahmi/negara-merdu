@@ -185,10 +185,10 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
   function loopPratinjau() {
     const sec = document.querySelector('section[data-langkah="rupa"]');
     if (sec && !sec.hidden && !$("#gerbang").hidden && siapkanPratinjau()) {
-      const kunci = JSON.stringify([form.baju, form.kulit, form.topi, form.rupa]);
+      const kunci = JSON.stringify([form.baju, form.kulit, form.topi, form.rupa, form.gender]);
       if (kunci !== pratinjau.kunci) {
         if (pratinjau.kar) pratinjau.scene.remove(pratinjau.kar);
-        pratinjau.kar = buatKarakter({ baju: form.baju, kulit: form.kulit, topi: form.topi, rupa: form.rupa });
+        pratinjau.kar = buatKarakter({ baju: form.baju, kulit: form.kulit, topi: form.topi, rupa: form.rupa, gender: form.gender });
         pratinjau.scene.add(pratinjau.kar); pratinjau.kunci = kunci;
       }
       if (pratinjau.seret == null) pratinjau.putar += 0.008;
@@ -321,7 +321,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
      + No. Rumah + tanggal terdaftar + "Berlaku: Seumur Hidup", foto karakter
      di kanan. Semua data dari sesi pemiliknya sendiri (server hanya memberi
      NIK lengkap ke pemiliknya). Tampilan = DOM/CSS (#ktp-overlay); unduhan
-     PNG digambar ulang ke canvas 2D. Foto di kedua tempat adalah RENDER 3D
+     PNG digambar ke canvas 2D dan tampilan memakai gambar yang sama. Foto di kedua tempat adalah RENDER 3D
      ASLI model karakter warga itu (lihat renderFoto3D di bawah), dan NIK
      ditampilkan berkelompok 4 digit supaya tidak pecah baris. */
   export const BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
@@ -367,7 +367,7 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
   export let panggungFoto = null;       // { renderer, scene, kamera } — dibuat malas, dipakai ulang
   export const cacheFoto3D = new Map(); // kunci penampilan -> dataURL PNG hasil render
   export function kunciRupa(rupa) {
-    return [(rupa && rupa.warna_baju) || "", (rupa && rupa.warna_kulit) || "", (rupa && rupa.topi) || "", JSON.stringify((rupa && rupa.rupa) || null)].join("|");
+    return [(rupa && rupa.warna_baju) || "", (rupa && rupa.warna_kulit) || "", (rupa && rupa.topi) || "", (rupa && rupa.gender) || "", JSON.stringify((rupa && rupa.rupa) || null)].join("|");
   }
   export function siapkanPanggungFoto() {
     if (panggungFoto) return panggungFoto;
@@ -391,8 +391,8 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
   }
   /* Render satu karakter menjadi dataURL potret. Mengembalikan null
      bila gagal — pemanggil memakai placeholder polos. */
-  export function renderFoto3D(rupa) {
-    const kunci = kunciRupa(rupa);
+  export function renderFoto3D(rupa, latar) {
+    const kunci = kunciRupa(rupa) + "|" + (latar || "krem");
     if (cacheFoto3D.has(kunci)) return cacheFoto3D.get(kunci);
     let kar = null;
     try {
@@ -402,9 +402,22 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
         kulit: (rupa && rupa.warna_kulit) || "#f1c27d",
         topi: (rupa && rupa.topi) || "tanpa",
         rupa: (rupa && rupa.rupa) || null,
+        gender: rupa && rupa.gender,
       });
       p.scene.add(kar);
+      /* Bingkai pas foto otomatis dari ukuran model (tahan perubahan proporsi
+         karakter): puncak kepala + ruang ~8%, bawah = sedikit di bawah bahu. */
+      kar.updateMatrixWorld(true);
+      const kotak = new THREE.Box3().setFromObject(kar);
+      const T = kotak.max.y - kotak.min.y, atas = kotak.max.y + T * 0.07, bawah = kotak.min.y + T * 0.6;
+      const tinggi = atas - bawah, tengah = (atas + bawah) / 2;
+      const jarak = (tinggi / 2) / Math.tan(THREE.MathUtils.degToRad(p.kamera.fov / 2));
+      p.kamera.position.set(0, tengah + T * 0.02, jarak);
+      p.kamera.lookAt(0, tengah, 0);
+      const bgLama = p.scene.background;
+      if (latar) p.scene.background = new THREE.Color(latar);
       p.renderer.render(p.scene, p.kamera);
+      p.scene.background = bgLama;
       const url = p.renderer.domElement.toDataURL("image/png");
       cacheFoto3D.set(kunci, url);
       return url;
@@ -418,37 +431,27 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
      dari placeholder krem polos, lalu foto 3D ditimpa begitu gambarnya
      siap dimuat. selesai() dipanggil tepat sekali di semua jalur
      (dipakai unduhan PNG yang harus menunggu foto selesai digambar). */
-  export function lukisFotoKartu(c, x, y, w, h, rupa, selesai) {
+  export function lukisFotoKartu(c, x, y, w, h, rupa, selesai, latar) {
     const grad = c.createLinearGradient(0, y, 0, y + h);
-    grad.addColorStop(0, "#f9f1de"); grad.addColorStop(1, "#eddfba");
+    grad.addColorStop(0, latar || "#f9f1de"); grad.addColorStop(1, latar || "#eddfba");
     c.fillStyle = grad; c.fillRect(x, y, w, h);
     let sudah = false;
     const beres = () => { if (!sudah) { sudah = true; if (selesai) selesai(); } };
-    const url = renderFoto3D(rupa);
+    const url = renderFoto3D(rupa, latar);
     if (!url) { beres(); return; }
     const img = new Image();
     img.onload = () => { try { c.drawImage(img, x, y, w, h); } catch (e) {} beres(); };
     img.onerror = beres;
     img.src = url;
   }
+  /* Tampilan = gambar PNG yang SAMA persis dengan unduhan (satu sumber
+     gambar), jadi tata letak tidak pernah berantakan di layar sempit. */
   export function tampilkanKTP() {
     const w = sesi.saya; if (!w) return;
-    $("#ktp-nik").textContent = kelompokkanNomor(w.nik);
-    $("#ktp-nama").textContent = "@" + w.username;
-    $("#ktp-gender").textContent = labelGender(w.gender); // "—" bila belum dilengkapi
-    const wl = w.wilayah || wilayahLengkap(w.blok); // server mengirim wilayah; cadangan dihitung klien
-    $("#ktp-alamat").textContent = "No. " + w.nomor_rumah + ", Blok " + w.blok + " Kav. " + w.kavling;
-    $("#ktp-rtrw").textContent = teksRTRW(wl);
-    $("#ktp-kelurahan").textContent = wl.nama_kelurahan;
-    $("#ktp-kecamatan").textContent = wl.nama_kecamatan;
-    $("#ktp-terdaftar").textContent = formatTanggalID(w.terdaftar);
-    $("#ktp-baris-jabatan").hidden = !w.jabatan; // baris Jabatan hanya untuk pejabat aktif
-    $("#ktp-jabatan").textContent = w.jabatan || "—";
-    const cv = $("#ktp-foto-kanvas");
-    const c = cv.getContext("2d");
-    c.clearRect(0, 0, cv.width, cv.height);
-    lukisFotoKartu(c, 0, 0, cv.width, cv.height, w); // placeholder dulu, render 3D menimpa begitu siap
+    const img = $("#ktp-gambar");
+    img.removeAttribute("src");
     $("#ktp-overlay").hidden = false;
+    gambarKTPKeCanvas(w).then((cv) => { img.src = cv.toDataURL("image/png"); });
   }
   /* Tulis teks nilai kartu di PNG dengan huruf yang menyusut otomatis
      sampai muat di lebar kolomnya — nilai panjang (NIK berkelompok,
@@ -468,77 +471,94 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
      Promise<canvas> karena foto 3D harus selesai digambar dulu. */
   export function gambarKTPKeCanvas(w) {
     return new Promise((resolve) => {
-    const cv = document.createElement("canvas"); cv.width = 1200; cv.height = 756;
+    const W = 1200, H = 756, F = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     const c = cv.getContext("2d");
-    const grad = c.createLinearGradient(0, 0, 1200, 756);
-    grad.addColorStop(0, "#c4e5f8"); grad.addColorStop(1, "#93c9ef");
-    jalurBulat(c, 0, 0, 1200, 756, 36); c.fillStyle = grad; c.fill();
-    c.save(); jalurBulat(c, 0, 0, 1200, 756, 36); c.clip();
-    c.strokeStyle = "rgba(29,78,121,0.07)"; c.lineWidth = 2; // pola kontur halus
-    for (const [ex, ey, er] of [[1120, 720, 130], [1120, 720, 190], [1120, 720, 250], [40, 30, 120], [40, 30, 185]]) {
-      c.beginPath(); c.ellipse(ex, ey, er, er * 0.62, 0, 0, Math.PI * 2); c.stroke();
+    // dasar biru muda + pola guilloche (gelombang halus) seperti KTP
+    const grad = c.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, "#d4ecfa"); grad.addColorStop(.55, "#b5dcf4"); grad.addColorStop(1, "#9fd0f0");
+    jalurBulat(c, 0, 0, W, H, 34); c.fillStyle = grad; c.fill();
+    c.save(); jalurBulat(c, 0, 0, W, H, 34); c.clip();
+    c.lineWidth = 1.3;
+    for (let k = 0; k < 26; k++) {
+      c.strokeStyle = k % 2 ? "rgba(29,90,143,0.07)" : "rgba(255,255,255,0.28)";
+      c.beginPath();
+      for (let x = 0; x <= W; x += 8) {
+        const y = 40 + k * 28 + Math.sin(x / 70 + k * 0.6) * 12 + Math.sin(x / 23 + k) * 3;
+        x ? c.lineTo(x, y) : c.moveTo(x, y);
+      }
+      c.stroke();
     }
-    // lambang rumah emas
-    const eg = c.createLinearGradient(0, 48, 0, 158);
-    eg.addColorStop(0, "#f6cd6b"); eg.addColorStop(1, "#dd9a26");
-    c.save(); c.translate(58, 48); c.scale(110 / 64, 110 / 64);
-    c.beginPath();
-    c.moveTo(32, 4); c.lineTo(60, 28); c.lineTo(52, 28); c.lineTo(52, 58); c.lineTo(38, 58);
-    c.lineTo(38, 42); c.lineTo(26, 42); c.lineTo(26, 58); c.lineTo(12, 58); c.lineTo(12, 28);
-    c.lineTo(4, 28); c.closePath();
-    c.fillStyle = eg; c.fill(); c.strokeStyle = "#b97e14"; c.lineWidth = 1.4; c.stroke();
+    // watermark lambang di tengah
+    c.save(); c.globalAlpha = 0.07; c.translate(W * 0.42, H * 0.56); c.scale(5.2, 5.2); c.translate(-32, -32);
+    c.beginPath(); c.moveTo(32, 4); c.lineTo(60, 28); c.lineTo(52, 28); c.lineTo(52, 58); c.lineTo(38, 58);
+    c.lineTo(38, 42); c.lineTo(26, 42); c.lineTo(26, 58); c.lineTo(12, 58); c.lineTo(12, 28); c.lineTo(4, 28); c.closePath();
+    c.fillStyle = "#123058"; c.fill(); c.restore();
     c.restore();
-    c.fillStyle = "#123058"; c.textBaseline = "alphabetic";
-    c.font = "800 55px system-ui, sans-serif";
-    c.fillText("KARTU TANDA PENDUDUK", 196, 118);
-    c.font = "700 36px system-ui, sans-serif"; c.fillStyle = "#1d5a8f";
-    try { c.letterSpacing = "8px"; } catch (e) {}
-    c.fillText("NEGARA MERDU · KOTA MERDU", 198, 166);
-    try { c.letterSpacing = "0px"; } catch (e) {}
-    // panel data (kolom nilai mulai x=316, panel berakhir x=800)
-    jalurBulat(c, 58, 200, 742, 404, 20); c.fillStyle = "rgba(255,255,255,0.45)"; c.fill();
+    // garis tepi tipis
+    jalurBulat(c, 3, 3, W - 6, H - 6, 32); c.strokeStyle = "rgba(18,48,88,0.25)"; c.lineWidth = 3; c.stroke();
+
+    // kepala: lambang kecil + 2 baris judul di tengah (seperti PROVINSI / KABUPATEN)
+    const eg = c.createLinearGradient(0, 30, 0, 110);
+    eg.addColorStop(0, "#f6cd6b"); eg.addColorStop(1, "#dd9a26");
+    c.save(); c.translate(54, 30); c.scale(84 / 64, 84 / 64);
+    c.beginPath(); c.moveTo(32, 4); c.lineTo(60, 28); c.lineTo(52, 28); c.lineTo(52, 58); c.lineTo(38, 58);
+    c.lineTo(38, 42); c.lineTo(26, 42); c.lineTo(26, 58); c.lineTo(12, 58); c.lineTo(12, 28); c.lineTo(4, 28); c.closePath();
+    c.fillStyle = eg; c.fill(); c.strokeStyle = "#b97e14"; c.lineWidth = 1.5; c.stroke(); c.restore();
+    c.textAlign = "center"; c.textBaseline = "alphabetic"; c.fillStyle = "#0f2747";
+    c.font = "800 40px " + F; c.fillText("NEGARA MERDU", W / 2, 72);
+    c.font = "800 34px " + F; c.fillText("KOTA MERDU", W / 2, 116);
+    c.textAlign = "left";
+
+    // NIK besar
+    const xL = 58, xT = 338, xV = 360, kananV = 862;
+    c.fillStyle = "#0f2747";
+    c.font = "800 44px " + F; c.fillText("NIK", xL, 192);
+    c.fillText(":", xT - 4, 192);
+    teksPas(c, kelompokkanNomor(w.nik), xV, 192, "800 44px ui-monospace, 'SF Mono', Menlo, Consolas, monospace", kananV - xV);
+
+    // baris data — label : nilai
     const wlK = w.wilayah || wilayahLengkap(w.blok);
     const baris = [
-      ["NIK", kelompokkanNomor(w.nik), "700 39px system-ui, sans-serif"],
-      ["Nama", "@" + w.username, "700 32px system-ui, sans-serif"],
-      ["Jenis Kelamin", labelGender(w.gender), "700 32px system-ui, sans-serif"],
-      ["Alamat", "No. " + w.nomor_rumah + ", Blok " + w.blok + " Kav. " + w.kavling, "700 32px system-ui, sans-serif"],
-      ["RT/RW", teksRTRW(wlK), "700 32px system-ui, sans-serif"],
-      ["Kel/Desa", wlK.nama_kelurahan, "700 32px system-ui, sans-serif"],
-      ["Kecamatan", wlK.nama_kecamatan, "700 32px system-ui, sans-serif"],
-      ["Terdaftar", formatTanggalID(w.terdaftar), "700 32px system-ui, sans-serif"],
-      ["Berlaku", "Seumur Hidup", "700 32px system-ui, sans-serif"],
+      ["Nama", "@" + w.username],
+      ["Jenis Kelamin", labelGender(w.gender)],
+      ["Alamat", "No. " + w.nomor_rumah + ", Blok " + w.blok + " Kav. " + w.kavling],
+      ["     RT/RW", teksRTRW(wlK)],
+      ["     Kel/Desa", wlK.nama_kelurahan],
+      ["     Kecamatan", wlK.nama_kecamatan],
     ];
-    if (w.jabatan) baris.splice(8, 0, ["Jabatan", w.jabatan, "700 32px system-ui, sans-serif"]);
-    // Jarak baris bertingkat supaya semua baris tetap di dalam panel
-    // (panel y 200..604): <=6 baris longgar, 7 rapat, 8+ paling rapat.
-    let yAwal = 268, langkahY = 62;
-    if (baris.length === 7) { yAwal = 258; langkahY = 54; }
-    else if (baris.length === 8) { yAwal = 248; langkahY = 48; }
-    else if (baris.length >= 9) { yAwal = 240; langkahY = Math.floor(370 / (baris.length - 1)); } // 9-10 baris (RT/RW, Kel, Kec)
-    baris.forEach(([label, nilai, font], i) => {
-      const yy = yAwal + i * langkahY;
-      c.font = "600 30px system-ui, sans-serif"; c.fillStyle = "#1d4e79";
-      c.fillText(label, 92, yy);
-      c.fillStyle = "#102c4c";
-      teksPas(c, nilai, 316, yy, font, 800 - 316 - 22);
+    if (w.jabatan) baris.push(["Jabatan", w.jabatan]);
+    baris.push(["Kewarganegaraan", "WNM"], ["Berlaku Hingga", "SEUMUR HIDUP"]);
+    const yAwal = 252, yAkhir = 690, langkah = Math.min(54, (yAkhir - yAwal) / (baris.length - 1));
+    baris.forEach(([label, nilai], i) => {
+      const yy = yAwal + i * langkah;
+      c.font = "600 29px " + F; c.fillStyle = "#16365c";
+      c.fillText(label.trim(), xL + (label.startsWith(" ") ? 36 : 0), yy);
+      c.fillText(":", xT, yy);
+      c.fillStyle = "#0b1f3a";
+      teksPas(c, String(nilai || "—").toUpperCase(), xV, yy, "700 29px " + F, kananV - xV);
     });
-    // pita kaki (digambar sebelum foto; tidak tumpang tindih dengan kotak foto)
-    const kaki = "NEGARA MERDU · KARTU TANDA PENDUDUK · @negaramerdu";
-    c.font = "700 21px system-ui, sans-serif";
-    const lebarKaki = c.measureText(kaki).width + 52;
-    jalurBulat(c, 58, 644, lebarKaki, 48, 24); c.fillStyle = "rgba(29,78,121,0.88)"; c.fill();
-    c.fillStyle = "#eaf4fc"; c.fillText(kaki, 84, 676);
-    // kotak foto + render 3D karakter (placeholder krem bila render gagal)
-    c.font = "700 24px system-ui, sans-serif"; c.fillStyle = "#123058";
-    c.textAlign = "right"; c.fillText("FOTO", 1142, 182); c.textAlign = "left";
-    c.save(); jalurBulat(c, 836, 200, 306, 404, 18); c.clip();
-    lukisFotoKartu(c, 836, 200, 306, 404, w, () => {
+
+    // foto (latar merah pas foto) + tempat/tanggal + tanda tangan
+    const fx = 896, fy = 150, fw = 250, fh = 320;
+    c.textAlign = "center"; c.fillStyle = "#16365c";
+    c.font = "700 24px " + F; c.fillText("KOTA MERDU", fx + fw / 2, fy + fh + 44);
+    c.font = "600 23px " + F; c.fillText(formatTanggalID(w.terdaftar).toUpperCase(), fx + fw / 2, fy + fh + 76);
+    // tanda tangan: @username bergaya tulisan tangan
+    c.save(); c.fillStyle = "#13325e";
+    c.font = "italic 600 40px 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', cursive";
+    const ttd = w.username.length > 12 ? w.username.slice(0, 12) : w.username;
+    teksPas(c, ttd, fx + fw / 2, fy + fh + 140, "italic 600 40px 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', cursive", fw);
+    c.strokeStyle = "rgba(19,50,94,.5)"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(fx + 20, fy + fh + 152); c.lineTo(fx + fw - 20, fy + fh + 152); c.stroke();
+    c.restore();
+    c.textAlign = "left";
+    c.save(); jalurBulat(c, fx, fy, fw, fh, 10); c.clip();
+    lukisFotoKartu(c, fx, fy, fw, fh, w, () => {
       c.restore();
-      jalurBulat(c, 836, 200, 306, 404, 18); c.strokeStyle = "#1d4e79"; c.lineWidth = 5; c.stroke();
-      c.restore();
+      jalurBulat(c, fx, fy, fw, fh, 10); c.strokeStyle = "rgba(15,39,71,.55)"; c.lineWidth = 3; c.stroke();
       resolve(cv);
-    });
+    }, "#c8262c");
     });
   }
   export async function unduhKTP() {

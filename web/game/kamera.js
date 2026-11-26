@@ -378,12 +378,12 @@ import { waktuLalu } from "./main.js";
      kepala sendiri. */
   export function rupaSaya() {
     const s = sesi.saya;
-    return s ? { baju: s.warna_baju, kulit: s.warna_kulit, topi: s.topi, rupa: s.rupa || null }
+    return s ? { baju: s.warna_baju, kulit: s.warna_kulit, topi: s.topi, rupa: s.rupa || null, gender: s.gender }
              : { baju: "#2e9e5b", kulit: "#f1c27d", topi: "tanpa" };
   }
   export function segarkanKarakterSaya() {
     const r = rupaSaya();
-    const kunci = [r.baju, r.kulit, r.topi, JSON.stringify(r.rupa || null)].join("|");
+    const kunci = [r.baju, r.kulit, r.topi, r.gender || "", JSON.stringify(r.rupa || null)].join("|");
     if (karSaya && kunci === kunciRupaSaya) return;
     if (karSaya) { scene.remove(karSaya); buangGrup(karSaya); karSaya = null; }
     kunciRupaSaya = kunci;

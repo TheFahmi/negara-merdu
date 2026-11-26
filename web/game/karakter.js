@@ -85,7 +85,7 @@ export function geoKarakter() {
     pipi: new THREE.CircleGeometry(0.068, 12),
     // Rambut (berponi + sisi samping) & Penutup Kepala
     rambut: new THREE.SphereGeometry(0.462, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.48),
-    rambutBelakang: new THREE.SphereGeometry(0.455, 18, 12, 0, Math.PI * 2, Math.PI * 0.35, Math.PI * 0.35),
+    rambutBelakang: new THREE.SphereGeometry(0.455, 18, 12, Math.PI / 2 + 1.15, Math.PI * 2 - 2.3, Math.PI * 0.35, Math.PI * 0.35),
     poni: new THREE.SphereGeometry(0.13, 12, 10),
     sampingRambut: new THREE.BoxGeometry(0.07, 0.22, 0.14),
     peci: new THREE.CylinderGeometry(0.34, 0.385, 0.27, 18),
@@ -124,21 +124,52 @@ export function warnaSkala(hex, faktor) {
   return c.getHex();
 }
 
-/* Proporsi realistis: pinggul 0,85 (dulu 0,52), torso dinaikkan NAIK,
-   kepala diperkecil SKALA_KEPALA. Kode lama yang mendudukkan karakter
-   (kaki diputar ~-1,35) mengandaikan pinggul 0,52 — animasiHidup()
-   menurunkan tubuh 0,33 & menekuk lutut otomatis saat pose duduk. */
+/* ===================== KARAKTER REALISTIS (rombak 26 Nov 2026) =====================
+   Anatomi dibangun dari profil LATHE (bukan tabung/bola polos): paha-betis
+   berotot, pinggang-dada-bahu, lengan atas + SIKU + lengan bawah, telapak &
+   jari, sepatu berbentuk. Wajah proporsional: mata kecil beriris + garis
+   bulu mata, hidung berbatang, bibir atas/bawah. Postur pria/wanita berbeda
+   (bahu, pinggang, pinggul). Pakaian bervariasi per warga (deterministik dari
+   data): kemeja panjang/pendek, kaos, polo; celana, jeans, celana pendek,
+   rok (pendek / panjang untuk berhijab). Kontrak tetap: y=0 di telapak,
+   pinggul (pivot kaki) 0,85, lutut 0,43, bahu (pivot lengan) ±1,42, pusat
+   kepalaGrup 1,61 berskala SKALA_KEPALA (satuan kepala lama -> topi/baret
+   di keamanan.js tetap pas), userData sama seperti sebelumnya. */
 export const PINGGUL = 0.85, NAIK = 0.33, SKALA_KEPALA = 0.34;
+const CACHE_GEO_VAR = new Map();
+function geoVar(kunci, buat) {
+  let g = CACHE_GEO_VAR.get(kunci);
+  if (!g) { g = buat(); CACHE_GEO_VAR.set(kunci, g); SUMBER_BERSAMA.add(g); }
+  return g;
+}
+/* profil [[r, y], ...] urut y naik -> LatheGeometry */
+function bubut(kunci, titik, seg) {
+  return geoVar(kunci, () => new THREE.LatheGeometry(titik.map(([r, y]) => new THREE.Vector2(Math.max(r, 0.0005), y)), seg || 14));
+}
+const BOLA = () => geoVar("bola", () => new THREE.SphereGeometry(1, 14, 10));
+const BALOK = () => geoVar("balok", () => new THREE.BoxGeometry(1, 1, 1));
 export function buatKarakter(opsi) {
   const GEO = geoKarakter();
   const g = new THREE.Group();
-  const kulit = parseInt((opsi.kulit || "#f1c27d").slice(1), 16);
+  const kulitHex = opsi.kulit || "#f1c27d";
+  const kulit = parseInt(kulitHex.slice(1), 16);
   const bajuHex = opsi.baju || "#2e9e5b";
   const baju = parseInt(bajuHex.slice(1), 16);
   const R = opsi.rupa || {}; // kustom karakter dari pendaftaran (rambut, warna rambut/celana, kacamata, alis)
   const hexKe = (h, cadangan) => (typeof h === "string" && /^#[0-9a-fA-F]{6}$/.test(h) ? parseInt(h.slice(1), 16) : cadangan);
-  const celana = hexKe(R.warna_celana, warnaCelana(bajuHex));
+  const gaya = R.rambut || "pendek";
+  const wanita = (opsi.gender || R.gender) === "P" || ((opsi.gender || R.gender) !== "L" && (opsi.topi === "hijab" || gaya === "panjang" || gaya === "kuncir"));
+  const h = hashWarna(bajuHex + kulitHex + (opsi.topi || "") + gaya);
+  const resmi = opsi.topi === "peci" || R.rambut === "botak" && R.warna_celana; // pejabat/petugas berseragam -> kemeja
+  const atasan = R.atasan || opsi.atasan || (resmi ? "kemeja" : ["kemeja", "kaos", "polo", "kemejaPendek", "kaos", "kemeja"][h % 6]);
+  const bawahan = R.bawahan || opsi.bawahan || (resmi ? "celana" : wanita
+    ? (opsi.topi === "hijab" ? ["rokPanjang", "celana", "rokPanjang"][(h >>> 3) % 3] : ["rok", "celana", "jeans"][(h >>> 3) % 3])
+    : atasan === "kemeja" ? ["celana", "jeans", "celana"][(h >>> 3) % 3] : ["celana", "jeans", "celana", "pendek", "jeans"][(h >>> 3) % 5]);
+  let celana = hexKe(R.warna_celana, warnaCelana(bajuHex));
+  if (bawahan === "jeans" && !R.warna_celana) celana = [0x3b5578, 0x2c3e5c, 0x52698c][h % 3];
   const matKulit = matKarakter(kulit), matBaju = matKarakter(baju), matCelana = matKarakter(celana);
+  const matBajuGelap = matKarakter(warnaSkala(baju, 0.78));
+  const lenganPanjang = atasan === "kemeja";
 
   function bagian(geo, mat, x, y, z, bayangan) {
     const m = new THREE.Mesh(geo, mat);
@@ -146,123 +177,171 @@ export function buatKarakter(opsi) {
     m.castShadow = !!bayangan;
     return m;
   }
+  const bola = (mat, x, y, z, sx, sy, sz) => { const m = bagian(BOLA(), mat, x, y, z, false); m.scale.set(sx, sy, sz); return m; };
+  const balok = (mat, x, y, z, sx, sy, sz) => { const m = bagian(BALOK(), mat, x, y, z, false); m.scale.set(sx, sy, sz); return m; };
 
   const tubuh = new THREE.Group(); g.add(tubuh); // semua bagian; turun saat duduk supaya pinggul tetap di tinggi dudukan lama (0,52)
-  // Kaki: pivot di pinggul y=0.52, telapak sepatu tepat di y=0
-  const matLipat = matKarakter(warnaSkala(celana, 1.3));
-  const matSepatu = matKarakter(0x2f2c28);
-  const matSol = matKarakter(0xe6dfd0);
-  /* PROPORSI REALISTIS (25 Nov 2026): tinggi ±1,78, kepala ±1/7 tinggi,
-     tungkai panjang berlutut. Pinggul di y 0,85; lutut 0,43. */
+  const W = wanita ? 1 : 0;
+  const lebarBahu = wanita ? 0.18 : 0.195, xLengan = wanita ? 0.198 : 0.218;
+
+  /* ---------- KAKI: paha (pivot pinggul) -> lutut -> betis -> sepatu ---------- */
+  const sepatuMat = matKarakter(lenganPanjang || bawahan === "rokPanjang" ? 0x1e1b18 : [0x2f2c28, 0xf1efe9, 0x6b4a2e, 0x24324a][(h >>> 5) % 4]);
+  const solMat = matKarakter(sepatuMat === matKarakter(0x1e1b18) ? 0x15120f : 0xeae4d6);
+  const geoPaha = bubut("paha" + W, wanita
+    ? [[0.056, -0.44], [0.06, -0.4], [0.072, -0.28], [0.088, -0.1], [0.095, 0.0], [0.07, 0.05], [0.001, 0.07]]
+    : [[0.058, -0.44], [0.062, -0.4], [0.072, -0.3], [0.085, -0.1], [0.09, 0.0], [0.065, 0.05], [0.001, 0.07]]);
+  const geoPahaAtas = bubut("pahaAtas2" + W, [[0.08, -0.33], [0.083, -0.25], [0.088, -0.1], [0.093, 0.0], [0.068, 0.05], [0.001, 0.07]]);
+  const geoBetisCelana = bubut("betisC", [[0.054, -0.355], [0.054, -0.3], [0.058, -0.15], [0.062, -0.04], [0.06, 0.03]]);
+  const geoBetisKulit = bubut("betisK" + W, [[0.033, -0.37], [0.036, -0.3], [0.05, -0.18], [0.059, -0.09], [0.056, 0.0], [0.054, 0.03]]);
+  const pakaiCelanaPanjang = bawahan === "celana" || bawahan === "jeans";
   function buatKaki(sx) {
     const kaki = new THREE.Group(); kaki.position.set(sx, PINGGUL, 0);
-    const paha = bagian(GEO.celana, matCelana, 0, -0.21, 0, true); paha.scale.set(0.95, 1.05, 0.95); kaki.add(paha);
+    if (pakaiCelanaPanjang) kaki.add(bagian(geoPaha, matCelana, 0, 0, 0, true));
+    else {
+      kaki.add(bagian(geoPaha, matKulit, 0, 0, 0, true));
+      if (bawahan === "pendek") kaki.add(bagian(geoPahaAtas, matCelana, 0, 0, 0, true));
+    }
+    if (bawahan === "rok" || bawahan === "rokPanjang") { // rok menempel di paha -> ikut saat duduk/berjalan
+      const rok = bubut("rokPaha", [[0.13, -0.42], [0.125, -0.3], [0.11, -0.12], [0.1, 0.02], [0.09, 0.07]], 16);
+      const r = bagian(rok, matCelana, -sx * 0.35, 0, 0, true); r.scale.set(1, 1, 0.95); kaki.add(r);
+    }
     const lutut = new THREE.Group(); lutut.position.y = -0.42; kaki.add(lutut); kaki.userData.lutut = lutut;
-    const betis = bagian(GEO.celana, matCelana, 0, -0.15, 0, true); betis.scale.set(0.85, 0.75, 0.85); lutut.add(betis);
-    lutut.add(bagian(GEO.lipatCelana, matLipat, 0, -0.30, 0, false));
-    lutut.add(bagian(GEO.sepatuBelakang, matSepatu, 0, -0.365, -0.01, false));
-    const ujung = bagian(GEO.sepatuUjung, matSepatu, 0, -0.375, 0.085, false);
-    ujung.scale.set(1, 0.55, 1.15); lutut.add(ujung);
-    lutut.add(bagian(GEO.solSepatu, matSol, 0, -0.412, 0.02, false));
-    lutut.add(bagian(GEO.solUjung, matSol, 0, -0.412, 0.11, false));
+    if (pakaiCelanaPanjang) {
+      lutut.add(bagian(geoBetisCelana, matCelana, 0, 0, 0, true));
+      lutut.add(bagian(geoBetisKulit, matKarakter(0x2a2a2a), 0, 0, 0, false)); // kaus kaki di bawah ujung celana
+    } else lutut.add(bagian(geoBetisKulit, matKulit, 0, 0, 0, true));
+    if (bawahan === "rokPanjang") {
+      const rp = bagian(bubut("rokBetis", [[0.135, -0.36], [0.13, -0.2], [0.13, 0.02]], 16), matCelana, -sx * 0.35, 0, 0, true); rp.scale.set(1, 1, 0.95); lutut.add(rp);
+    }
+    // sepatu: badan lonjong + tumit + sol, ujung ke depan (+z), telapak tepat y=0
+    lutut.add(bola(sepatuMat, 0, -0.388, 0.035, 0.052, 0.042, 0.125));
+    lutut.add(balok(sepatuMat, 0, -0.38, -0.035, 0.092, 0.07, 0.09));
+    lutut.add(balok(solMat, 0, -0.4185, 0.025, 0.1, 0.023, 0.27));
     return kaki;
   }
-  const kakiK = buatKaki(-0.11), kakiR = buatKaki(0.11);
+  const kakiK = buatKaki(-0.093), kakiR = buatKaki(0.093);
   tubuh.add(kakiK); tubuh.add(kakiR);
 
-  // Pinggul & Torso
-  const pinggul = bagian(GEO.pinggul, matCelana, 0, 0.56 + NAIK, 0, true);
-  pinggul.scale.set(0.66, 1, 0.52); tubuh.add(pinggul);
-
-  const badan = bagian(GEO.badan, matBaju, 0, 0.87 + NAIK, 0, true);
-  badan.scale.set(0.64, 1.02, 0.5); badan.userData.skala = { x: 0.64, z: 0.5 }; tubuh.add(badan);
-
-  // Leher
-  { const lh = bagian(GEO.leher, matKulit, 0, 1.22 + NAIK, 0, false); lh.scale.set(0.62, 1.1, 0.62); tubuh.add(lh); }
-
-  // Detail Kemeja (kerah, plaket, kancing, saku dada kiri)
-  const matKerahGelap = matKarakter(warnaSkala(baju, 0.72));
-  const kerah = bagian(GEO.kerah, matKerahGelap, 0, 1.15 + NAIK, 0, false);
-  kerah.scale.set(0.62, 1, 0.5); tubuh.add(kerah);
-
-  for (const s of [-1, 1]) {
-    const bahu = bagian(GEO.bahu, matBaju, s * 0.235, 1.12 + NAIK, 0, false);
-    bahu.scale.set(0.72, 0.7, 0.62); tubuh.add(bahu);
-    const lidah = bagian(GEO.kerahDepan, matKerahGelap, s * 0.055, 1.10 + NAIK, 0.165, false); lidah.scale.set(0.65, 0.8, 1);
-    lidah.rotation.set(0.10, 0, -s * 0.42); tubuh.add(lidah);
+  /* ---------- PANGGUL, TORSO, LEHER ---------- */
+  const pinggul = bagian(bubut("panggul2" + W, wanita
+    ? [[0.06, -0.1], [0.13, -0.075], [0.17, -0.03], [0.175, 0.03], [0.15, 0.11]]
+    : [[0.06, -0.1], [0.13, -0.075], [0.162, -0.03], [0.165, 0.04], [0.155, 0.11]], 18), matCelana, 0, PINGGUL, 0, true);
+  pinggul.scale.set(1, 1, 0.68); tubuh.add(pinggul);
+  if (bawahan === "rok" || bawahan === "rokPanjang") { // pangkal rok mengembang dari pinggang
+    const pr = bagian(bubut("pangkalRok", [[0.205, -0.1], [0.185, 0.0], [0.155, 0.1]], 18), matCelana, 0, PINGGUL, 0, true); pr.scale.set(1, 1, 0.72); tubuh.add(pr);
   }
-  const plaket = bagian(GEO.plaket, matKarakter(warnaSkala(baju, 0.86)), 0, 0.88 + NAIK, 0.156, false); plaket.scale.x = 0.6;
-  plaket.rotation.x = 0.11; tubuh.add(plaket);
+  const dimasukkan = atasan === "kemeja" || atasan === "kemejaPendek" && resmi;
+  const yBadan = PINGGUL + 0.08;
+  const profilBadan = wanita
+    ? [[0.148, -0.02], [0.13, 0.1], [0.135, 0.18], [0.158, 0.27], [0.162, 0.35], [0.156, 0.43], [0.142, 0.48], [0.1, 0.52], [0.064, 0.55]]
+    : [[0.158, -0.02], [0.148, 0.08], [0.153, 0.16], [0.172, 0.28], [0.182, 0.38], [0.18, 0.44], [0.165, 0.49], [0.115, 0.535], [0.068, 0.56]];
+  if (!dimasukkan) profilBadan.unshift([wanita ? 0.16 : 0.165, -0.11]); // baju dikeluarkan menutup pinggang
+  const badan = bagian(bubut("badan" + W + (dimasukkan ? "m" : "k"), profilBadan, 18), matBaju, 0, yBadan, 0, true);
+  badan.scale.set(1, 1, 0.64); badan.userData.skala = { x: 1, z: 0.64 }; tubuh.add(badan);
+  if (dimasukkan) { // ikat pinggang + gesper
+    const sabuk = bagian(geoVar("sabuk", () => new THREE.TorusGeometry(0.152, 0.016, 6, 22)), matKarakter(0x2a1d14), 0, yBadan - 0.005, 0, false);
+    sabuk.rotation.x = Math.PI / 2; sabuk.scale.set(1, 0.66, 1); tubuh.add(sabuk);
+    tubuh.add(balok(matKarakter(0xb8a26a), 0, yBadan - 0.005, 0.104, 0.04, 0.028, 0.01));
+  }
+  for (const s of [-1, 1]) tubuh.add(bola(matBaju, s * lebarBahu, PINGGUL + 0.565, 0, 0.06, 0.05, 0.058)); // bahu membulat
+  { const lh = bagian(bubut("leher2", [[0.066, 0.0], [0.058, 0.07], [0.056, 0.14]]), matKulit, 0, PINGGUL + 0.58, 0.005, false); tubuh.add(lh); }
 
-  const saku = bagian(GEO.saku, matKarakter(warnaSkala(baju, 0.88)), 0.09, 0.95 + NAIK, 0.15, false); saku.scale.set(0.6, 0.6, 1);
-  saku.rotation.set(0.10, 0.18, 0); tubuh.add(saku);
-
-  const matKancing = matKarakter(0x2a2320);
-  for (const ky of [1.03, 0.88, 0.73]) {
-    tubuh.add(bagian(GEO.kancing, matKancing, 0, ky + NAIK, 0.17 + (ky - 0.88) * 0.07, false));
+  // Detail atasan
+  const zDepan = (yRel) => { // permukaan depan badan pada ketinggian yRel di atas yBadan
+    for (let i = 1; i < profilBadan.length; i++) { const [r1, y1] = profilBadan[i - 1], [r2, y2] = profilBadan[i]; if (yRel <= y2) return (r1 + (r2 - r1) * (yRel - y1) / (y2 - y1)) * 0.64; }
+    return 0.05;
+  };
+  if (atasan === "kemeja" || atasan === "kemejaPendek" || atasan === "polo") {
+    for (const s of [-1, 1]) { // kerah lancip
+      const k = balok(matBajuGelap, s * 0.04, PINGGUL + 0.565, zDepan(0.47) + 0.005, 0.045, 0.06, 0.01);
+      k.rotation.set(-0.35, 0, -s * 0.5); tubuh.add(k);
+    }
+    const kb = bagian(geoVar("kerahBelakang", () => new THREE.CylinderGeometry(0.058, 0.07, 0.05, 14, 1, true, Math.PI * 0.6, Math.PI * 0.8 + Math.PI)), matBajuGelap, 0, PINGGUL + 0.6, -0.005, false);
+    tubuh.add(kb);
+    const nKancing = atasan === "polo" ? 2 : 5, yAtas = atasan === "polo" ? 0.44 : 0.43, yBawah = atasan === "polo" ? 0.36 : 0.04;
+    const plaket = balok(matKarakter(warnaSkala(baju, 0.9)), 0, yBadan + (yAtas + yBawah) / 2, (zDepan(yAtas) + zDepan(yBawah)) / 2 + 0.003, 0.032, yAtas - yBawah, 0.006);
+    plaket.rotation.x = Math.atan2(zDepan(yAtas) - zDepan(yBawah), yAtas - yBawah); tubuh.add(plaket);
+    for (let i = 0; i < nKancing; i++) {
+      const yy = yAtas - 0.02 - i * (yAtas - yBawah - 0.04) / Math.max(1, nKancing - 1);
+      tubuh.add(bola(matKarakter(0xe9e4da), 0, yBadan + yy, zDepan(yy) + 0.008, 0.008, 0.008, 0.004));
+    }
+    if (atasan !== "polo") { const saku = balok(matKarakter(warnaSkala(baju, 0.9)), wanita ? -0.07 : 0.075, yBadan + 0.33, zDepan(0.33) + 0.004, 0.06, 0.07, 0.006); saku.rotation.x = 0.12; tubuh.add(saku); }
+  } else { // kaos: kerah bulat rib
+    const rib = bagian(geoVar("ribKaos", () => new THREE.TorusGeometry(0.062, 0.011, 6, 16)), matBajuGelap, 0, PINGGUL + 0.585, 0.008, false);
+    rib.rotation.x = Math.PI / 2 - 0.25; tubuh.add(rib);
   }
 
-  // Lengan & Tangan beribu jari
+  /* ---------- LENGAN: bahu -> SIKU -> tangan ---------- */
+  const geoLenganAtas = bubut("lenganAtas" + W, wanita
+    ? [[0.036, -0.29], [0.039, -0.2], [0.043, -0.08], [0.046, 0.0], [0.03, 0.035]]
+    : [[0.039, -0.29], [0.043, -0.2], [0.05, -0.08], [0.052, 0.0], [0.032, 0.035]]);
+  const geoLenganBawah = bubut("lenganBawah" + W, wanita
+    ? [[0.024, -0.255], [0.027, -0.2], [0.036, -0.08], [0.037, 0.0], [0.035, 0.02]]
+    : [[0.027, -0.255], [0.03, -0.2], [0.041, -0.08], [0.042, 0.0], [0.039, 0.02]]);
+  const geoLengan = bubut("lenganBaju", [[0.056, -0.15], [0.058, -0.05], [0.058, 0.035]], 14);
   function buatLengan(sx) {
-    const lengan = new THREE.Group(); lengan.position.set(sx, 1.12 + NAIK, 0); lengan.scale.set(0.72, 1.08, 0.72);
-    lengan.rotation.z = sx < 0 ? -0.06 : 0.06;
-    lengan.add(bagian(GEO.lenganAtas, matBaju, 0, -0.16, 0, true));
-    lengan.add(bagian(GEO.manset, matKarakter(warnaSkala(baju, 0.8)), 0, -0.34, 0, false));
-    lengan.add(bagian(GEO.lenganBawah, matKulit, 0, -0.47, 0, false));
-    const tangan = bagian(GEO.tangan, matKulit, 0, -0.65, 0.01, false);
-    tangan.scale.set(0.85, 1.12, 0.95);
-    lengan.add(tangan);
-    lengan.add(bagian(GEO.jempol, matKulit, sx < 0 ? 0.048 : -0.048, -0.63, 0.045, false));
+    const lengan = new THREE.Group(); lengan.position.set(sx, PINGGUL + 0.565, 0);
+    lengan.rotation.z = sx < 0 ? -0.07 : 0.07;
+    if (lenganPanjang) lengan.add(bagian(geoLenganAtas, matBaju, 0, 0, 0, true));
+    else { lengan.add(bagian(geoLenganAtas, matKulit, 0, 0, 0, true)); const lb = bagian(geoLengan, matBaju, 0, 0, 0, true); lb.scale.set(wanita ? 0.9 : 1, 1, 1); lengan.add(lb); }
+    const siku = new THREE.Group(); siku.position.y = -0.285; siku.rotation.x = -0.14; lengan.add(siku); lengan.userData.siku = siku;
+    if (lenganPanjang) {
+      const lb = bagian(geoLenganBawah, matBaju, 0, 0, 0, false); lb.scale.set(1.15, 1, 1.15); siku.add(lb);
+      siku.add(bagian(geoVar("manset", () => new THREE.CylinderGeometry(0.036, 0.036, 0.05, 12)), matBajuGelap, 0, -0.23, 0, false));
+    } else siku.add(bagian(geoLenganBawah, matKulit, 0, 0, 0, false));
+    // tangan: telapak + jari + ibu jari (menghadap ke paha)
+    const tangan = new THREE.Group(); tangan.position.y = -0.26; siku.add(tangan);
+    tangan.add(bola(matKulit, 0, -0.042, 0.004, 0.026, 0.05, 0.042));
+    const jari = bola(matKulit, 0, -0.094, 0.012, 0.022, 0.045, 0.038); jari.rotation.x = -0.25; tangan.add(jari);
+    const jempol = bola(matKulit, -Math.sign(sx) * 0.016, -0.045, 0.034, 0.012, 0.03, 0.012); jempol.rotation.set(-0.5, 0, Math.sign(sx) * 0.4); tangan.add(jempol);
     return lengan;
   }
-  const lenganK = buatLengan(-0.27), lenganR = buatLengan(0.27);
+  const lenganK = buatLengan(-xLengan), lenganR = buatLengan(xLengan);
   tubuh.add(lenganK); tubuh.add(lenganR);
 
-  // Kepala & Wajah
+  /* ---------- KEPALA & WAJAH (satuan kepala; pusat kepala mesh di y 0,24) ---------- */
   const kepalaGrup = new THREE.Group(); kepalaGrup.position.y = 1.32 + NAIK - 0.04; kepalaGrup.scale.setScalar(SKALA_KEPALA); tubuh.add(kepalaGrup);
   const kepalaMesh = bagian(GEO.kepala, matKulit, 0, 0.24, 0, true);
-  kepalaMesh.scale.set(1, 1, 0.92); kepalaGrup.add(kepalaMesh);
+  kepalaMesh.scale.set(wanita ? 0.96 : 1, 1, 0.92); kepalaGrup.add(kepalaMesh);
+  const fz = (x, y) => mukaZ(x, y - 0.24) * 0.92; // permukaan wajah (sudah termasuk skala z kepala)
 
-  const matWajah = matKarakter(0x2a2320);
-  const matPutih = matKarakter(0xffffff);
-  const matPipi = matKarakter(0xf2a097);
-  if (!matPipi.polygonOffset) { matPipi.polygonOffset = true; matPipi.polygonOffsetFactor = -2; matPipi.polygonOffsetUnits = -2; }
-
+  const matWajah = matKarakter(0x1d1714);
+  const matPutih = matKarakter(0xf4f1ea);
+  const matIris = matKarakter([0x3b2416, 0x4a2f1f, 0x2b1a10][h % 3]);
+  const matBibir = matKarakter(new THREE.Color(kulit).lerp(new THREE.Color(0xa0453c), wanita ? 0.55 : 0.32).getHex());
+  const matKulitGelap = matKarakter(warnaSkala(kulit, 0.86));
   const mataK = [], mataR = [];
   for (const s of [-1, 1]) {
-    const putih = bagian(GEO.mataPutih, matPutih, s * 0.155, 0.285, 0.362, false);
-    putih.scale.set(0.62, 0.62, 0.42); putih.position.z += 0.012; kepalaGrup.add(putih);
-    const pup = bagian(GEO.pupil, matWajah, s * 0.155, 0.28, 0.396, false);
-    pup.scale.set(0.55, 0.6, 0.45); pup.position.z -= 0.01; kepalaGrup.add(pup);
-    const sorot = bagian(GEO.highlight, matPutih, s * 0.155 - 0.012, 0.3, 0.408, false); sorot.scale.setScalar(0.5);
-    kepalaGrup.add(sorot);
-    for (const m of [putih, pup, sorot]) m.userData.sy = m.scale.y;
-    (s < 0 ? mataK : mataR).push(putih, pup, sorot);
-
-    const alis = bagian(GEO.alis, matWajah, s * 0.155, 0.415, 0.342, false);
-    alis.rotation.z = s * 0.14; alis.rotation.x = -0.12; kepalaGrup.add(alis);
-    alis.scale.set(0.8, 0.7, 1); if (R.alis === "tebal") alis.scale.set(0.9, 1.2, 1.2);
-
-    const tel = bagian(GEO.telinga, matKulit, s * 0.43, 0.26, -0.01, false);
-    tel.scale.set(0.45, 1.05, 0.72); kepalaGrup.add(tel);
-
-    const pipi = bagian(GEO.pipi, matPipi, s * 0.245, 0.185, 0.334, false);
-    pipi.rotation.y = s * 0.45; pipi.rotation.x = 0.10; pipi.visible = false; kepalaGrup.add(pipi); // pipi merah kartun dimatikan (realistis)
+    const ex = s * 0.148, ey = 0.275, ez = fz(ex, ey);
+    const putih = bola(matPutih, ex, ey, ez - 0.004, 0.06, 0.036, 0.03);
+    const iris = bola(matIris, ex, ey - 0.002, ez + 0.02, 0.027, 0.029, 0.012);
+    const pup = bola(matWajah, ex, ey - 0.002, ez + 0.029, 0.013, 0.014, 0.006);
+    const sorot = bola(matPutih, ex - 0.01, ey + 0.01, ez + 0.033, 0.006, 0.006, 0.003);
+    for (const m of [putih, iris, pup, sorot]) { kepalaGrup.add(m); m.userData.sy = m.scale.y; }
+    (s < 0 ? mataK : mataR).push(putih, iris, pup, sorot);
+    // kelopak atas (kulit) + garis bulu mata -> mata tampak tertanam, tidak melotot
+    const kelopak = bola(matKulit, ex, ey + 0.032, ez - 0.002, 0.066, 0.022, 0.032); kepalaGrup.add(kelopak);
+    const bulu = balok(matWajah, ex, ey + 0.036, ez + 0.026, 0.11, wanita ? 0.014 : 0.01, 0.01); bulu.rotation.z = s * -0.08; kepalaGrup.add(bulu);
+    const alis = balok(matKarakter(hexKe(R.warna_rambut, 0x281f1c)), s * 0.15, 0.37, fz(s * 0.15, 0.37) + 0.012, 0.15, R.alis === "tebal" ? 0.036 : wanita ? 0.018 : 0.026, 0.02);
+    alis.rotation.set(-0.15, s * 0.25, s * (wanita ? -0.12 : -0.06)); kepalaGrup.add(alis);
+    const tel = bagian(GEO.telinga, matKulit, s * 0.42, 0.24, -0.01, false);
+    tel.scale.set(0.4, 0.95, 0.66); kepalaGrup.add(tel);
   }
-
-  // Hidung bulat stylized
-  const hidung = bagian(GEO.hidung, matKulit, 0, 0.20, 0.405, false);
-  hidung.scale.set(0.75, 1.1, 1.0); kepalaGrup.add(hidung);
-
-  // Senyum
-  const mulut = bagian(GEO.mulut, matKarakter(0x7c4030), 0, 0.095, 0.372, false);
-  mulut.rotation.z = Math.PI; mulut.scale.set(0.55, 0.35, 1); mulut.position.y += 0.02; kepalaGrup.add(mulut);
-  const gigi = bagian(GEO.gigi, matPutih, 0, 0.099, 0.368, false);
-  gigi.rotation.z = Math.PI; gigi.visible = false; kepalaGrup.add(gigi);
+  // hidung: batang + ujung + cuping
+  { const nb = bola(matKulit, 0, 0.19, fz(0, 0.19) + 0.008, 0.032, 0.095, 0.03); nb.rotation.x = -0.35; kepalaGrup.add(nb);
+    kepalaGrup.add(bola(matKulit, 0, 0.125, fz(0, 0.125) + 0.036, 0.04, 0.034, 0.034));
+    for (const s of [-1, 1]) kepalaGrup.add(bola(matKulitGelap, s * 0.04, 0.115, fz(s * 0.04, 0.115) + 0.018, 0.026, 0.022, 0.022)); }
+  // bibir atas/bawah + garis mulut
+  const mulut = new THREE.Group(); kepalaGrup.add(mulut);
+  { const zm = fz(0, 0.035);
+    mulut.add(bola(matBibir, 0, 0.045, zm + 0.01, 0.085, 0.02, 0.03));
+    mulut.add(bola(matBibir, 0, 0.012, zm + 0.008, 0.075, 0.024, 0.03));
+    mulut.add(balok(matKarakter(0x4a2422), 0, 0.03, zm + 0.03, 0.13, 0.008, 0.008)); }
+  // dagu & rahang pria sedikit tegas
+  if (!wanita) kepalaGrup.add(bola(matKulit, 0, -0.1, fz(0, -0.1) - 0.04, 0.12, 0.07, 0.07));
 
   // Rambut / Peci / Topi
   const matRambut = matKarakter(hexKe(R.warna_rambut, 0x281f1c));
-  const gaya = R.rambut || "pendek";
   // Kacamata (opsional): 2 bingkai bulat + jembatan + gagang
   if (R.kacamata === "ya") {
     const matKaca = matKarakter(0x1b1b1d);
@@ -289,11 +368,15 @@ export function buatKarakter(opsi) {
   }
   if (opsi.topi === "hijab") { // kerudung menutup kepala & leher, wajah terbuka
     const matHijab = matKarakter(hexKe(R.warna_rambut && R.warna_rambut !== "#281f1c" ? R.warna_rambut : null, warnaSkala(baju, 0.85)));
-    const tudung = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.62), matHijab);
-    tudung.scale.set(1.0, 1.02, 0.98); tudung.position.set(0, 0.24, -0.02); tudung.castShadow = true; kepalaGrup.add(tudung);
+    // mahkota (menutup dahi sampai atas alis) + bungkus samping/belakang yang TERBUKA di depan wajah
+    const mahkota = new THREE.Mesh(geoVar("hijabMahkota", () => new THREE.SphereGeometry(0.5, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.36)), matHijab);
+    mahkota.position.set(0, 0.24, -0.01); mahkota.scale.set(1, 1.02, 0.98); mahkota.castShadow = true; kepalaGrup.add(mahkota);
+    const bungkus = new THREE.Mesh(geoVar("hijabBungkus", () => new THREE.SphereGeometry(0.5, 24, 14, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, Math.PI * 0.34, Math.PI * 0.42)), matHijab);
+    bungkus.position.set(0, 0.24, -0.01); bungkus.scale.set(1, 1.02, 0.98); bungkus.castShadow = true; kepalaGrup.add(bungkus);
     const bingkai = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.06, 10, 28, Math.PI * 1.25), matHijab);
     bingkai.position.set(0, 0.22, 0.2); bingkai.rotation.z = -Math.PI * 0.125 - Math.PI / 2 + Math.PI; bingkai.rotation.z = Math.PI * 1.375; kepalaGrup.add(bingkai);
-    const jubah = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.9, 24, 1, true), matHijab); jubah.position.set(0, -0.25, 0); kepalaGrup.add(jubah);
+    const jubah = new THREE.Mesh(geoVar("hijabJubah", () => new THREE.LatheGeometry([[0.62, -0.62], [0.6, -0.5], [0.5, -0.3], [0.4, -0.1], [0.36, 0.05]].map(([r, y]) => new THREE.Vector2(r, y)), 24)), matHijab);
+    jubah.scale.set(1, 1, 0.8); kepalaGrup.add(jubah);
   } else if (opsi.topi === "peci") {
     const matPeci = matKarakter(0x1c1c1e);
     kepalaGrup.add(bagian(GEO.peci, matPeci, 0, 0.61, 0, true));
@@ -326,12 +409,13 @@ export function buatKarakter(opsi) {
   }
 
   g.userData.tubuh = tubuh; g.userData.lututK = kakiK.userData.lutut; g.userData.lututR = kakiR.userData.lutut;
-  g.userData.lenganK = lenganK; g.userData.lenganR = lenganR;
+  g.userData.lenganK = lenganK; g.userData.lenganR = lenganR; g.userData.sikuK = lenganK.userData.siku; g.userData.sikuR = lenganR.userData.siku;
   g.userData.kakiK = kakiK; g.userData.kakiR = kakiR;
   g.userData.kepala = kepalaGrup;
   g.userData.badan = badan;
   g.userData.mataK = mataK; g.userData.mataR = mataR;
   g.userData.geserHidup = Math.random() * 10;
+  g.userData.pakaian = atasan + "/" + bawahan;
   return g;
 }
 

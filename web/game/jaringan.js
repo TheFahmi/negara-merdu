@@ -103,7 +103,7 @@ import { sesi } from "./ui.js";
     }
     for (const [u, p] of urut) {
       if (!p.grup) {
-        const g = buatKarakter({ baju: p.baju, kulit: p.kulit, topi: p.topi, rupa: p.rupa });
+        const g = buatKarakter({ baju: p.baju, kulit: p.kulit, topi: p.topi, rupa: p.rupa, gender: p.gender });
         g.scale.setScalar(SKALA_KARAKTER);
         const lb = buatLabel("@" + u, 4.2, p.jabatan || null); lb.position.y = 2.25; g.add(lb);
         g.position.set(p.x, 0.32, p.z);

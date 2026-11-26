@@ -278,34 +278,9 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
 </div>
 
 <div id="ktp-overlay" hidden>
-  <div class="ktp-kartu">
-    <div class="ktp-kepala">
-      <svg class="ktp-lambang" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="ktpEmas" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6cd6b"/><stop offset="1" stop-color="#dd9a26"/></linearGradient></defs><path fill="url(#ktpEmas)" stroke="#b97e14" stroke-width="2" d="M32 4 L60 28 H52 V58 H38 V42 H26 V58 H12 V28 H4 Z"/></svg>
-      <div class="ktp-judul">
-        <div class="ktp-judul-besar">KARTU TANDA PENDUDUK</div>
-        <div class="ktp-judul-kecil">NEGARA MERDU · KOTA MERDU</div>
-      </div>
-      <div class="ktp-foto-label">FOTO</div>
-    </div>
-    <div class="ktp-badan">
-      <div class="ktp-data">
-        <div class="ktp-baris"><span>NIK</span><b id="ktp-nik">—</b></div>
-        <div class="ktp-baris"><span>Nama</span><b id="ktp-nama">—</b></div>
-        <div class="ktp-baris"><span>Jenis Kelamin</span><b id="ktp-gender">—</b></div>
-        <div class="ktp-baris"><span>Alamat</span><b id="ktp-alamat">—</b></div>
-        <div class="ktp-baris"><span>RT/RW</span><b id="ktp-rtrw">—</b></div>
-        <div class="ktp-baris"><span>Kel/Desa</span><b id="ktp-kelurahan">—</b></div>
-        <div class="ktp-baris"><span>Kecamatan</span><b id="ktp-kecamatan">—</b></div>
-        <div class="ktp-baris"><span>Terdaftar</span><b id="ktp-terdaftar">—</b></div>
-        <div class="ktp-baris" id="ktp-baris-jabatan" hidden><span>Jabatan</span><b id="ktp-jabatan">—</b></div>
-        <div class="ktp-baris"><span>Berlaku</span><b>Seumur Hidup</b></div>
-      </div>
-      <div class="ktp-foto"><canvas id="ktp-foto-kanvas" width="320" height="440"></canvas></div>
-    </div>
-    <div class="ktp-kaki">NEGARA MERDU · KARTU TANDA PENDUDUK · @negaramerdu</div>
-  </div>
+  <div class="ktp-kartu"><img id="ktp-gambar" alt="KTP Negara Merdu" draggable="false"></div>
   <div class="ktp-aksi">
-    <button id="unduh-ktp" type="button"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11.5"/><path d="M6.3 10.2L12 15.9l5.7-5.7"/><path d="M4 20h16"/></svg> Unduh KTP (PNG)</button>
+    <button id="unduh-ktp" type="button"><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11.5"/><path d="M6.3 10.2L12 15.9l5.7-5.7"/><path d="M4 20h16"/></svg> Unduh PNG</button>
     <button id="tutup-ktp" type="button">Tutup</button>
   </div>
 </div>
