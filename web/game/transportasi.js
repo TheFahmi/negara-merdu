@@ -121,6 +121,41 @@ function bangunRel(grup) {
    dengan tangga di ujung barat kedua peron -> peron utara. Zona dipakai
    tinggiPijak() untuk mengangkat pemain (kamera & karakter) mengikuti
    tangga/peron; di atas peron pemain tidak bisa jatuh ke rel. */
+/* Tangga lurus rapi (26 Nov): anak tangga beraturan (tinggi ±0,19 m) di atas
+   pelat miring beton, balok tepi (stringer) di kedua sisi, pagar kaca +
+   pegangan tangan, dan kanopi miring bertiang. a = tepi bawah (tengah),
+   b = tepi atas (tengah). Bagian opak digabung jadi 1 mesh. */
+const MAT_KACA_TANGGA = new THREE.MeshStandardMaterial({ color: 0xa8d4e8, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
+function tanggaRapi(grup, a, b, lebar, atap) {
+  const dx = b.x - a.x, dz = b.z - a.z, run = Math.hypot(dx, dz), dh = b.y - a.y;
+  const ux = dx / run, uz = dz / run, px = -uz, pz = ux; // u = arah naik (horizontal), p = arah melintang
+  const pitch = Math.atan2(dh, run), yaw = Math.atan2(ux, uz), miring = Math.hypot(run, dh);
+  const bag = [];
+  const miringBox = (w, h, len, cx, cy, cz, warna) => { const g = new THREE.BoxGeometry(w, h, len); g.rotateX(-pitch); g.rotateY(yaw); bag.push({ geo: g, x: cx, y: cy, z: cz, warna }); };
+  const datar = (w, h, d, cx, cy, cz, warna) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(yaw); bag.push({ geo: g, x: cx, y: cy, z: cz, warna }); };
+  const n = Math.max(3, Math.round(dh / 0.19)), tr = dh / n, td = run / n;
+  for (let i = 0; i < n; i++) { // anak tangga: injakan + tegak
+    const f = (i + 0.5) / n, cx = a.x + ux * run * f, cz = a.z + uz * run * f, yt = a.y + tr * (i + 1);
+    datar(lebar, tr + 0.04, td + 0.03, cx, yt - (tr + 0.04) / 2, cz, i % 2 ? 0xd6d0c4 : 0xdcd6ca);
+    datar(lebar, 0.03, 0.06, cx + ux * (td / 2 - 0.03), yt + 0.012, cz + uz * (td / 2 - 0.03), 0xf2c230); // strip anti-selip kuning
+  }
+  const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, my = (a.y + b.y) / 2;
+  miringBox(lebar, 0.35, miring, mx, my - 0.32, mz, 0xa9a49b);             // pelat beton miring
+  for (const s of [-1, 1]) {
+    const sx = mx + px * s * (lebar / 2 + 0.1), sz = mz + pz * s * (lebar / 2 + 0.1);
+    miringBox(0.2, 0.75, miring + 0.2, sx, my - 0.05, sz, 0xbdb7ac);       // balok tepi
+    miringBox(0.07, 0.07, miring, sx, my + 1.15, sz, 0x8a8f94);            // pegangan tangan
+    const kaca = new THREE.Mesh((() => { const g = new THREE.BoxGeometry(0.03, 0.85, miring); g.rotateX(-pitch); g.rotateY(yaw); return g; })(), MAT_KACA_TANGGA);
+    kaca.position.set(sx, my + 0.7, sz); grup.add(kaca);
+    if (atap) for (let t = 0; t <= Math.ceil(run / 5); t++) { // tiang kanopi
+      const f = Math.min(1, t / Math.ceil(run / 5)), cx = a.x + ux * run * f + px * s * (lebar / 2 + 0.35), cz = a.z + uz * run * f + pz * s * (lebar / 2 + 0.35);
+      const yb = a.y + dh * f; datar(0.14, 2.9, 0.14, cx, yb + 1.45 - 0.2, cz, 0x7b8086);
+    }
+  }
+  if (atap) { miringBox(lebar + 1.2, 0.14, miring + 0.6, mx, my + 2.75, mz, 0x14467a); miringBox(lebar + 1.3, 0.06, miring + 0.7, mx, my + 2.66, mz, 0xe9edf0); }
+  const m = new THREE.Mesh(gabungBerwarna(bag), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.05 }));
+  m.castShadow = true; m.receiveShadow = true; grup.add(m);
+}
 export const ZONA_PIJAK = []; // {x0,x1,z0,z1, y} datar | {.., sumbu:"x"|"z", ya, yb} tangga (ya di sisi koordinat kecil)
 const Y_PERON = YD + 1.2, Y_JEMBATAN = YD + 9.2;
 function bangunAksesPeron(grup, xc, zc) {
@@ -132,10 +167,7 @@ function bangunAksesPeron(grup, xc, zc) {
   const tx0 = xc + 30.4, tx1 = xc + 33, panjang = 15;
   const za = zc + 7.85, zb = za + panjang;
   ZONA_PIJAK.push({ x0: tx0, x1: tx1, z0: za, z1: zb, sumbu: "z", ya: Y_PERON, yb: 0.05 });
-  const n = 22;
-  for (let i = 0; i < n; i++) { const f = (i + 0.5) / n; K(tx1 - tx0, Y_PERON / n + 0.05, panjang / n + 0.02, 0xd8d2c6, (tx0 + tx1) / 2, Y_PERON * (1 - f) - Y_PERON / n / 2 + 0.02, za + f * panjang); }
-  for (const x of [tx0 - 0.1, tx1 + 0.1]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, Math.hypot(panjang, Y_PERON)), M(0x8a8f94)); r.position.set(x, Y_PERON / 2 + 1, za + panjang / 2); r.rotation.x = Math.atan2(Y_PERON, panjang); grup.add(r); }
-  K(tx1 - tx0 + 0.6, 0.4, panjang, 0x9aa0a6, (tx0 + tx1) / 2, Y_PERON / 2 - 0.3, za + panjang / 2); // balok penyangga (dilihat dari samping)
+  tanggaRapi(grup, { x: (tx0 + tx1) / 2, y: 0.05, z: zb }, { x: (tx0 + tx1) / 2, y: Y_PERON, z: za }, tx1 - tx0, true);
   const pp = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.6), new THREE.MeshBasicMaterial({ map: teksturPapanNama("KE PERON", "KRL Merdu") })); pp.position.set((tx0 + tx1) / 2, 2.6, zb + 0.3); grup.add(pp);
   K(0.15, 2.4, 0.15, 0x7b8086, tx0 - 0.3, 1.2, zb + 0.2); K(0.15, 2.4, 0.15, 0x7b8086, tx1 + 0.3, 1.2, zb + 0.2);
   // 2) tangga naik di ujung barat kedua peron (naik ke barat) + jembatan melintang rel
@@ -143,9 +175,7 @@ function bangunAksesPeron(grup, xc, zc) {
   for (const sz of [-1, 1]) {
     const z0 = sz > 0 ? zc + 4.75 : zc - 7.85, z1 = z0 + 3.1;
     ZONA_PIJAK.push({ x0: sx0, x1: sx1, z0, z1, sumbu: "x", ya: Y_JEMBATAN, yb: Y_PERON });
-    const m = 18, L = sx1 - sx0, tinggi = Y_JEMBATAN - Y_PERON;
-    for (let i = 0; i < m; i++) { const f = (i + 0.5) / m; K(L / m + 0.02, tinggi / m + 0.05, 2.2, 0xcfc9bd, sx0 + f * L, Y_PERON + tinggi * (1 - f) - tinggi / m / 2, (z0 + z1) / 2); }
-    for (const zz of [z0 + 0.35, z1 - 0.35]) { const r = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(L, tinggi), 0.1, 0.1), M(0x8a8f94)); r.position.set(sx0 + L / 2, Y_PERON + tinggi / 2 + 1, zz); r.rotation.z = -Math.atan2(tinggi, L); grup.add(r); }
+    tanggaRapi(grup, { x: sx1, y: Y_PERON, z: (z0 + z1) / 2 }, { x: sx0, y: Y_JEMBATAN, z: (z0 + z1) / 2 }, 2.4, false);
   }
   ZONA_PIJAK.push({ x0: bx0, x1: bx1, z0: zc - 7.85, z1: zc + 7.85, y: Y_JEMBATAN });
   K(bx1 - bx0, 0.35, 15.7, 0xcfc9bd, (bx0 + bx1) / 2, Y_JEMBATAN - 0.18, zc);                       // lantai jembatan
@@ -186,13 +216,10 @@ function bangunStasiunUtara(grup) {
     new THREE.MeshStandardMaterial({ color: 0xdfe5ea, metalness: 0.35, roughness: 0.4, side: THREE.DoubleSide }));
   atap.rotation.z = Math.PI / 2; atap.position.set(x, YD + 2.5, z); atap.castShadow = true; grup.add(atap);
   // tangga turun ke selatan (arah kota) dari ujung peron selatan + kios pintu
-  for (let t = 0; t < 14; t++) grup.add(kotak(4, 0.4, 0.9, 0xd8d2c6, x, 0.2 + t * 0.6, z + 21 - t * 0.85));
-  grup.add(kotak(5, YD + 1.2, 3, 0xf3efe6, x, (YD + 1.2) / 2, z + 9.4));
   grup.add(kotak(6, 3.4, 3.4, 0x1d5a8f, x, 1.7, z + 24.5));
   const papan = new THREE.Mesh(new THREE.BoxGeometry(18, 2, 0.3), new THREE.MeshStandardMaterial({ map: teksturPapanNama("STASIUN MERDU UTARA", "KRL Keliling Kota"), roughness: 0.8 }));
   papan.position.set(x, YD + 3.2, z + 8.2); grup.add(papan);
   const jamU = buatJam(0.9); jamU.position.set(x + 12, YD + 3.2, z + 8.2); grup.add(jamU);
-  rintanganTransportasi.push({ minX: x - 2.6, maxX: x + 2.6, minZ: z + 7.8, maxZ: z + 22 });
 }
 
 /* ---------- Gedung Stasiun Merdu (realistis) ---------- */
@@ -310,8 +337,6 @@ function bangunStasiun(grup, st) {
   // tiket, layar jadwal, bangku) terlihat menembus kaca.
   bangunGedungStasiun(grup, zb);
   const jam = buatJam(1.1); jam.position.set(XST + 12, YD - 1.1, zb + 17.3); grup.add(jam); // jam stasiun real time di fasad
-  for (let t = 0; t < 14; t++) grup.add(kotak(4, 0.4, 0.9, 0xd8d2c6, XST - 6, 0.2 + t * 0.6, zb + 30 - t * 0.85)); // tangga
-  const esk = kotak(1.6, 0.3, 14, 0x8a8f94, XST + 6, YD / 2, zb + 24); esk.rotation.x = -Math.atan2(YD, 12); grup.add(esk); // eskalator
   rintanganTransportasi.push({ minX: XST - 30, maxX: XST + 30, minZ: zb + 1, maxZ: zb + 17 });
   if (!st.terminal) return;
   // terminal bus (selatan blok, hanya Stasiun Merdu)
