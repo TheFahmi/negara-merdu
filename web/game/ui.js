@@ -261,6 +261,112 @@ import { buangGrup, perbaruiStatusChat, sambungUlangWS } from "./jaringan.js";
     } catch (err) { $("#salah-login").textContent = err.message; }
   });
 
+  /* ================= ATUR ULANG PIN (RESET LEWAT DM) =================
+     Warga lupa PIN: minta kode (POST /api/reset-pin) -> kode tampil di
+     layar sebagai teks siap salin "Reset PIN Negara Merdu: <KODE>" ->
+     warga mengirim teks itu sendiri lewat DM ke @negaramerdu ->
+     verifier server menandai sesi terverifikasi -> halaman ini polling
+     status (GET /api/reset-pin/status) -> warga tetapkan PIN baru
+     (POST /api/reset-pin/pin-baru). */
+  const reset = { sesi: null, username: "", timer: null };
+  function berhentiPollReset() { if (reset.timer) { clearInterval(reset.timer); reset.timer = null; } }
+  function formatSisa(detik) {
+    const d = Math.max(0, detik | 0);
+    return Math.floor(d / 60) + ":" + String(d % 60).padStart(2, "0");
+  }
+  function pollReset() {
+    berhentiPollReset();
+    reset.timer = setInterval(async () => {
+      const sec = document.querySelector('section[data-langkah="reset-kode"]');
+      if (!sec || sec.hidden || !reset.sesi) { berhentiPollReset(); return; }
+      try {
+        const r = await fetch("/api/reset-pin/status?sesi=" + encodeURIComponent(reset.sesi));
+        const d = await r.json();
+        if (!r.ok) { berhentiPollReset(); $("#salah-reset-kode").textContent = d.error || "Sesi tidak ditemukan."; return; }
+        if (d.status === "terverifikasi") {
+          berhentiPollReset();
+          $("#reset-pin-user").textContent = "@" + reset.username;
+          tampilLangkah("reset-pin");
+        } else if (d.status === "menunggu") {
+          $("#reset-status").textContent = "Menunggu DM kamu… kode berlaku " + formatSisa(d.sisa_detik) + " lagi.";
+        } else {
+          berhentiPollReset();
+          $("#reset-status").textContent = "";
+          $("#salah-reset-kode").textContent = "Kode sudah kedaluwarsa. Minta kode baru, lalu kirim lagi lewat DM.";
+        }
+      } catch (err) { /* jaringan berkedip: coba lagi pada tick berikut */ }
+    }, 4000);
+  }
+  $("#ke-reset").addEventListener("click", () => {
+    const u = $("#login-nama").value.trim();
+    if (u) $("#reset-nama").value = u;
+    $("#salah-reset").textContent = "";
+    tampilLangkah("reset");
+  });
+  $("#reset-batal").addEventListener("click", () => tampilLangkah("login"));
+  $("#reset-ke-login").addEventListener("click", () => tampilLangkah("login"));
+  $("#reset-ulang").addEventListener("click", () => { berhentiPollReset(); tampilLangkah("reset"); });
+  $("#form-reset").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const u = $("#reset-nama").value.trim().replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9._]{1,30}$/.test(u) || u.startsWith(".") || u.endsWith(".")) {
+      $("#salah-reset").textContent = "Username tidak valid. Pakai huruf kecil, angka, titik, atau garis bawah.";
+      return;
+    }
+    $("#salah-reset").textContent = "";
+    const btn = e.target.querySelector("button.utama"); btn.disabled = true; btn.textContent = "Membuat kode…";
+    try {
+      const r = await fetch("/api/reset-pin", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Gagal membuat kode reset");
+      reset.sesi = d.sesi; reset.username = u;
+      $("#reset-teks").textContent = "Reset PIN Negara Merdu: " + d.kode;
+      $("#salah-reset-kode").textContent = "";
+      $("#reset-status").textContent = "Menunggu DM kamu… kode berlaku " + formatSisa(d.berlaku_detik) + " lagi.";
+      tampilLangkah("reset-kode");
+      pollReset();
+    } catch (err) { $("#salah-reset").textContent = err.message; }
+    btn.disabled = false; btn.textContent = "Buat kode reset";
+  });
+  $("#salin-reset").addEventListener("click", async () => {
+    const teks = $("#reset-teks").textContent;
+    const btn = $("#salin-reset");
+    let bisa = false;
+    try { await navigator.clipboard.writeText(teks); bisa = true; } catch (err) { /* fallback di bawah */ }
+    if (!bisa) {
+      const range = document.createRange();
+      range.selectNodeContents($("#reset-teks"));
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      try { bisa = document.execCommand("copy"); } catch (err) { /* biarkan warga menyalin manual dari seleksi */ }
+    }
+    btn.textContent = bisa ? "Tersalin" : "Terpilih — salin manual";
+    setTimeout(() => { btn.textContent = "Salin"; }, 2200);
+  });
+  $("#form-reset-pin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const p1 = $("#reset-pin1").value, p2 = $("#reset-pin2").value;
+    if (!/^\d{6}$/.test(p1)) { $("#salah-reset-pin").textContent = "PIN baru harus tepat 6 angka."; return; }
+    if (p1 !== p2) { $("#salah-reset-pin").textContent = "PIN kedua tidak sama."; return; }
+    $("#salah-reset-pin").textContent = "";
+    const btn = e.target.querySelector("button.utama"); btn.disabled = true; btn.textContent = "Menyimpan…";
+    try {
+      const r = await fetch("/api/reset-pin/pin-baru", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sesi: reset.sesi, pin_baru: p1 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Gagal menyimpan PIN baru");
+      reset.sesi = null;
+      $("#login-nama").value = reset.username;
+      $("#login-pin").value = "";
+      tampilLangkah("reset-selesai");
+    } catch (err) { $("#salah-reset-pin").textContent = err.message; }
+    btn.disabled = false; btn.textContent = "Simpan PIN baru";
+  });
+
   /* ================= LENGKAPI PROFIL =================
      Akun pra-daftar (dibuatkan sistem: PIN standar 123456, gender kosong)
      dan warga lama yang gender-nya belum terisi DISURUH melengkapi saat

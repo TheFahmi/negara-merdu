@@ -1,6 +1,7 @@
 /* Negara Merdu — modul game "kota" (pecahan app.js monolit, migrasi Next.js 22 Nov 2026).
    Kota: pembangunan kota massal ter-instanced (bangunKotaMassal). */
 import { MAT_KACA_MOBIL, MAT_RODA, PIVOT_MOBIL, geoMobil } from "./mobilGeo.js";
+import { geoMobilGLB } from "./aset3d.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, SKALA_MOBIL, KAV_PITCH, PER_BLOK, RESERVASI, SISI, TAMAN, WARNA_LAMPU_LL, elemenJalan, hashInt, markaPersimpangan, polaKavling, sudutBlok, tiangLaluLintas, warnaAtapZonaHSL, warnaDindingZonaHSL, zonaDariKolBar, KOTA_D, KOTA_W, PITCH, PLAZA_TAPAK, faseLaluLintas, persimpanganKota } from "./inti.js";
 import { bangunRagamLahan, saringPersimpangan } from "./ragam.js";
 import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, matriksSway, posJalur } from "./jalur.js";
@@ -458,9 +459,18 @@ geoKepalaL.translate(1.02, 4.80, 0);
        SEIN kuning berkedip kiri/kanan sebelum & selama berbelok. Material
        Basic (tidak terpengaruh cahaya) + instanceColor; sein mati = skala 0. */
     const lampu = (bag) => gabungGeometri(bag.map(([x, y, z, w, h, d]) => ({ geo: new THREE.BoxGeometry(w, h, d), x, y, z })));
-    const geoDepan = lampu([[-0.63, 0.74, 2.2, 0.4, 0.13, 0.04], [0.63, 0.74, 2.2, 0.4, 0.13, 0.04]]); // menempel di lampu model mobilGeo
-    const geoRem = lampu([[-0.62, 0.8, -2.205, 0.44, 0.15, 0.04], [0.62, 0.8, -2.205, 0.44, 0.15, 0.04], [0, 1.43, -1.38, 0.5, 0.05, 0.04]]);
-    const seinSisi = (sx) => lampu([[sx * 0.88, 0.72, 2.17, 0.14, 0.1, 0.04], [sx * 0.86, 0.8, -2.2, 0.08, 0.15, 0.04], [sx * 1.0, 1.0, 0.95, 0.04, 0.05, 0.16]]); // depan, belakang, di spion
+    /* Posisi lampu tempel mengikuti model aktif: sedan GLB (next35)
+       diukur dari node Headlamp/Taillamp/spion GLB; prosedural = lama. */
+    const glbAktif = !!geoMobilGLB();
+    const geoDepan = glbAktif
+      ? lampu([[-0.68, 0.89, 2.19, 0.34, 0.2, 0.05], [0.68, 0.89, 2.19, 0.34, 0.2, 0.05]])
+      : lampu([[-0.63, 0.74, 2.2, 0.4, 0.13, 0.04], [0.63, 0.74, 2.2, 0.4, 0.13, 0.04]]); // menempel di lampu model mobilGeo
+    const geoRem = glbAktif
+      ? lampu([[-0.68, 0.9, -2.19, 0.34, 0.19, 0.05], [0.68, 0.9, -2.19, 0.34, 0.19, 0.05]])
+      : lampu([[-0.62, 0.8, -2.205, 0.44, 0.15, 0.04], [0.62, 0.8, -2.205, 0.44, 0.15, 0.04], [0, 1.43, -1.38, 0.5, 0.05, 0.04]]);
+    const seinSisi = glbAktif
+      ? (sx) => lampu([[sx * 0.86, 0.85, 2.1, 0.14, 0.1, 0.04], [sx * 0.86, 0.9, -2.18, 0.08, 0.15, 0.04], [sx * 0.99, 1.25, 0.99, 0.04, 0.05, 0.16]])
+      : (sx) => lampu([[sx * 0.88, 0.72, 2.17, 0.14, 0.1, 0.04], [sx * 0.86, 0.8, -2.2, 0.08, 0.15, 0.04], [sx * 1.0, 1.0, 0.95, 0.04, 0.05, 0.16]]); // depan, belakang, di spion
     const MAT_L = () => new THREE.MeshBasicMaterial({ color: 0xffffff });
     const imDepan = new THREE.InstancedMesh(geoDepan, new THREE.MeshBasicMaterial({ color: 0xfff6d8 }), daftar.length);
     const imRem = new THREE.InstancedMesh(geoRem, MAT_L(), daftar.length);

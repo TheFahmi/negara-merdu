@@ -21,6 +21,7 @@ import { BUSWAY_Z_DUNIA, perbaruiGerbangBus, tinggiBus } from "./plazaPagar.js";
 import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur, sTerdekatJalur, terapkanSway } from "./jalur.js";
 import { bunyiPeristiwa } from "./suara.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
+import { buatBusGLB, buatKeretaGLB } from "./aset3d.js";
 import { batasLampuMerah } from "./kota.js";
 import { buatJam } from "./jam.js";
 
@@ -368,6 +369,23 @@ const TEX_PETA_KRL = (() => { const cv = document.createElement("canvas"); cv.wi
   c.fillStyle = "#ffb020"; c.font = "bold 18px system-ui"; c.textAlign = "left"; c.fillText("KRL MERDU · Keliling Kota", 30, 24); return new THREE.CanvasTexture(cv); })();
 const KACA_KRL = new THREE.MeshStandardMaterial({ color: 0x9fc4d6, transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0.1, depthWrite: false });
 function buatKereta() {
+  /* KRL GLB (next35): rangkaian Tail-Mid-Mid-Head dari aset3d (pintu
+     geser asli sisi peron, bogie di grup sasis). Masinis ditambah di
+     sini sama seperti model prosedural. Jatuh ke prosedural bila GLB
+     gagal dimuat. */
+  const k = buatKeretaGLB();
+  if (k) {
+    const ujung = [[0, 5.9, Math.PI], [3, -5.9, 0]]; // [indeks gerbong, lx kabin, rotY masinis]
+    for (const [ci, lx, ry] of ujung) {
+      const kar = buatKarakter({ baju: "#1d5a8f", kulit: "#c68642", topi: "polisi" });
+      kar.position.set(lx, 0.35, 0); kar.rotation.y = ry;
+      k.userData.gerbong[ci].add(kar);
+    }
+    return k;
+  }
+  return buatKeretaProsedural();
+}
+function buatKeretaProsedural() {
   const g = new THREE.Group(), gerbong = [];
   let tgt = g; // grup gerbong yang sedang diisi
   const merah = M(0xc8102e, 0.4);
@@ -506,8 +524,17 @@ function buatKereta() {
 }
 /* ---------- bus (BERONGGA ber-interior, bisa dinaiki) — hadap +z ----------
    Lantai y 0,55, atap 3,3; pintu di sisi KIRI (+x, ke trotoar, lajur kiri). */
-const PINTU_BUS_Z = 0; // pintu bus di TENGAH bodi (z lokal)
+const PINTU_BUS_Z = -0.96; // pintu bus: pusat Door_Mid GLB (z lokal); bus prosedural lama di 0
 function buatBus(warna) {
+  /* Bus GLB (next35): model Trans Merdu dari aset3d (pintu Door_Mid
+     geser, roda berputar, sasis tegak saat sway). Warna koridor lama
+     tidak dipakai lagi — livery GLB tetap. Jatuh ke prosedural bila
+     GLB gagal dimuat. */
+  const g = buatBusGLB();
+  if (g) return g;
+  return buatBusProsedural(warna);
+}
+function buatBusProsedural(warna) {
   const g = new THREE.Group(), w = parseInt(warna.slice(1), 16), tex = teksturBus(warna);
   const sasisBus = []; // roda, as, gardan, rel sasis: dipindah ke grup sasis (tetap tegak saat bodi sway)
   const K = (l, t, d, c, x, y, z) => { const m = kotak(l, t, d, c, x, y, z); m.castShadow = false; g.add(m); return m; };
@@ -821,7 +848,7 @@ function perbaruiPintuKrl(k) {
   const e = k.buka * k.buka * (3 - 2 * k.buka);
   for (const c of k.mobil) for (const pt of c.userData.pintu) {
     const aktif = pt.sisi === (k.sisiPintu || 0) ? e : 0; // hanya sisi yang menghadap peron
-    pt.daun.position.x = pt.x0 + pt.arah * aktif * 0.66;
+    pt.daun.position[pt.sumbu || "x"] = (pt.pos0 !== undefined ? pt.pos0 : pt.x0) + pt.arah * aktif * (pt.geser !== undefined ? pt.geser : 0.66);
   }
 }
 const _eLihat = new THREE.Euler(), _qLihat = new THREE.Quaternion();
@@ -920,7 +947,12 @@ export function perbaruiTransportasi(t, dt) {
     if (b.buka !== sasaranB) {
       b.buka += Math.sign(sasaranB - b.buka) * Math.min(Math.abs(sasaranB - b.buka), dt / 0.7);
       const e = b.buka * b.buka * (3 - 2 * b.buka);
-      for (const pt of b.g.userData.pintu) pt.daun.position.z = pt.z0 + pt.arah * e * 0.8;
+      for (const pt of b.g.userData.pintu) pt.daun.position.z = pt.z0 + pt.arah * e * (pt.geser !== undefined ? pt.geser : 0.8);
+    }
+    /* roda bus GLB berputar mengikuti kecepatan (bus prosedural tak punya) */
+    if (b.g.userData.roda && b.v) {
+      const putar = b.v * dt / (b.g.userData.rRoda || 0.4);
+      for (const r of b.g.userData.roda) r.rotation.x += putar;
     }
     { // lampu rem & sein bus (sein juga menyala saat keluar dari halte = menepi/ masuk lajur)
       const L = b.g.userData.lampu, tNow = performance.now() / 1000;
@@ -1069,7 +1101,7 @@ function naikkan(w, pintuLuar, pintuDalam, induk, pintuLx, pintuLz, bus, tunda, 
 }
 function peristiwaBusBerhenti(b, entri) {
   bunyiPeristiwa("busBerhenti", b.g.position);
-  const pintuLuar = duniaDari(b.g, 2.2, 0, PINTU_BUS_Z).clone(), pintuDalam = duniaDari(b.g, 0.9, 0.65, PINTU_BUS_Z).clone();
+  const pintuLuar = duniaDari(b.g, 2.2, 0, PINTU_BUS_Z).clone(), pintuDalam = duniaDari(b.g, 0.9, b.g.userData.lantaiY !== undefined ? b.g.userData.lantaiY : 0.65, PINTU_BUS_Z).clone();
   const y0 = entri.y + 0.02; pintuLuar.y = y0;
   const duduk = (b.g.userData.kursi || []).filter((k) => k.isi).map((k) => k.isi);
   const nTurun = Math.min(duduk.length, Math.floor(Math.random() * 3));
@@ -1137,7 +1169,7 @@ function peristiwaKeretaBerhenti(k, idx) {
    Selama menumpang: kamera 1st Person menempel di dalam kendaraan yang
    melaju (melihat kota lewat jendela), joystick/WASD = berjalan di lorong
    (KRL: antar gerbong), seret = menoleh. "Turun" aktif saat berhenti. */
-export const NAIK = { aktif: false, jenis: null, obj: null, lx: 0, lz: 0, lantaiY: 0 };
+export const NAIK = { aktif: false, jenis: null, obj: null, lx: 0, lz: 0, lantaiY: 0, mataY: null };
 export function sedangNaik() { return NAIK.aktif; }
 const _v = new THREE.Vector3();
 function duniaDari(o, lx, ly, lz) { o.updateMatrixWorld(); return _v.set(lx, ly, lz).applyMatrix4(o.matrixWorld); }
@@ -1182,8 +1214,8 @@ export function setKaitNaik(k) { kaitNaik = k; }
 function naik(jenis, obj) {
   Object.assign(NAIK, { aktif: true, jenis, obj });
   const fp = kaitNaik.fp;
-  if (jenis === "bus") { NAIK.lx = 0.2; NAIK.lz = PINTU_BUS_Z; NAIK.lantaiY = 0.65; fp.yaw = Math.PI; }
-  else { NAIK.lx = -18.4; NAIK.lz = 0; NAIK.lantaiY = 0.5; fp.yaw = -Math.PI / 2; }
+  if (jenis === "bus") { NAIK.lx = 0.2; NAIK.lz = PINTU_BUS_Z; NAIK.lantaiY = obj.g.userData.lantaiY !== undefined ? obj.g.userData.lantaiY : 0.65; NAIK.mataY = obj.g.userData.mataY !== undefined ? obj.g.userData.mataY : null; fp.yaw = Math.PI; }
+  else { NAIK.lx = -18.4; NAIK.lz = 0; NAIK.lantaiY = 0.5; NAIK.mataY = null; fp.yaw = -Math.PI / 2; }
   fp.pitch = 0;
   kaitNaik.petunjuk(jenis === "bus" ? "Menumpang bus Trans Merdu · jalan di lorong · turun saat bus berhenti di halte"
     : "Menumpang KRL Merdu keliling kota · jalan antar gerbong · turun saat berhenti di stasiun");
@@ -1215,7 +1247,7 @@ export function updateNaik(dt, camera, fp, gerak) {
     const i = Math.max(0, Math.min(3, Math.round(-NAIK.lx / 14.2)));
     o = NAIK.obj.mobil[i]; lx = NAIK.lx + i * 14.2;
   }
-  const w = duniaDari(o, lx, NAIK.lantaiY + 2.05, NAIK.lz); // mata penumpang (karakter ±2,3 m)
+  const w = duniaDari(o, lx, NAIK.mataY !== null && NAIK.mataY !== undefined ? NAIK.mataY : NAIK.lantaiY + 2.05, NAIK.lz); // mata penumpang (karakter ±2,3 m; bus GLB memakai mataY terukur dari plafon kabinnya — next36)
   camera.position.copy(w);
   // arah pandang = orientasi kendaraan (termasuk sway: miring & angguk) x arah lihat pemain
   _eLihat.set(fp.pitch, fp.yaw, 0, "YXZ"); _qLihat.setFromEuler(_eLihat);

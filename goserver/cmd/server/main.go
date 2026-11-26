@@ -232,6 +232,9 @@ func main() {
 			case "/api/keluarga-saya":
 				wargaH.KeluargaSaya(w, r)
 				return
+			case "/api/reset-pin/status":
+				wargaH.ResetStatus(w, r)
+				return
 			case "/api/pemilu":
 				pemiluH.Ambil(w, r)
 				return
@@ -264,6 +267,14 @@ func main() {
 				pemiluH.Admin("fase")(w, r)
 			case "/api/admin/pemilu/tutup":
 				pemiluH.Admin("tutup")(w, r)
+			case "/api/reset-pin":
+				wargaH.ResetMinta(w, r)
+			case "/api/reset-pin/pin-baru":
+				wargaH.ResetPINBaru(w, r)
+			case "/api/admin/reset-pin/pending":
+				wargaH.AdminResetPending(w, r)
+			case "/api/admin/reset-pin/verifikasi":
+				wargaH.AdminResetVerifikasi(w, r)
 			case "/api/admin/verifikasi":
 				wargaH.Verifikasi(w, r)
 			case "/api/admin/pembangunan/bangun":

@@ -2,7 +2,8 @@
    Rumah: rumah detail di kavling asli, papan distrik, rintangan & tapak fasilitas, dan interior rumah. */
 import { buatJam } from "./jam.js";
 import { SKALA_KARAKTER, $, BLOK_KOLOM, KAPASITAS, PER_BLOK, PINTU_ISTANA, PUSAT_X, PUSAT_Z, Z_ISTANA, aktivitasUntukNpc, hashInt, posisiKavling, warnaDindingZonaHSL, zonaDariKolBar } from "./inti.js";
-import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, meshPelana, plafonTerang, kotak, scene, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
+import { M, TEX_ATAP, daftarRumah, dataPembangunan, geometriAtapPelana, meshPelana, plafonTerang, kotak, scene, semuaWarga, statistik, wargaTerbaru, warnaPemilik } from "./bersama.js";
+import { asetRumah, buatRumahGLB } from "./aset3d.js";
 import { FASILITAS_NAMA } from "./fasilitas.js";
 import { buatKarakter, buatLabel } from "./karakter.js";
 import { PETUNJUK, aturMode, fp, modeKamera, posisiDepanRumah } from "./kamera.js";
@@ -331,28 +332,47 @@ import { AP, aksiApartemen, pintuApartemen, jepitRuang, masukApartemenLobi, rese
        rumus hash yang sama dengan instans massal untuk nomor rumah
        global yang sama, jadi rumah detail terbaca sebagai versi rinci
        dari rumah yang sama. NPC doppelganger tetap di plaza (di bawah). */
-    wargaTerbaru.slice(0, 30).forEach((w, i) => {
+    /* Rumah GLB (next35): SEMUA warga berdiri sebagai model 3D GLB di
+       kavling aslinya — tipe 1-5 deterministik dari nomor rumah global,
+       tipe 6 khusus @thefahmihassan (Pak Presiden). rumahDetailSet kini
+       berisi semua warga (lihat ambilData) sehingga instans massal
+       kavling mereka dilewati. Bila GLB gagal dimuat, rumah warga itu
+       jatuh ke rumah detail prosedural lama (skala 1,55). */
+    const SKALA_RUMAH = 9.2;
+    semuaWarga.forEach((w) => {
       const pos = posisiKavling(w.blok, w.kavling);
       const nomorGlobal = (w.blok - 1) * PER_BLOK + w.kavling; // nomor hash yang sama dengan instans massal
-      const bi = w.blok - 1;
-      const zonaW = zonaDariKolBar(bi % BLOK_KOLOM, Math.floor(bi / BLOK_KOLOM));
-      const hslD = warnaDindingZonaHSL(zonaW, hashInt(nomorGlobal * 11 + 3), hashInt(nomorGlobal * 13 + 5));
-      const warnaD = new THREE.Color(); warnaD.setHSL(hslD[0], hslD[1], hslD[2]);
-      const warnaA = new THREE.Color(warnaPemilik.get(w.blok + "," + w.kavling) || w.warna_baju || "#b5533c");
-      const h2 = hashInt(nomorGlobal * 7 + 1); // varian atap sama seperti instans massal
-      const varian = h2 < 0.55 ? 0 : h2 < 0.85 ? 1 : 2;
-      const cerobong = h2 < 0.85 && hashInt(nomorGlobal * 13 + 5) < 0.35;
-      const rumah = buatRumahDetail(warnaD.getHex(), warnaA.getHex(), varian, cerobong);
+      const tipe = w.username === "thefahmihassan" ? 6 : 1 + Math.floor(hashInt(nomorGlobal * 31 + 7) * 5);
+      const tpl = asetRumah(tipe);
+      let rumah, labelY, labelBesar, hx, hz;
+      if (tpl) {
+        rumah = buatRumahGLB(tipe);
+        rumah.scale.setScalar(SKALA_RUMAH);
+        labelY = tpl.tinggi + 0.18; labelBesar = 5 * 1.55 / SKALA_RUMAH; // label sprite ikut skala grup: samakan ukuran dunianya dengan label lama
+        hx = tpl.lebar * SKALA_RUMAH / 2 + 0.3; hz = tpl.dalam * SKALA_RUMAH / 2 + 0.3;
+      } else {
+        const bi = w.blok - 1;
+        const zonaW = zonaDariKolBar(bi % BLOK_KOLOM, Math.floor(bi / BLOK_KOLOM));
+        const hslD = warnaDindingZonaHSL(zonaW, hashInt(nomorGlobal * 11 + 3), hashInt(nomorGlobal * 13 + 5));
+        const warnaD = new THREE.Color(); warnaD.setHSL(hslD[0], hslD[1], hslD[2]);
+        const warnaA = new THREE.Color(warnaPemilik.get(w.blok + "," + w.kavling) || w.warna_baju || "#b5533c");
+        const h2 = hashInt(nomorGlobal * 7 + 1); // varian atap sama seperti instans massal
+        rumah = buatRumahDetail(warnaD.getHex(), warnaA.getHex(), h2 < 0.55 ? 0 : h2 < 0.85 ? 1 : 2, h2 < 0.85 && hashInt(nomorGlobal * 13 + 5) < 0.35);
+        rumah.scale.setScalar(1.55); // sebanding dengan rumah instanced skala baru
+        labelY = 7.4; labelBesar = 5; hx = 4.6; hz = 4.2;
+      }
       rumah.userData.pemilik = w; rumah.userData.nomor = w.nomor_rumah;
-      rumah.scale.setScalar(1.55); // sebanding dengan rumah instanced skala baru
       rumah.position.set(pos.x, 0, pos.z); rumah.rotation.y = 0;
       // Titik pintu untuk fitur interior: doorstep 6,4 satuan di depan
       // wajah rumah (sisi +z, arah hadap rumah massal); di luar AABB-nya.
       rumah.userData.pintu = { x: pos.x, z: pos.z + 6.4 };
-      const label = buatLabel("@" + w.username, 5, w.jabatan || null);
-      label.position.set(0, 7.4, 0); rumah.add(label);
+      const label = buatLabel("@" + w.username, labelBesar, w.jabatan || null);
+      label.position.set(0, labelY, 0); rumah.add(label);
       dinamis.add(rumah); rumahKlik.push(rumah);
-      rintanganDetail.push({ minX: pos.x - 4.6, maxX: pos.x + 4.6, minZ: pos.z - 4.2, maxZ: pos.z + 4.2 }); // tapak detail — cakupan tabrakan kavling ini
+      rintanganDetail.push({ minX: pos.x - hx, maxX: pos.x + hx, minZ: pos.z - hz, maxZ: pos.z + hz }); // tapak rumah — cakupan tabrakan kavling ini
+    });
+    /* NPC doppelganger: tetap 30 warga terbaru seperti sebelumnya. */
+    wargaTerbaru.slice(0, 30).forEach((w, i) => {
       const kar = buatKarakter({ baju: w.warna_baju, kulit: w.warna_kulit, topi: w.topi, rupa: w.rupa, gender: w.gender });
       kar.scale.setScalar(SKALA_KARAKTER);
       kar.userData.username = w.username; // dipakai multiplayer: NPC disembunyikan saat orangnya online

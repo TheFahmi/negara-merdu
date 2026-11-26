@@ -15,6 +15,7 @@
    -> beberapa draw call per gedung; kaca 1 mesh transparan; layar & lampu 1
    mesh Basic. Interior + orang disembunyikan bila kamera jauh (> 320 m). */
 import { buatJip, buatMobil, buatTruk } from "./mobilGeo.js";
+import { klonKendaraanGLB } from "./aset3d.js";
 import { buatJam } from "./jam.js";
 import { buatPetugas } from "./keamanan.js";
 import { GEDUNG_KACA_BLOK, JALAN, PITCH, SKALA_KARAKTER, sudutBlok } from "./inti.js";
@@ -64,6 +65,10 @@ function mobilParkir(g, x, z, ry, warna) {
   const m = buatMobil(warna); m.position.set(x, 0.3, z); m.rotation.y = ry; m.scale.setScalar(SKALA_MOBIL); g.add(m);
 }
 function motor(g, x, z, ry, warna) {
+  /* Motor GLB (next35): klon motor.glb, warna bodi dari parameter.
+     Jatuh ke motor kotak prosedural di bawah bila GLB gagal. */
+  const glb = klonKendaraanGLB("motor", 2.17, warna); // next37: 1,94->2,17 — samakan panjang prosedural 2,02-2,08
+  if (glb) { glb.g.position.set(x, 0.3, z); glb.g.rotation.y = ry; g.add(glb.g); return; }
   const m = new THREE.Group(); m.add(kotak(0.35, 0.45, 1.5, warna, 0, 0.75, 0)); m.add(kotak(0.3, 0.15, 0.7, 0x1d1d1f, 0, 1.05, -0.2));
   for (const dz of [-0.62, 0.62]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.09, 6, 14), M(0x222222)); r.rotation.y = Math.PI / 2; r.position.set(0, 0.33, dz); m.add(r); }
   m.position.set(x, 0.3, z); m.rotation.y = ry; g.add(m);

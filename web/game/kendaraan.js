@@ -13,6 +13,7 @@ import { SWAY, goyang, matriksSway } from "./jalur.js";
 import { BLOK_BARIS, BLOK_KOLOM, JALAN, KAV_PITCH, SKALA_MOBIL, PLAZA_TAPAK, SISI, faseLaluLintas, hashInt, persimpanganKota, sudutBlok } from "./inti.js";
 import { M, PARAM, gabungBerwarna, rumahDetailSet, rumahTerisi, scene } from "./bersama.js";
 import { rintanganFasilitas } from "./rumah.js";
+import { klonKendaraanGLB } from "./aset3d.js";
 
 export const WARNA_MOBIL = [0xd9462e, 0x3f6fb5, 0xf2f2ee, 0x2b2d30, 0x9aa0a6, 0xe8c268, 0x2e8b57, 0x7a1f2b, 0x5b7c99, 0xe8943a];
 
@@ -196,13 +197,20 @@ export function perbaruiLaluLintasMobil(t, dt) {
       hx = m.sb.x - m.sa.x; hz = m.sb.z - m.sa.z;
     }
     const yawJ = Math.atan2(hx, hz), gJ = goyang(m.goy || (m.goy = {}), dt, yawJ, m.vNyata || 0, SWAY.mobil, t);
-    matriksSway(_d.matrix, _mRodaJ, x, 0.02 + (gJ.naik || 0), z, yawJ, gJ.pitch, gJ.rollTampil || 0, PIVOT_MOBIL, 1); // sway: bodi berayun, roda tegak
+    matriksSway(_d.matrix, _mRodaJ, x, 0.02 + (gJ.naik || 0), z, yawJ, gJ.pitch, gJ.rollTampil || 0, PIVOT_MOBIL, 1.2); // next37: skala 1 -> 1,2 (+20% sedan, keputusan Fahmi 26 Nov 2026); sway: bodi berayun, roda tegak
     inst.badan.setMatrixAt(i, _d.matrix); inst.detail.setMatrixAt(i, _d.matrix); inst.roda.setMatrixAt(i, _mRodaJ);
   });
   inst.badan.instanceMatrix.needsUpdate = true; inst.detail.instanceMatrix.needsUpdate = true; inst.roda.instanceMatrix.needsUpdate = true;
 }
 
 export function mobil(g, x, z, ry, warna) {
+    /* Sedan GLB (next35): klon mobil.glb, warna bodi dari parameter.
+       Jatuh ke sedan kotak prosedural di bawah bila GLB gagal. */
+    const glb = klonKendaraanGLB("mobil", 3.0, warna); // next37: 2,5 -> 3,0 (+20% sedan pajangan, keputusan Fahmi 26 Nov 2026)
+    if (glb) {
+      glb.g.position.set(x, 0, z); glb.g.rotation.y = ry || 0; g.add(glb.g);
+      return glb.g;
+    }
     const grup = new THREE.Group();
     const matBody = M(warna, 0.45);
     const matKaca = M(0x1e2c36, 0.25);
@@ -278,6 +286,15 @@ export function mobil(g, x, z, ry, warna) {
     return grup;
   }
 
+/* Ambulans GLB (next35) untuk Puskesmas — jatuh ke null bila GLB gagal
+   (pemanggil memakai sedan + boks prosedural lama). */
+export function ambulans(g, x, z, ry) {
+  const glb = klonKendaraanGLB("ambulans", 2.5, null);
+  if (!glb) return null;
+  glb.g.position.set(x, 0, z); glb.g.rotation.y = ry || 0; g.add(glb.g);
+  return glb.g;
+}
+
 /* ============ MOBIL PAJANGAN: mobil() detail parkir di tepi jalan ============
    8 mobil mesh penuh (bukan instanced) di tepi jalan dekat plaza &
    fasilitas terbangun, di posisi trotoar tepi (di luar lajur lalu lintas
@@ -297,7 +314,7 @@ export function bangunMobilPajangan() {
   for (const [x, z, ry, warna] of tempat) {
     mobil(grup, x, z, ry, warna);
     const memanjangX = Math.abs(Math.sin(ry)) > 0.5;
-    const hx = memanjangX ? 2.15 : 0.97, hz = memanjangX ? 0.97 : 2.15;
+    const hx = memanjangX ? 2.58 : 1.16, hz = memanjangX ? 1.16 : 2.58; // next37: AABB rintangan x1,2 mengikuti sedan +20% (2,15/0,97 lama)
     rintanganFasilitas.push({ minX: x - hx, maxX: x + hx, minZ: z - hz, maxZ: z + hz });
   }
   scene.add(grup);

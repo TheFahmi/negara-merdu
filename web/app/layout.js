@@ -32,6 +32,10 @@ export default function RootLayout({ children }) {
         {/* three.min.js vendored — dimuat sebelum kode game (global THREE),
             sama seperti <script src="three.min.js"> di index.html lama. */}
         <Script src="/three.min.js" strategy="beforeInteractive" />
+        {/* Loader GLB untuk aset 3D (game/aset3d.js) — versi r128 yang
+            menempel ke global THREE yang sama. */}
+        <Script src="/BufferGeometryUtils.js" strategy="beforeInteractive" />
+        <Script src="/GLTFLoader.js" strategy="beforeInteractive" />
         {children}
       </body>
     </html>

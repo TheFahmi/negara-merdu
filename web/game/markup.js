@@ -272,7 +272,54 @@ export const MARKUP = `<canvas id="kanvas"></canvas>
         <div class="salah" id="salah-login" role="alert"></div>
         <button class="utama" type="submit">Masuk negara</button>
       </form>
+      <button class="tautan" id="ke-reset" type="button">Lupa PIN? Atur ulang lewat DM Instagram</button>
       <button class="tautan" type="button" data-ganti>Belum punya Kartu Warga Negara? Daftar</button>
+    </section>
+
+    <section data-langkah="reset" hidden>
+      <div class="judul">Atur Ulang PIN</div>
+      <p>Masukkan username Instagram kamu. Nanti kamu dapat kode yang harus kamu kirim sendiri lewat DM ke <b>@negaramerdu</b> — itu bukti akunnya memang milikmu.</p>
+      <form id="form-reset" novalidate>
+        <label for="reset-nama">Username Instagram</label>
+        <div class="isian"><span>@</span><input id="reset-nama" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="31" placeholder="username"></div>
+        <div class="salah" id="salah-reset" role="alert"></div>
+        <button class="utama" type="submit">Buat kode reset</button>
+      </form>
+      <button class="tautan" id="reset-batal" type="button">Batal, kembali masuk</button>
+    </section>
+
+    <section data-langkah="reset-kode" hidden>
+      <div class="judul">Kirim Kode Lewat DM</div>
+      <p>Salin teks di bawah ini, lalu tempel dan kirim lewat DM Instagram ke <b>@negaramerdu</b> dari akunmu. Kirim apa adanya, jangan diubah.</p>
+      <div class="blok-salin">
+        <span id="reset-teks">Reset PIN Negara Merdu: —</span>
+        <button id="salin-reset" type="button">Salin</button>
+      </div>
+      <a class="utama ig" href="https://instagram.com/negaramerdu" target="_blank" rel="noopener">Buka Instagram @negaramerdu</a>
+      <p class="reset-status" id="reset-status">Menunggu DM kamu…</p>
+      <div class="salah" id="salah-reset-kode" role="alert"></div>
+      <button class="tautan" id="reset-ulang" type="button">Minta kode baru</button>
+      <button class="tautan" type="button" data-ganti>Batalkan</button>
+    </section>
+
+    <section data-langkah="reset-pin" hidden>
+      <div class="judul">Buat PIN Baru</div>
+      <p>DM kamu sudah terverifikasi. Sekarang buat PIN 6 angka yang baru untuk <b id="reset-pin-user">@kamu</b>.</p>
+      <form id="form-reset-pin" novalidate>
+        <label for="reset-pin1">PIN baru 6 angka</label>
+        <div class="isian pin"><input id="reset-pin1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="••••••"></div>
+        <label for="reset-pin2">Ulangi PIN baru</label>
+        <div class="isian pin"><input id="reset-pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="••••••"></div>
+        <div class="salah" id="salah-reset-pin" role="alert"></div>
+        <button class="utama" type="submit">Simpan PIN baru</button>
+      </form>
+      <button class="tautan" type="button" data-ganti>Batalkan</button>
+    </section>
+
+    <section data-langkah="reset-selesai" hidden>
+      <div class="judul">PIN Berhasil Diganti</div>
+      <p>Masuk lagi dengan PIN barumu. Demi keamanan, semua sesi masuk di perangkat lain sudah dikeluarkan.</p>
+      <button class="utama" id="reset-ke-login" type="button">Masuk</button>
     </section>
   </div>
 </div>

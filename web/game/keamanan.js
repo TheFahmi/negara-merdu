@@ -16,6 +16,7 @@ import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
 import { SWAY, arahHalus, arahSein, goyang, jalurPoligon, jarakKeBelok, kedip, posJalur, terapkanSway } from "./jalur.js";
 import { PIVOT_MOBIL } from "./mobilGeo.js";
 import { batasLampuMerah } from "./kota.js";
+import { buatPolisiGLB } from "./aset3d.js";
 
 export const WARNA_POLISI = { baju: "#8b6b45", celana: "#3d2b1f" };
 export const WARNA_TENTARA = { baju: "#4f5d3a", celana: "#4f5d3a" };
@@ -95,6 +96,16 @@ export function bangunKeamananIstana() {
 /* ---------- mobil patroli polisi ---------- */
 const PATROLI = [];
 function buatMobilPolisi() {
+  /* Mobil polisi GLB (next35): livery, strip & teks POLISI bawaan model;
+     LightBar_Red/Blue + material lampu rem dirujuk untuk kedip patroli.
+     Skala SKALA_MOBIL berlaku seperti sedan prosedural sebelumnya. */
+  const glb = buatPolisiGLB();
+  if (glb) {
+    const g = glb.g;
+    g.scale.setScalar(SKALA_MOBIL);
+    g.userData = { merah: glb.merah, biru: glb.biru, rem: glb.rem, seinM: { 1: [], "-1": [] }, sasis: g.userData.sasis };
+    return g;
+  }
   const g = buatMobil(0xf4f4f2); // sedan realistis bersama + livery polisi
   const K = (w, h, d, c, x, y, z) => { const m = kotak(w, h, d, c, x, y, z); m.castShadow = false; g.add(m); return m; };
   for (const sx of [-1, 1]) { K(0.02, 0.16, 3.6, 0x1d3a8f, sx * 0.935, 0.66, 0.05); K(0.02, 0.06, 3.6, 0xf28c28, sx * 0.94, 0.55, 0.05); } // strip biru-oranye

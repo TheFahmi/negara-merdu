@@ -17,7 +17,7 @@
   /* Skala mobil penumpang (parkir di rumah & lalu lintas arteri) relatif model
      ±4,2 m: dunia game berskala besar (lajur 7, rumah 8,6, pintu ±3), jadi
      mobil 1:1 tampak kerdil di samping rumah. Satu konstanta untuk keduanya. */
-  export const SKALA_MOBIL = 1.35;
+  export const SKALA_MOBIL = 1.62; // next37: 1,35 -> 1,62 — tuning +20% semua sedan atas keputusan Fahmi 26 Nov 2026 ("naikkan ukuran mobil +20% sekalian")
   /* Skala SEMUA karakter (pemain sendiri, pemain lain, warga di rumah, NPC
      plaza/pasar/mall/penumpang): satu angka supaya tinggi badan sama
      (±1,75 m, sebanding mata 1st Person 1,6 & interior bus/KRL/rumah). */

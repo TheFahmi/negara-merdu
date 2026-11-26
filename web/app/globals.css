@@ -311,6 +311,20 @@ body {
   display: block; margin: 14px auto 0; border: 0; background: none; cursor: pointer;
   color: #5b7263; font-size: 13.5px; text-decoration: underline;
 }
+/* Blok teks siap salin pada alur atur ulang PIN (kode reset via DM). */
+.blok-salin {
+  display: flex; align-items: center; gap: 10px; background: #fff;
+  border: 2px dashed #2e9e5b; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px;
+}
+.blok-salin span {
+  flex: 1; font-size: 15.5px; font-weight: 700; color: #21332a;
+  word-break: break-all; -webkit-user-select: all; user-select: all;
+}
+.blok-salin button {
+  border: 0; background: #2e9e5b; color: #fff; font-weight: 700; font-size: 13.5px;
+  border-radius: 9px; padding: 8px 14px; cursor: pointer; white-space: nowrap;
+}
+#gerbang p.reset-status { text-align: center; font-weight: 600; color: #22713f; margin-top: 12px; }
 .grup-rupa { margin-top: 14px; }
 .grup-rupa > span { font-size: 13px; font-weight: 600; display: block; margin-bottom: 7px; }
 .swatch { display: flex; gap: 8px; flex-wrap: wrap; }

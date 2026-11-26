@@ -191,6 +191,7 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
   export const rumahTerisi = new Set();   // "blok,kavling" yang ADA warganya — satu-satunya dasar rumah massal & tabrakannya
   export const rumahDetailSet = new Set(); // "blok,kavling" milik <=30 warga terbaru yang punya rumah DETAIL di kavling aslinya — instans massalnya dilewati, tabrakannya via rintanganDetail
   export const daftarRumah = [];          // {nomor, blok, kavling, warna} warga termuat — untuk titik rumah di peta
+  export const semuaWarga = [];           // SEMUA warga dari paginasi (objek lengkap) — dasar rumah GLB tiap warga di bangunDistrik
   export let dataPembangunan = [];        // status fasilitas dari /api/pembangunan (dibaca sekali saat muat)
 
   export async function ambilData() {
@@ -204,14 +205,15 @@ import { $, BLOK_BARIS, BLOK_KOLOM, JALAN, KAPASITAS, KOTA_D, KOTA_W, KUNCI_ANGK
       const hal = await (await fetch("/api/warga?limit=60&urut=terbaru")).json();
       wargaTerbaru = hal.warga || [];
       rumahDetailSet.clear(); // himpunan detail harus sama persis dengan irisan yang dibangun bangunDistrik
-      wargaTerbaru.slice(0, 30).forEach((w) => rumahDetailSet.add(w.blok + "," + w.kavling));
-      warnaPemilik.clear(); rumahTerisi.clear(); daftarRumah.length = 0;
+      warnaPemilik.clear(); rumahTerisi.clear(); daftarRumah.length = 0; semuaWarga.length = 0;
       let offset = 0, total = st.warga || 0;
       while (offset < Math.min(total, 2000)) {
         const p = await (await fetch(`/api/warga?limit=500&offset=${offset}`)).json();
         (p.warga || []).forEach((w) => {
           warnaPemilik.set(w.blok + "," + w.kavling, w.warna_baju);
           rumahTerisi.add(w.blok + "," + w.kavling);
+          rumahDetailSet.add(w.blok + "," + w.kavling); // SEMUA warga kini rumah detail (GLB) — instans massalnya dilewati
+          semuaWarga.push(w);
           daftarRumah.push({ nomor: w.nomor_rumah, blok: w.blok, kavling: w.kavling, warna: w.warna_baju });
         });
         offset += 500;

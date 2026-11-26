@@ -8,6 +8,7 @@
    Depan bangunan menghadap +z (selatan). Grup: y=0 = muka alas blok.
    TAPAK_BARU = AABB tabrakan [minX, minZ, maxX, maxZ] relatif pusat blok. */
 import { buatJip, buatMobil, buatTruk } from "./mobilGeo.js";
+import { klonKendaraanGLB } from "./aset3d.js";
 import { SKALA_MOBIL } from "./inti.js";
 import { LAMPU_TAMAN, M, geometriAtapPelana, meshPelana, kotak } from "./bersama.js";
 import { animasiHidup, animasiJalan, buatKarakter } from "./karakter.js";
@@ -274,9 +275,14 @@ export const MODEL_BARU = {
     for (const x of [-1.6, 9.6]) g.add(kotak(0.4, 4.1, 0.4, PUTIH, x, 2.05, 4.2));
     const pn = new THREE.Mesh(new THREE.BoxGeometry(10, 1.1, 0.25), new THREE.MeshStandardMaterial({ map: teksturPapanNama("PUSKESMAS", "Negara Merdu Sehat"), roughness: 0.9 }));
     pn.position.set(4, 5.1, 4.55); g.add(pn);
-    const amb = mobil(g, 4, 2, 0, 0xffffff);
-    amb.add(kotak(2.0, 1.6, 2.4, 0xffffff, 0, 1.6, 1.1)); amb.add(kotak(2.02, 0.3, 4.22, 0xd63b2f, 0, 1.0, 0));
-    amb.add(kotak(0.6, 0.2, 0.4, 0x3f6fb5, 0, 2.5, -0.6));
+    /* Ambulans GLB (next35); fallback: sedan + boks prosedural lama. */
+    const ambG = klonKendaraanGLB("ambulans", 2.5, null);
+    if (ambG) { ambG.g.position.set(4, 0, 2); g.add(ambG.g); }
+    else {
+      const amb = mobil(g, 4, 2, 0, 0xffffff);
+      amb.add(kotak(2.0, 1.6, 2.4, 0xffffff, 0, 1.6, 1.1)); amb.add(kotak(2.02, 0.3, 4.22, 0xd63b2f, 0, 1.0, 0));
+      amb.add(kotak(0.6, 0.2, 0.4, 0x3f6fb5, 0, 2.5, -0.6));
+    }
     parkir(g, -18, 14, 5, false); mobil(g, -24.4, 14, 0, 0x8a8f94); mobil(g, -14.8, 14, 0, 0xe8c268);
     // taman obat + bangku tunggu
     for (const [x, z] of [[16, 14], [22, 14], [16, 20], [22, 20]]) {
@@ -367,16 +373,24 @@ export const MODEL_BARU = {
     for (const s of [-1, 1]) { gerobak.add(kotak(0.08, 1.3, 0.08, 0x8a8f94, s * 1.1, 1.85, 0.5)); const r = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.15, 12), M(0x333333)); r.rotation.x = Math.PI / 2; r.position.set(s * 0.8, 0.45, 0.6); gerobak.add(r); }
     const pg = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.6), new THREE.MeshStandardMaterial({ map: teksturPapanNama("BAKSO", "Pak Kumis") })); pg.position.set(0, 1.3, 0.56); gerobak.add(pg);
     gerobak.position.set(14, 0, 16); g.add(gerobak);
-    const becak = new THREE.Group();
-    becak.add(kotak(1.4, 0.9, 1.0, 0x2e7d46, 0, 1.0, 0.8)); becak.add(kotak(1.4, 1.0, 0.15, 0x2e7d46, 0, 1.6, 1.3));
-    const kap = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0xc8102e)); kap.scale.set(0.9, 0.9, 0.7); kap.position.set(0, 1.9, 0.9); becak.add(kap);
-    for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 16), M(0x222222)); r.rotation.y = Math.PI / 2; r.position.set(s * 0.75, 0.4, 0.8); becak.add(r); }
-    const rb = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 16), M(0x222222)); rb.rotation.y = Math.PI / 2; rb.position.set(0, 0.4, -0.9); becak.add(rb);
-    becak.add(kotak(0.1, 0.1, 1.8, 0x333333, 0, 0.7, -0.1)); becak.add(kotak(0.5, 0.1, 0.4, 0x333333, 0, 1.3, -0.8));
-    becak.position.set(-12, 0, 18); becak.rotation.y = 0.6; g.add(becak);
-    // parkir motor (deret) + mobil
+    /* Becak GLB (next35); fallback: becak kotak prosedural lama. */
+    const becakGLB = klonKendaraanGLB("becak", 2.5, null); // next37: 2,0->2,5 — kalibrasi 0,40 file = 1 m game (panjang 2,24->2,80 = prosedural 2,85)
+    if (becakGLB) { becakGLB.g.position.set(-12, 0, 18); becakGLB.g.rotation.y = 0.6; g.add(becakGLB.g); }
+    if (!becakGLB) {
+      const becak = new THREE.Group();
+      becak.add(kotak(1.4, 0.9, 1.0, 0x2e7d46, 0, 1.0, 0.8)); becak.add(kotak(1.4, 1.0, 0.15, 0x2e7d46, 0, 1.6, 1.3));
+      const kap = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0xc8102e)); kap.scale.set(0.9, 0.9, 0.7); kap.position.set(0, 1.9, 0.9); becak.add(kap);
+      for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 16), M(0x222222)); r.rotation.y = Math.PI / 2; r.position.set(s * 0.75, 0.4, 0.8); becak.add(r); }
+      const rb = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 16), M(0x222222)); rb.rotation.y = Math.PI / 2; rb.position.set(0, 0.4, -0.9); becak.add(rb);
+      becak.add(kotak(0.1, 0.1, 1.8, 0x333333, 0, 0.7, -0.1)); becak.add(kotak(0.5, 0.1, 0.4, 0x333333, 0, 1.3, -0.8));
+      becak.position.set(-12, 0, 18); becak.rotation.y = 0.6; g.add(becak);
+    }
+    // parkir motor (deret) + mobil — motor GLB (next35), fallback kotak lama
     for (let i = 0; i < 10; i++) {
-      const m = new THREE.Group(), w = [0xc8102e, 0x1d1d1f, 0x3f6fb5, 0xf2f2ee][i % 4];
+      const w = [0xc8102e, 0x1d1d1f, 0x3f6fb5, 0xf2f2ee][i % 4];
+      const mG = klonKendaraanGLB("motor", 2.17, w); // next37: 1,94->2,17 — panjang 1,84->2,05 = prosedural 2,02-2,08
+      if (mG) { mG.g.position.set(20 + (i % 5) * 1.2, 0.1, 20 + Math.floor(i / 5) * 2.6); g.add(mG.g); continue; }
+      const m = new THREE.Group();
       m.add(kotak(0.35, 0.5, 1.5, w, 0, 0.75, 0)); m.add(kotak(0.3, 0.15, 0.7, 0x1d1d1f, 0, 1.05, -0.2));
       for (const z of [-0.65, 0.65]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.09, 6, 14), M(0x222222)); r.rotation.y = Math.PI / 2; r.position.set(0, 0.33, z); m.add(r); }
       m.add(kotak(0.7, 0.06, 0.06, 0x8a8f94, 0, 1.2, 0.6));

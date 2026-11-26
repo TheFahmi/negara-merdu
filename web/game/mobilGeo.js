@@ -12,6 +12,7 @@
      pintu & handel, pelat nomor depan-belakang.
    Geometri dibuat sekali & dipakai bersama (InstancedMesh atau Mesh). */
 import { gabungBerwarna } from "./bersama.js";
+import { geoMobilGLB, klonKendaraanGLB } from "./aset3d.js";
 
 const RODA_Z = 1.36, RODA_R = 0.36, LEBAR = 1.82;
 function profilBawah() { // (u = maju/z, v = tinggi/y)
@@ -46,6 +47,11 @@ let GEO = null;
 export const MAT_KACA_MOBIL = new THREE.MeshStandardMaterial({ color: 0x2a4050, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.6, depthWrite: false });
 export function geoMobil() {
   if (GEO) return GEO;
+  /* Sedan GLB (next35): geometri dari aset3d — skala meter game yang
+     sama dengan model prosedural (0,40 file = 1 m), alas y = 0, hadap
+     +z; SKALA_MOBIL di pemanggil berlaku seperti sebelumnya. */
+  const glb = geoMobilGLB();
+  if (glb) { GEO = glb; return GEO; }
   const PUTIH = 0xffffff;
   // ---- BADAN (instance color) ----
   const badan = [
@@ -175,6 +181,14 @@ function kabinTruk(g, warna, zDepan, lebar) {
 }
 /* jenis: "boks" (bak tertutup), "terpal" (militer, bak beratap terpal), "bak" (bak terbuka) */
 export function buatTruk(o) {
+  /* Truk GLB (next35): varian jenis -> truk_boks/truk_bak/truk_terpal,
+     skala samakan panjang prosedural 6,6 m. Parameter warna/label lama
+     tidak dipakai — livery GLB tetap. */
+  const glb = klonKendaraanGLB(o.jenis === "terpal" ? "truk_terpal" : o.jenis === "bak" ? "truk_bak" : "truk_boks", 2.405, null);
+  if (glb) return glb.g;
+  return buatTrukProsedural(o);
+}
+function buatTrukProsedural(o) {
   const g = new THREE.Group(), L = 2.2, zDepan = 3.3;
   kabinTruk(g, o.kabin, zDepan, L);
   kotakM(g, 0.9, 0.25, 6.2, 0x2a2c30, 0, 0.75, -0.2);                                       // sasis
@@ -205,6 +219,14 @@ export function buatTruk(o) {
 }
 /* Jip militer 4x4: kap kotak, kaca depan tegak, atap kanvas, ban kasar, ban serep. */
 export function buatJip(warna) {
+  /* Jip GLB (next35): skala samakan panjang prosedural ±4,3 m.
+     next37: 2,37->2,55 — kompromi panjang/lebar vs prosedural terukur
+     (4,465 x 2,250): panjang 4,31->4,63 (+3,7%), lebar 1,97->2,12 (-5,9%). */
+  const glb = klonKendaraanGLB("jip", 2.55, null);
+  if (glb) return glb.g;
+  return buatJipProsedural(warna);
+}
+function buatJipProsedural(warna) {
   const g = new THREE.Group(), W = 1.85;
   kotakM(g, W, 0.75, 4.0, warna, 0, 1.0, 0, { roughness: 0.85, metalness: 0.05 });          // badan
   kotakM(g, W - 0.1, 0.12, 1.3, warna, 0, 1.43, 1.3, { roughness: 0.85 });                   // kap

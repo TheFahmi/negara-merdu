@@ -4,6 +4,7 @@ import "./warna.js"; // HARUS pertama: manajemen warna sRGB (lihat warna.js)
 import { $, KOTA_D, KOTA_W, POS_KADES, PUSAT_X, PUSAT_Z } from "./inti.js";
 import { ambilData, awanGrup, camera, pantauFrame, perbaruiLaluLintas, renderer, scene, tambahWaktuSiklus, terapkanKualitas, terapkanWaktu } from "./bersama.js";
 import { bangunKotaMassal, bangunLaluLintasMobil, perbaruiMobil } from "./kota.js";
+import { muatAset3D } from "./aset3d.js";
 import { bangunLahanPembangunan } from "./fasilitas.js";
 import { perbaruiApartemen } from "./fasilitasBaru.js";
 import { animasiHidup, animasiJalan } from "./karakter.js";
@@ -169,6 +170,9 @@ import { wkt } from "./bersama.js";
     const pmLuas = $("#pm-luas");
     if (pmLuas) pmLuas.textContent = KOTA_W.toLocaleString("id-ID") + " × " + KOTA_D.toLocaleString("id-ID") + " satuan + sawah, hutan & danau di pinggiran";
     await ambilData();
+    /* Aset 3D GLB (next35): dimuat sebelum kota dibangun; kegagalan
+       memuat satu aset = model prosedural lama untuk aset itu. */
+    try { await muatAset3D(); } catch (e) { console.error("Aset 3D gagal dimuat:", e); }
     if (sesi.token) {
       try {
         const r = await fetch("/api/saya", { headers: { Authorization: "Bearer " + sesi.token } });
