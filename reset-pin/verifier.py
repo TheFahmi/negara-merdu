@@ -80,7 +80,7 @@ try:
     for line in open("/opt/pinarak/.env"):
         line = line.strip()
         if line.startswith("PINARAK_ADMIN_TOKEN="):
-            token = <redacted>
+            token = line.split("=", 1)[1].strip().strip('"')
             break
 except OSError:
     token = ""
@@ -109,7 +109,7 @@ try:
     for line in open("/opt/pinarak/.env"):
         line = line.strip()
         if line.startswith("PINARAK_ADMIN_TOKEN="):
-            token = <redacted>
+            token = line.split("=", 1)[1].strip().strip('"')
             break
 except OSError:
     token = ""

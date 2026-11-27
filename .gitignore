@@ -39,3 +39,7 @@ node_modules/
 # === Frontend Next.js ===
 web/.next/
 web/node_modules/
+
+# === Arsip frame & state runtime tambahan ===
+konten/**/*.zip
+reset-pin/state.json
